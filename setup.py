@@ -119,16 +119,42 @@ class CMakeBuild(build_ext):
 
 # The information here can also be placed in setup.cfg - better separation of
 # logic and declaration, and simpler if you include description/version in a file.
-setup(
-    name="cmake_example",
-    version="0.0.1",
-    author="Dean Moldovan",
-    author_email="dean0x7d@gmail.com",
-    description="A test project using pybind11 and CMake",
-    long_description="",
-    ext_modules=[CMakeExtension("cmake_example")],
-    cmdclass={"build_ext": CMakeBuild},
+#setup(
+#    name="cmake_example",
+  #  version="0.0.1",
+   # author="Dean Moldovan",
+    #author_email="dean0x7d@gmail.com",
+    #description="A test project using pybind11 and CMake",
+    #long_description="",
+    #ext_modules=[CMakeExtension("cmake_example._math")],
+    #cmdclass={"build_ext": CMakeBuild},
+    #zip_safe=False,
+    #extras_require={"test": ["pytest>=6.0"]},
+    #python_requires=">=3.6",
+#)
+
+# the above stays intact
+
+from subprocess import CalledProcessError
+
+kwargs = dict(
+    name='cmake_example',
+    version='0.0.1',
+    author='Dean Moldovan',
+    author_email='dean0x7d@gmail.com',
+    description='A test project using pybind11 and CMake',
+    long_description='',
+    ext_modules=[CMakeExtension('cmake_example._math')],
+    cmdclass=dict(build_ext=CMakeBuild),
     zip_safe=False,
-    extras_require={"test": ["pytest>=6.0"]},
-    python_requires=">=3.6",
+    packages=['cmake_example']
 )
+
+# likely there are more exceptions, take a look at yarl example
+try:
+    setup(**kwargs)        
+except CalledProcessError:
+    print('Failed to build extension!')
+    del kwargs['ext_modules']
+    setup(**kwargs)
+
