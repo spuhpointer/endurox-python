@@ -144,7 +144,7 @@ kwargs = dict(
     author_email='dean0x7d@gmail.com',
     description='A test project using pybind11 and CMake',
     long_description='',
-    ext_modules=[CMakeExtension('cmake_example._math')],
+    ext_modules=[CMakeExtension('cmake_example._endurox')],
     cmdclass=dict(build_ext=CMakeBuild),
     zip_safe=False,
     packages=['cmake_example']
