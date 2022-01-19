@@ -308,7 +308,7 @@ static py::object to_py(FBFR32 *fbfr, FLDLEN32 buflen = 0) {
       case FLD_CARRAY:
         val.append(py::bytes(value.get(), len));
         break;
-      case FLD_FML32:
+      case BFLD_UBF:
         val.append(to_py(reinterpret_cast<FBFR32 *>(value.get()), buflen));
         break;
       default:
@@ -329,7 +329,7 @@ static py::object to_py(xatmibuf buf) {
     return py::cast(*buf.pp);
   } else if (strcmp(type, "CARRAY") == 0 || strcmp(type, "X_OCTET") == 0) {
     return py::bytes(*buf.pp, buf.len);
-  } else if (strcmp(type, "FML32") == 0) {
+  } else if (strcmp(type, "UBF") == 0) {
     return to_py(*buf.fbfr());
   } else {
     throw std::invalid_argument("Unsupported buffer type");
@@ -886,6 +886,17 @@ static void register_exceptions(py::module &m) {
 }
 
 PYBIND11_MODULE(_endurox, m) {
+    m.doc() = R"pbdoc(
+        Pybind11 example plugin
+        -----------------------
+
+        .. currentmodule:: endurox
+
+        .. autosummary::
+           :toctree: _generate
+
+           add
+    )pbdoc";
 
   register_exceptions(m);
 
@@ -978,7 +989,11 @@ PYBIND11_MODULE(_endurox, m) {
           throw xatmi_exception(tperrno);
         }
       },
-      "Leaves an application");
+      R"pbdoc(
+        Leaves an applicatio
+
+        Some other explanation about the add function.
+     )pbdoc");
 
   m.def(
       "tpbegin",
