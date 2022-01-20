@@ -886,17 +886,7 @@ static void register_exceptions(py::module &m) {
 }
 
 PYBIND11_MODULE(_endurox, m) {
-    m.doc() = R"pbdoc(
-        Pybind11 example plugin
-        -----------------------
 
-        .. currentmodule:: endurox
-
-        .. autosummary::
-           :toctree: _generate
-
-           add
-    )pbdoc";
 
   register_exceptions(m);
 
@@ -990,9 +980,9 @@ PYBIND11_MODULE(_endurox, m) {
         }
       },
       R"pbdoc(
-        Leaves an applicatio
-
-        Some other explanation about the add function.
+        Leaves application, closes XATMI session.
+        
+        For more details see *tpterm(3)*.
      )pbdoc");
 
   m.def(
@@ -1406,7 +1396,17 @@ PYBIND11_MODULE(_endurox, m) {
   m.attr("TPQQOSNONPERSISTENT") = py::int_(TPQQOSNONPERSISTENT);
 
   m.doc() =
-      R"(Python3 bindings for writing Endurox clients and servers
+      R"pbdoc(
+Python3 bindings for writing Endurox clients and servers
+--------------------------------------------------------
+
+    .. currentmodule:: cmake_example._endurox
+
+    .. autosummary::
+        :toctree: _generate
+
+        tpterm
+           
 
 Flags to service routines:
 
@@ -1463,5 +1463,5 @@ Flags to tpenqueue/tpdequeue:
 - TPQQOSPERSISTENT  - disk message
 - TPQQOSNONPERSISTENT - memory message
 
-)";
+)pbdoc";
 }
