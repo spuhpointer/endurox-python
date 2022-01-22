@@ -1,7 +1,5 @@
 """Root module of your package"""
 
-from .math import mul
-
 import sys
 import os
 import time
@@ -15,3 +13,5 @@ sys.setdlopenflags(flags | ctypes.RTLD_GLOBAL)
 from ._endurox import *
 # Restore original flags
 sys.setdlopenflags(flags)
+
+#__all__ = ['cmake_example']

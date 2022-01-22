@@ -1400,7 +1400,7 @@ PYBIND11_MODULE(_endurox, m) {
 Python3 bindings for writing Endurox clients and servers
 --------------------------------------------------------
 
-    .. currentmodule:: cmake_example._endurox
+    .. currentmodule:: cmake_example
 
     .. autosummary::
         :toctree: _generate

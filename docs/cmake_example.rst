@@ -1,1 +1,1 @@
-.. automodule:: cmake_example
+.. automodule:: cmake_example._endurox
