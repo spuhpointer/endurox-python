@@ -23,7 +23,7 @@
 #include <tpadm.h>
 #include <userlog.h>
 #include <xa.h>
-#include <fml32.h>
+#include <ubf.h>
 #undef _
 #pragma GCC diagnostic pop
 
@@ -96,14 +96,14 @@ struct qm_exception : public xatmi_exception {
   }
 };
 
-struct fml32_exception : public std::exception {
+struct ubf_exception : public std::exception {
  private:
   int code_;
   std::string message_;
 
  public:
-  explicit fml32_exception(int code)
-      : code_(code), message_(Fstrerror32(code)) {}
+  explicit ubf_exception(int code)
+      : code_(code), message_(Bstrerror(code)) {}
 
   const char *what() const noexcept override { return message_.c_str(); }
   int code() const noexcept { return code_; }
@@ -174,8 +174,8 @@ struct xatmibuf {
         throw std::bad_alloc();
       }
     } else {
-      FBFR32 *fbfr = reinterpret_cast<FBFR32 *>(*pp);
-      Finit32(fbfr, Fsizeof32(fbfr));
+      UBFH *fbfr = reinterpret_cast<UBFH *>(*pp);
+      Binit(fbfr, Bsizeof(fbfr));
     }
   }
   xatmibuf(xatmibuf &&other) : xatmibuf() { swap(other); }
@@ -198,20 +198,20 @@ struct xatmibuf {
     return ret;
   }
 
-  FBFR32 **fbfr() { return reinterpret_cast<FBFR32 **>(pp); }
+  UBFH **fbfr() { return reinterpret_cast<UBFH **>(pp); }
 
   char **pp;
   long len;
 
-  void mutate(std::function<int(FBFR32 *)> f) {
+  void mutate(std::function<int(UBFH *)> f) {
     while (true) {
       int rc = f(*fbfr());
       if (rc == -1) {
-        if (Ferror32 == FNOSPACE) {
+        if (Berror == BNOSPACE) {
           len *= 2;
           *pp = tprealloc(*pp, len);
         } else {
-          throw fml32_exception(Ferror32);
+          throw ubf_exception(Berror);
         }
       } else {
         break;
@@ -247,24 +247,24 @@ static void with_context() {
   }
 }
 
-static py::object to_py(FBFR32 *fbfr, FLDLEN32 buflen = 0) {
-  FLDID32 fieldid = FIRSTFLDID;
-  FLDOCC32 oc = 0;
+static py::object to_py(UBFH *fbfr, BFLDLEN buflen = 0) {
+  BFLDID fieldid = BFIRSTFLDID;
+  BFLDOCC oc = 0;
 
   py::dict result;
   py::list val;
 
   if (buflen == 0) {
-    buflen = Fsizeof32(fbfr);
+    buflen = Bsizeof(fbfr);
   }
   std::unique_ptr<char> value(new char[buflen]);
 
   for (;;) {
-    FLDLEN32 len = buflen;
+    BFLDLEN len = buflen;
 
-    int r = Fnext32(fbfr, &fieldid, &oc, value.get(), &len);
+    int r = Bnext(fbfr, &fieldid, &oc, value.get(), &len);
     if (r == -1) {
-      throw fml32_exception(Ferror32);
+      throw ubf_exception(Berror);
     } else if (r == 0) {
       break;
     }
@@ -272,7 +272,7 @@ static py::object to_py(FBFR32 *fbfr, FLDLEN32 buflen = 0) {
     if (oc == 0) {
       val = py::list();
 
-      char *name = Fname32(fieldid);
+      char *name = Bfname(fieldid);
       if (name != nullptr) {
         result[name] = val;
       } else {
@@ -280,23 +280,23 @@ static py::object to_py(FBFR32 *fbfr, FLDLEN32 buflen = 0) {
       }
     }
 
-    switch (Fldtype32(fieldid)) {
-      case FLD_CHAR:
+    switch (Bfldtype(fieldid)) {
+      case BFLD_CHAR:
         val.append(py::cast(value.get()[0]));
         break;
-      case FLD_SHORT:
+      case BFLD_SHORT:
         val.append(py::cast(*reinterpret_cast<short *>(value.get())));
         break;
-      case FLD_LONG:
+      case BFLD_LONG:
         val.append(py::cast(*reinterpret_cast<long *>(value.get())));
         break;
-      case FLD_FLOAT:
+      case BFLD_FLOAT:
         val.append(py::cast(*reinterpret_cast<float *>(value.get())));
         break;
-      case FLD_DOUBLE:
+      case BFLD_DOUBLE:
         val.append(py::cast(*reinterpret_cast<double *>(value.get())));
         break;
-      case FLD_STRING:
+      case BFLD_STRING:
         val.append(
 #if PY_MAJOR_VERSION >= 3
             py::str(PyUnicode_DecodeLocale(value.get(), "surrogateescape"))
@@ -305,11 +305,11 @@ static py::object to_py(FBFR32 *fbfr, FLDLEN32 buflen = 0) {
 #endif
         );
         break;
-      case FLD_CARRAY:
+      case BFLD_CARRAY:
         val.append(py::bytes(value.get(), len));
         break;
       case BFLD_UBF:
-        val.append(to_py(reinterpret_cast<FBFR32 *>(value.get()), buflen));
+        val.append(to_py(reinterpret_cast<UBFH *>(value.get()), buflen));
         break;
       default:
         throw std::invalid_argument("Unsupported field " +
@@ -337,7 +337,7 @@ static py::object to_py(xatmibuf buf) {
 }
 
 static void from_py(py::dict obj, xatmibuf &b);
-static void from_py1(xatmibuf &buf, FLDID32 fieldid, FLDOCC32 oc,
+static void from_py1(xatmibuf &buf, BFLDID fieldid, BFLDOCC oc,
                      py::handle obj, xatmibuf &b) {
   if (obj.is_none()) {
     // pass
@@ -345,9 +345,9 @@ static void from_py1(xatmibuf &buf, FLDID32 fieldid, FLDOCC32 oc,
   } else if (py::isinstance<py::bytes>(obj)) {
     std::string val(PyBytes_AsString(obj.ptr()), PyBytes_Size(obj.ptr()));
 
-    buf.mutate([&](FBFR32 *fbfr) {
-      return CFchg32(fbfr, fieldid, oc, const_cast<char *>(val.data()),
-                     val.size(), FLD_CARRAY);
+    buf.mutate([&](UBFH *fbfr) {
+      return CBchg(fbfr, fieldid, oc, const_cast<char *>(val.data()),
+                     val.size(), BFLD_CARRAY);
     });
 #endif
   } else if (py::isinstance<py::str>(obj)) {
@@ -361,27 +361,27 @@ static void from_py1(xatmibuf &buf, FLDID32 fieldid, FLDOCC32 oc,
     }
     std::string val(PyString_AsString(obj.ptr()), PyString_Size(obj.ptr()));
 #endif
-    buf.mutate([&](FBFR32 *fbfr) {
-      return CFchg32(fbfr, fieldid, oc, const_cast<char *>(val.data()),
-                     val.size(), FLD_CARRAY);
+    buf.mutate([&](UBFH *fbfr) {
+      return CBchg(fbfr, fieldid, oc, const_cast<char *>(val.data()),
+                     val.size(), BFLD_CARRAY);
     });
   } else if (py::isinstance<py::int_>(obj)) {
     long val = obj.cast<py::int_>();
-    buf.mutate([&](FBFR32 *fbfr) {
-      return CFchg32(fbfr, fieldid, oc, reinterpret_cast<char *>(&val), 0,
-                     FLD_LONG);
+    buf.mutate([&](UBFH *fbfr) {
+      return CBchg(fbfr, fieldid, oc, reinterpret_cast<char *>(&val), 0,
+                     BFLD_LONG);
     });
 
   } else if (py::isinstance<py::float_>(obj)) {
     double val = obj.cast<py::float_>();
-    buf.mutate([&](FBFR32 *fbfr) {
-      return CFchg32(fbfr, fieldid, oc, reinterpret_cast<char *>(&val), 0,
-                     FLD_DOUBLE);
+    buf.mutate([&](UBFH *fbfr) {
+      return CBchg(fbfr, fieldid, oc, reinterpret_cast<char *>(&val), 0,
+                     BFLD_DOUBLE);
     });
   } else if (py::isinstance<py::dict>(obj)) {
     from_py(obj.cast<py::dict>(), b);
-    buf.mutate([&](FBFR32 *fbfr) {
-      return Fchg32(fbfr, fieldid, oc, reinterpret_cast<char *>(*b.fbfr()), 0);
+    buf.mutate([&](UBFH *fbfr) {
+      return Bchg(fbfr, fieldid, oc, reinterpret_cast<char *>(*b.fbfr()), 0);
     });
   } else {
     throw std::invalid_argument("Unsupported type");
@@ -389,21 +389,21 @@ static void from_py1(xatmibuf &buf, FLDID32 fieldid, FLDOCC32 oc,
 }
 
 static void from_py(py::dict obj, xatmibuf &b) {
-  b.reinit("FML32", 1024);
+  b.reinit("ubf", 1024);
   xatmibuf f;
 
   for (auto it : obj) {
-    FLDID32 fieldid;
+    BFLDID fieldid;
     if (py::isinstance<py::int_>(it.first)) {
       fieldid = it.first.cast<py::int_>();
     } else {
       fieldid =
-          Fldid32(const_cast<char *>(std::string(py::str(it.first)).c_str()));
+          Bfldid(const_cast<char *>(std::string(py::str(it.first)).c_str()));
     }
 
     py::handle o = it.second;
     if (py::isinstance<py::list>(o)) {
-      FLDOCC32 oc = 0;
+      BFLDOCC oc = 0;
       for (auto e : o.cast<py::list>()) {
         from_py1(b, fieldid, oc++, e, f);
       }
@@ -425,7 +425,7 @@ static xatmibuf from_py(py::object obj) {
     strcpy(*buf.pp, s.c_str());
     return buf;
   } else if (py::isinstance<py::dict>(obj)) {
-    xatmibuf buf("FML32", 1024);
+    xatmibuf buf("ubf", 1024);
 
     from_py(static_cast<py::dict>(obj), buf);
 
@@ -453,7 +453,7 @@ static py::object pytpexport(py::object idata, long flags) {
 }
 
 static py::object pytpimport(const std::string istr, long flags) {
-  xatmibuf obuf("FML32", istr.size());
+  xatmibuf obuf("ubf", istr.size());
 
   long olen = 0;
   int rc = tpimport(const_cast<char *>(istr.c_str()), istr.size(), obuf.pp,
@@ -481,7 +481,7 @@ static void pytppost(const std::string eventname, py::object data, long flags) {
 static pytpreply pytpcall(const char *svc, py::object idata, long flags) {
   with_context();
   auto in = from_py(idata);
-  xatmibuf out("FML32", 1024);
+  xatmibuf out("ubf", 1024);
   {
     py::gil_scoped_release release;
     int rc = tpcall(const_cast<char *>(svc), *in.pp, in.len, out.pp, &out.len,
@@ -517,7 +517,7 @@ static std::pair<TPQCTL, py::object> pytpdequeue(const char *qspace,
                                                  const char *qname, TPQCTL *ctl,
                                                  long flags) {
   with_context();
-  xatmibuf out("FML32", 1024);
+  xatmibuf out("ubf", 1024);
   {
     py::gil_scoped_release release;
     int rc = tpdequeue(const_cast<char *>(qspace), const_cast<char *>(qname),
@@ -546,7 +546,7 @@ static int pytpacall(const char *svc, py::object idata, long flags) {
 
 static pytpreply pytpgetrply(int cd, long flags) {
   with_context();
-  xatmibuf out("FML32", 1024);
+  xatmibuf out("ubf", 1024);
   {
     py::gil_scoped_release release;
     int rc = tpgetrply(&cd, out.pp, &out.len, flags);
@@ -597,7 +597,7 @@ static void pytpforward(const std::string &svc, py::object data, long flags) {
 
 static pytpreply pytpadmcall(py::object idata, long flags) {
   auto in = from_py(idata);
-  xatmibuf out("FML32", 1024);
+  xatmibuf out("ubf", 1024);
   {
     py::gil_scoped_release release;
     int rc = tpadmcall(*in.fbfr(), out.fbfr(), flags);
@@ -718,8 +718,11 @@ void PY(TPSVCINFO *svcinfo) {
   }
 }
 
-static void pytpadvertisex(std::string svcname, long flags) {
-  if (tpadvertise(const_cast<char *>(svcname.c_str()), PY) == -1) {
+/**
+ * Standard tpadvertise()
+ */
+static void pytpadvertise(std::string svcname, long flags) {
+  if (tpadvertise_full(const_cast<char *>(svcname.c_str()), PY, (char *)"PY") == -1) {
     throw xatmi_exception(tperrno);
   }
 }
@@ -848,17 +851,17 @@ static void register_exceptions(py::module &m) {
     m.add_object("QmException", py::handle(QmException));
   }
 
-  static PyObject *Fml32Exception =
-      PyErr_NewException(MODULE ".Fml32Exception", nullptr, nullptr);
-  if (Fml32Exception) {
-    PyTypeObject *as_type = reinterpret_cast<PyTypeObject *>(Fml32Exception);
+  static PyObject *ubfException =
+      PyErr_NewException(MODULE ".ubfException", nullptr, nullptr);
+  if (ubfException) {
+    PyTypeObject *as_type = reinterpret_cast<PyTypeObject *>(ubfException);
     as_type->tp_str = EnduroxException_tp_str;
     PyObject *descr = PyDescr_NewGetSet(as_type, EnduroxException_getsetters);
     auto dict = py::reinterpret_borrow<py::dict>(as_type->tp_dict);
     dict[py::handle(((PyDescrObject *)(descr))->d_name)] = py::handle(descr);
 
-    Py_XINCREF(Fml32Exception);
-    m.add_object("Fml32Exception", py::handle(Fml32Exception));
+    Py_XINCREF(ubfException);
+    m.add_object("ubfException", py::handle(ubfException));
   }
 
   py::register_exception_translator([](std::exception_ptr p) {
@@ -876,11 +879,11 @@ static void register_exceptions(py::module &m) {
       args[0] = e.what();
       args[1] = e.code();
       PyErr_SetObject(XatmiException, args.ptr());
-    } catch (const fml32_exception &e) {
+    } catch (const ubf_exception &e) {
       py::tuple args(2);
       args[0] = e.what();
       args[1] = e.code();
-      PyErr_SetObject(Fml32Exception, args.ptr());
+      PyErr_SetObject(ubfException, args.ptr());
     }
   });
 }
@@ -982,7 +985,25 @@ PYBIND11_MODULE(_endurox, m) {
       R"pbdoc(
         Leaves application, closes XATMI session.
         
-        For more details see *tpterm(3)*.
+        For more deatils see C call *tpterm(3)*.
+
+        :raise: XatmiException, with following error codes:
+        	*TPEPROTO* - Called from XATMI server (main thread)
+        	*TPESYSTEM* - Enduro/X System error occurred
+        	*TPEOS* - Operating system error occurred.
+
+        Parameters
+        ----------
+        arg1 : int
+            Description of arg1
+        arg2 : str
+            Description of arg2
+
+        Returns
+        -------
+        int
+            Description of return value
+
      )pbdoc");
 
   m.def(
@@ -1066,7 +1087,7 @@ PYBIND11_MODULE(_endurox, m) {
       py::arg("message"));
 
   m.def(
-      "tpadvertise", [](const char *svcname) { pytpadvertisex(svcname, 0); },
+      "tpadvertise", [](const char *svcname) { pytpadvertise(svcname, 0); },
       "Routine for advertising a service name", py::arg("svcname"));
 
   m.def("run", &pyrun, "Run Endurox server", py::arg("server"), py::arg("args"),
@@ -1174,65 +1195,65 @@ PYBIND11_MODULE(_endurox, m) {
       py::arg("blktime"), py::arg("flags"));
 
   m.def(
-      "Fldtype32", [](FLDID32 fieldid) { return Fldtype32(fieldid); },
+      "Bfldtype", [](BFLDID fieldid) { return Bfldtype(fieldid); },
       "Maps field identifier to field type", py::arg("fieldid"));
   m.def(
-      "Fldno32", [](FLDID32 fieldid) { return Fldno32(fieldid); },
+      "Bfldno", [](BFLDID fieldid) { return Bfldno(fieldid); },
       "Maps field identifier to field number", py::arg("fieldid"));
   m.def(
-      "Fmkfldid32", [](int type, FLDID32 num) { return Fmkfldid32(type, num); },
+      "Bmkfldid", [](int type, BFLDID num) { return Bmkfldid(type, num); },
       "Makes a field identifier", py::arg("type"), py::arg("num"));
 
   m.def(
-      "Fname32",
-      [](FLDID32 fieldid) {
-        auto *name = Fname32(fieldid);
+      "Bfname",
+      [](BFLDID fieldid) {
+        auto *name = Bfname(fieldid);
         if (name == nullptr) {
-          throw fml32_exception(Ferror32);
+          throw ubf_exception(Berror);
         }
         return name;
       },
       "Maps field identifier to field name", py::arg("fieldid"));
   m.def(
-      "Fldid32",
+      "BFLDID",
       [](const char *name) {
-        auto id = Fldid32(const_cast<char *>(name));
-        if (id == BADFLDID) {
-          throw fml32_exception(Ferror32);
+        auto id = Bfldid(const_cast<char *>(name));
+        if (id == BBADFLDID) {
+          throw ubf_exception(Berror);
         }
         return id;
       },
       "Maps field name to field identifier", py::arg("name"));
 
   m.def(
-      "Fboolpr32",
+      "Bboolpr",
       [](const char *expression, py::object iop) {
         std::unique_ptr<char, decltype(&free)> guard(
-            Fboolco32(const_cast<char *>(expression)), &free);
+            Bboolco(const_cast<char *>(expression)), &free);
         if (guard.get() == nullptr) {
-          throw fml32_exception(Ferror32);
+          throw ubf_exception(Berror);
         }
 
         int fd = iop.attr("fileno")().cast<py::int_>();
         std::unique_ptr<FILE, decltype(&fclose)> fiop(fdopen(dup(fd), "w"),
                                                       &fclose);
-        Fboolpr32(guard.get(), fiop.get());
+        Bboolpr(guard.get(), fiop.get());
       },
       "Print Boolean expression as parsed", py::arg("expression"),
       py::arg("iop"));
 
   m.def(
-      "Fboolev32",
+      "Bboolev",
       [](py::object fbfr, const char *expression) {
         std::unique_ptr<char, decltype(&free)> guard(
-            Fboolco32(const_cast<char *>(expression)), &free);
+            Bboolco(const_cast<char *>(expression)), &free);
         if (guard.get() == nullptr) {
-          throw fml32_exception(Ferror32);
+          throw ubf_exception(Berror);
         }
         auto buf = from_py(fbfr);
-        auto rc = Fboolev32(*buf.fbfr(), guard.get());
+        auto rc = Bboolev(*buf.fbfr(), guard.get());
         if (rc == -1) {
-          throw fml32_exception(Ferror32);
+          throw ubf_exception(Berror);
         }
         return rc == 1;
       },
@@ -1240,17 +1261,17 @@ PYBIND11_MODULE(_endurox, m) {
       py::arg("expression"));
 
   m.def(
-      "Ffloatev32",
+      "Bfloatev",
       [](py::object fbfr, const char *expression) {
         std::unique_ptr<char, decltype(&free)> guard(
-            Fboolco32(const_cast<char *>(expression)), &free);
+            Bboolco(const_cast<char *>(expression)), &free);
         if (guard.get() == nullptr) {
-          throw fml32_exception(Ferror32);
+          throw ubf_exception(Berror);
         }
         auto buf = from_py(fbfr);
-        auto rc = Ffloatev32(*buf.fbfr(), guard.get());
+        auto rc = Bfloatev(*buf.fbfr(), guard.get());
         if (rc == -1) {
-          throw fml32_exception(Ferror32);
+          throw ubf_exception(Berror);
         }
         return rc;
       },
@@ -1258,29 +1279,29 @@ PYBIND11_MODULE(_endurox, m) {
       py::arg("expression"));
 
   m.def(
-      "Ffprint32",
+      "Bfprint",
       [](py::object fbfr, py::object iop) {
         auto buf = from_py(fbfr);
         int fd = iop.attr("fileno")().cast<py::int_>();
         std::unique_ptr<FILE, decltype(&fclose)> fiop(fdopen(dup(fd), "w"),
                                                       &fclose);
-        auto rc = Ffprint32(*buf.fbfr(), fiop.get());
+        auto rc = Bfprint(*buf.fbfr(), fiop.get());
         if (rc == -1) {
-          throw fml32_exception(Ferror32);
+          throw ubf_exception(Berror);
         }
       },
       "Prints fielded buffer to specified stream", py::arg("fbfr"),
       py::arg("iop"));
 
   m.def(
-      "Fextread32",
+      "Bextread",
       [](py::object iop) {
-        xatmibuf obuf("FML32", 1024);
+        xatmibuf obuf("ubf", 1024);
         int fd = iop.attr("fileno")().cast<py::int_>();
         std::unique_ptr<FILE, decltype(&fclose)> fiop(fdopen(dup(fd), "r"),
                                                       &fclose);
 
-        obuf.mutate([&](FBFR32 *fbfr) { return Fextread32(fbfr, fiop.get()); });
+        obuf.mutate([&](UBFH *fbfr) { return Bextread(fbfr, fiop.get()); });
         return to_py(std::move(obuf));
       },
       "Builds fielded buffer from printed format", py::arg("iop"));
@@ -1348,15 +1369,15 @@ PYBIND11_MODULE(_endurox, m) {
   m.attr("QMEINVHANDLE") = py::int_(QMEINVHANDLE);
   m.attr("QMESHARE") = py::int_(QMESHARE);
 
-  m.attr("FLD_SHORT") = py::int_(FLD_SHORT);
-  m.attr("FLD_LONG") = py::int_(FLD_LONG);
-  m.attr("FLD_CHAR") = py::int_(FLD_CHAR);
-  m.attr("FLD_FLOAT") = py::int_(FLD_FLOAT);
-  m.attr("FLD_DOUBLE") = py::int_(FLD_DOUBLE);
-  m.attr("FLD_STRING") = py::int_(FLD_STRING);
-  m.attr("FLD_CARRAY") = py::int_(FLD_CARRAY);
-  m.attr("FLD_FML32") = py::int_(FLD_FML32);
-  m.attr("BADFLDID") = py::int_(BADFLDID);
+  m.attr("BFLD_SHORT") = py::int_(BFLD_SHORT);
+  m.attr("BFLD_LONG") = py::int_(BFLD_LONG);
+  m.attr("BFLD_CHAR") = py::int_(BFLD_CHAR);
+  m.attr("BFLD_FLOAT") = py::int_(BFLD_FLOAT);
+  m.attr("BFLD_DOUBLE") = py::int_(BFLD_DOUBLE);
+  m.attr("BFLD_STRING") = py::int_(BFLD_STRING);
+  m.attr("BFLD_CARRAY") = py::int_(BFLD_CARRAY);
+  m.attr("BFLD_UBF") = py::int_(BFLD_UBF);
+  m.attr("BBADFLDID") = py::int_(BBADFLDID);
 
   m.attr("TPEX_STRING") = py::int_(TPEX_STRING);
 
@@ -1432,7 +1453,6 @@ Flags to tpreturn:
 
 Flags to tpsblktime/tpgblktime:
 
-- TPBLK_MILLISECOND - This flag sets the blocktime value, in milliseconds.
 - TPBLK_SECOND - This flag sets the blocktime value, in seconds. This is default behavior.
 - TPBLK_NEXT - This flag sets the blocktime value for the next potential blocking API.
 - TPBLK_ALL - This flag sets the blocktime value for the all subsequent potential blocking APIs.
