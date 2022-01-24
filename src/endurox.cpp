@@ -20,60 +20,16 @@
 
 namespace py = pybind11;
 
-struct context {
-  context() {}
-  explicit context(bool is_client) {
-    TPCONTEXT_T tpcontext;
-    if (tpgetctxt(&tpcontext, 0) != -1 && tpcontext >= 0) {
-      return;
-    }
-    _init(is_client ? tpinit : tpappthrinit, nullptr, "tpsysadm", nullptr,
-          nullptr, TPMULTICONTEXTS);
-  }
-  context(std::function<int(TPINIT *)> initfunc, const char *usrname,
-          const char *cltname, const char *passwd, const char *grpname,
-          long flags) {
-    _init(initfunc, usrname, cltname, passwd, grpname, flags);
-  }
-
-  void _init(std::function<int(TPINIT *)> initfunc, const char *usrname,
-             const char *cltname, const char *passwd, const char *grpname,
-             long flags) {
-    std::unique_ptr<char, decltype(&tpfree)> guard(
-        tpalloc(const_cast<char *>("TPINIT"), nullptr, TPINITNEED(16)),
-        &tpfree);
-    TPINIT *tpinfo = reinterpret_cast<TPINIT *>(guard.get());
-    memset(tpinfo, 0, sizeof(*tpinfo));
-
-    if (usrname != nullptr) {
-      strncpy(tpinfo->usrname, usrname, sizeof(tpinfo->usrname));
-    }
-    if (cltname != nullptr) {
-      strncpy(tpinfo->cltname, cltname, sizeof(tpinfo->cltname));
-    }
-    if (passwd != nullptr) {
-      strncpy(tpinfo->passwd, passwd, sizeof(tpinfo->passwd));
-    }
-    if (grpname != nullptr) {
-      strncpy(tpinfo->grpname, grpname, sizeof(tpinfo->grpname));
-    }
-    tpinfo->flags = flags;
-    if (initfunc(tpinfo) == -1) {
-      throw xatmi_exception(tperrno);
-    }
-  }
-
-  ~context() {}
-  context(const context &) = delete;
-  context &operator=(const context &) = delete;
-  context(context &&) = delete;
-  context &operator=(context &&) = delete;
-};
-
+/**
+ * XATMI buffer handling routines
+ */
 struct xatmibuf {
+
   xatmibuf() : pp(&p), len(0), p(nullptr) {}
+
   xatmibuf(TPSVCINFO *svcinfo)
       : pp(&svcinfo->data), len(svcinfo->len), p(nullptr) {}
+
   xatmibuf(const char *type, long len) : pp(&p), len(len), p(nullptr) {
     reinit(type, len);
   }
@@ -85,15 +41,19 @@ struct xatmibuf {
         throw std::bad_alloc();
       }
     } else {
+      /* always UBF? */
       UBFH *fbfr = reinterpret_cast<UBFH *>(*pp);
       Binit(fbfr, Bsizeof(fbfr));
     }
   }
+
   xatmibuf(xatmibuf &&other) : xatmibuf() { swap(other); }
+
   xatmibuf &operator=(xatmibuf &&other) {
     swap(other);
     return *this;
   }
+
   ~xatmibuf() {
     if (p != nullptr) {
       tpfree(p);
@@ -150,13 +110,6 @@ struct pytpreply {
 };
 
 static py::object server;
-static thread_local std::unique_ptr<context> thread_context;
-
-static void with_context() {
-  if (!thread_context) {
-    thread_context.reset(new context(server.ptr() == nullptr));
-  }
-}
 
 static py::object to_py(UBFH *fbfr, BFLDLEN buflen = 0) {
   BFLDID fieldid = BFIRSTFLDID;
@@ -300,7 +253,7 @@ static void from_py1(xatmibuf &buf, BFLDID fieldid, BFLDOCC oc,
 }
 
 static void from_py(py::dict obj, xatmibuf &b) {
-  b.reinit("ubf", 1024);
+  b.reinit("UBF", 1024);
   xatmibuf f;
 
   for (auto it : obj) {
@@ -336,7 +289,7 @@ static xatmibuf from_py(py::object obj) {
     strcpy(*buf.pp, s.c_str());
     return buf;
   } else if (py::isinstance<py::dict>(obj)) {
-    xatmibuf buf("ubf", 1024);
+    xatmibuf buf("UBF", 1024);
 
     from_py(static_cast<py::dict>(obj), buf);
 
@@ -364,7 +317,7 @@ static py::object pytpexport(py::object idata, long flags) {
 }
 
 static py::object pytpimport(const std::string istr, long flags) {
-  xatmibuf obuf("ubf", istr.size());
+  xatmibuf obuf("UBF", istr.size());
 
   long olen = 0;
   int rc = tpimport(const_cast<char *>(istr.c_str()), istr.size(), obuf.pp,
@@ -390,9 +343,9 @@ static void pytppost(const std::string eventname, py::object data, long flags) {
 }
 
 static pytpreply pytpcall(const char *svc, py::object idata, long flags) {
-  with_context();
+
   auto in = from_py(idata);
-  xatmibuf out("ubf", 1024);
+  xatmibuf out("UBF", 1024);
   {
     py::gil_scoped_release release;
     int rc = tpcall(const_cast<char *>(svc), *in.pp, in.len, out.pp, &out.len,
@@ -408,7 +361,6 @@ static pytpreply pytpcall(const char *svc, py::object idata, long flags) {
 
 static TPQCTL pytpenqueue(const char *qspace, const char *qname, TPQCTL *ctl,
                           py::object data, long flags) {
-  with_context();
   auto in = from_py(data);
   {
     py::gil_scoped_release release;
@@ -427,8 +379,7 @@ static TPQCTL pytpenqueue(const char *qspace, const char *qname, TPQCTL *ctl,
 static std::pair<TPQCTL, py::object> pytpdequeue(const char *qspace,
                                                  const char *qname, TPQCTL *ctl,
                                                  long flags) {
-  with_context();
-  xatmibuf out("ubf", 1024);
+  xatmibuf out("UBF", 1024);
   {
     py::gil_scoped_release release;
     int rc = tpdequeue(const_cast<char *>(qspace), const_cast<char *>(qname),
@@ -444,7 +395,7 @@ static std::pair<TPQCTL, py::object> pytpdequeue(const char *qspace,
 }
 
 static int pytpacall(const char *svc, py::object idata, long flags) {
-  with_context();
+
   auto in = from_py(idata);
 
   py::gil_scoped_release release;
@@ -456,8 +407,8 @@ static int pytpacall(const char *svc, py::object idata, long flags) {
 }
 
 static pytpreply pytpgetrply(int cd, long flags) {
-  with_context();
-  xatmibuf out("ubf", 1024);
+
+  xatmibuf out("UBF", 1024);
   {
     py::gil_scoped_release release;
     int rc = tpgetrply(&cd, out.pp, &out.len, flags);
@@ -508,7 +459,7 @@ static void pytpforward(const std::string &svc, py::object data, long flags) {
 
 static pytpreply pytpadmcall(py::object idata, long flags) {
   auto in = from_py(idata);
-  xatmibuf out("ubf", 1024);
+  xatmibuf out("UBF", 1024);
   {
     py::gil_scoped_release release;
     int rc = tpadmcall(*in.fbfr(), out.fbfr(), flags);
@@ -522,9 +473,7 @@ static pytpreply pytpadmcall(py::object idata, long flags) {
 }
 
 int tpsvrinit(int argc, char *argv[]) {
-  if (!thread_context) {
-    thread_context.reset(new context());
-  }
+
   if (tpopen() == -1) {
     userlog(const_cast<char *>("Failed tpopen() = %d / %s"), tperrno,
             tpstrerror(tperrno));
@@ -547,9 +496,7 @@ void tpsvrdone() {
   }
 }
 int tpsvrthrinit(int argc, char *argv[]) {
-  if (!thread_context) {
-    thread_context.reset(new context());
-  }
+
   // Create a new Python thread
   // otherwise pybind11 creates and deletes one
   // and messes up threading.local
@@ -578,9 +525,8 @@ void tpsvrthrdone() {
   }
 }
 void PY(TPSVCINFO *svcinfo) {
-  if (!thread_context) {
-    thread_context.reset(new context());
-  }
+
+
   tsvcresult.clean = true;
 
   try {
@@ -877,8 +823,11 @@ PYBIND11_MODULE(_endurox, m) {
       [](const char *usrname, const char *cltname, const char *passwd,
          const char *grpname, long flags) {
         py::gil_scoped_release release;
-        thread_context.reset(
-            new context(tpinit, usrname, cltname, passwd, grpname, flags));
+
+        if (tpinit(NULL) == -1) {
+          throw xatmi_exception(tperrno);
+        }
+
       },
       "Joins an application", py::arg("usrname") = nullptr,
       py::arg("cltname") = nullptr, py::arg("passwd") = nullptr,
@@ -888,10 +837,11 @@ PYBIND11_MODULE(_endurox, m) {
       "tpterm",
       []() {
         py::gil_scoped_release release;
-        thread_context.reset();
+
         if (tpterm() == -1) {
           throw xatmi_exception(tperrno);
         }
+
       },
       R"pbdoc(
         Leaves application, closes XATMI session.
@@ -1015,31 +965,6 @@ PYBIND11_MODULE(_endurox, m) {
         py::arg("svc"), py::arg("data"), py::arg("flags") = 0);
 
   m.def(
-      "tpappthrinit",
-      [](const char *usrname, const char *cltname, const char *passwd,
-         const char *grpname, long flags) {
-        py::gil_scoped_release release;
-        thread_context.reset(new context(tpappthrinit, usrname, cltname, passwd,
-                                         grpname, flags));
-      },
-      "Routine for creating and initializing a new Endurox context in an "
-      "application-created server thread.",
-      py::arg("usrname") = nullptr, py::arg("cltname") = nullptr,
-      py::arg("passwd") = nullptr, py::arg("grpname") = nullptr,
-      py::arg("flags") = 0);
-
-  m.def(
-      "tpappthrterm",
-      []() {
-        py::gil_scoped_release release;
-        thread_context.reset();
-        if (tpappthrterm() == -1) {
-          throw xatmi_exception(tperrno);
-        }
-      },
-      "Routine for terminating Endurox User context in a server process");
-
-  m.def(
       "xaoSvcCtx",
       []() {
         if (xao_svc_ctx_ptr == nullptr) {
@@ -1083,7 +1008,6 @@ PYBIND11_MODULE(_endurox, m) {
   m.def(
       "tpgblktime",
       [](long flags) {
-        with_context();
         int rc = tpgblktime(flags);
         if (rc == -1) {
           throw xatmi_exception(tperrno);
@@ -1096,7 +1020,6 @@ PYBIND11_MODULE(_endurox, m) {
   m.def(
       "tpsblktime",
       [](int blktime, long flags) {
-        with_context();
         if (tpsblktime(blktime, flags) == -1) {
           throw xatmi_exception(tperrno);
         }
@@ -1207,7 +1130,7 @@ PYBIND11_MODULE(_endurox, m) {
   m.def(
       "Bextread",
       [](py::object iop) {
-        xatmibuf obuf("ubf", 1024);
+        xatmibuf obuf("UBF", 1024);
         int fd = iop.attr("fileno")().cast<py::int_>();
         std::unique_ptr<FILE, decltype(&fclose)> fiop(fdopen(dup(fd), "r"),
                                                       &fclose);
