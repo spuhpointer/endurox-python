@@ -1,4 +1,4 @@
-import cmake_example as m
+import endurox as m
 
 
 def test_main():

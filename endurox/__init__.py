@@ -14,4 +14,4 @@ from ._endurox import *
 # Restore original flags
 sys.setdlopenflags(flags)
 
-#__all__ = ['cmake_example']
+#__all__ = ['endurox']
