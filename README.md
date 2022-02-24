@@ -46,7 +46,7 @@ needed for the pybind11 submodule:
 
 ```bash
 git clone --recursive https://github.com/pybind/endurox.git
-pip install ./endurox
+pip install -v --global-option=build_ext ./endurox
 ```
 
 With the `setup.py` file included in this example, the `pip install` command will
