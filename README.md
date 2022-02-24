@@ -1,43 +1,9 @@
-# endurox for pybind11
-
-[![Gitter][gitter-badge]][gitter-link]
-
-|      CI              | status |
-|----------------------|--------|
-| MSVC 2015            | [![AppVeyor][appveyor-badge]][appveyor-link] |
-| conda.recipe         | [![Conda Actions Status][actions-conda-badge]][actions-conda-link] |
-| pip builds           | [![Pip Actions Status][actions-pip-badge]][actions-pip-link] |
-| [`cibuildwheel`][]   | [![Wheels Actions Status][actions-wheels-badge]][actions-wheels-link] |
-
-[gitter-badge]:            https://badges.gitter.im/pybind/Lobby.svg
-[gitter-link]:             https://gitter.im/pybind/Lobby
-[actions-badge]:           https://github.com/pybind/endurox/workflows/Tests/badge.svg
-[actions-conda-link]:      https://github.com/pybind/endurox/actions?query=workflow%3A%22Conda
-[actions-conda-badge]:     https://github.com/pybind/endurox/workflows/Conda/badge.svg
-[actions-pip-link]:        https://github.com/pybind/endurox/actions?query=workflow%3A%22Pip
-[actions-pip-badge]:       https://github.com/pybind/endurox/workflows/Pip/badge.svg
-[actions-wheels-link]:     https://github.com/pybind/endurox/actions?query=workflow%3AWheels
-[actions-wheels-badge]:    https://github.com/pybind/endurox/workflows/Wheels/badge.svg
-[appveyor-link]:           https://ci.appveyor.com/project/dean0x7d/cmake-example/branch/master
-[appveyor-badge]:          https://ci.appveyor.com/api/projects/status/57nnxfm4subeug43/branch/master?svg=true
-
-An example [pybind11](https://github.com/pybind/pybind11) module built with a
-CMake-based build system. This is useful for C++ codebases that have an
-existing CMake project structure. This is in many cases superseded by
-[`scikit_build_example`](https://github.com/pybind/scikit_build_example), which uses
-[scikit-build][], a tool from the makers of CMake designed to allow Python
-packages to be driven from CMake. However, there are still cases where you
-might want full control over the CMake run; and both of these approaches have
-some trade-offs not present in a pure setuptools build (see
-[`python_example`](https://github.com/pybind/python_example)). Python 3.6+ required;
-see the commit history for older versions of Python.
+# endurox for Python 3
 
 ## Prerequisites
 
 * A compiler with C++11 support
-* Pip 10+ or CMake >= 3.4 (or 3.8+ on Windows, which was the first version to support VS 2015)
-* Ninja or Pip 10+
-
+* cmake is used for development time makefile preparation.
 
 ## Installation
 
