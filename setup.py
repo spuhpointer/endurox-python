@@ -1,104 +1,108 @@
-from setuptools import setup, Extension
-from setuptools.command.build_ext import build_ext
+#! /usr/bin/env python3
+
 import os
+import re
 import sys
-import setuptools
+import sysconfig
+import platform
+import subprocess
 
-__name__ = 'endurox'
-__version__ = '1.0.7'
+from distutils.version import LooseVersion
+from setuptools import setup, Extension, find_packages
+from setuptools.command.build_ext import build_ext
+from setuptools.command.test import test as TestCommand
+from shutil import copyfile, copymode
 
-class get_pybind_include(object):
-    """Helper class to determine the pybind11 include path
-    The purpose of this class is to postpone importing pybind11
-    until it is actually installed, so that the ``get_include()``
-    method can be invoked. """
 
-    def __init__(self, user=False):
-        self.user = user
+class CMakeExtension(Extension):
+    def __init__(self, name, sourcedir=''):
+        Extension.__init__(self, name, sources=[])
+        self.sourcedir = os.path.abspath(sourcedir)
 
-    def __str__(self):
-        import pybind11
-        return pybind11.get_include(self.user)
 
-ext_modules = [
-    Extension(
-        'endurox._endurox',
-        ['src/endurox.cpp'],
-        include_dirs=[
-            # Path to pybind11 headers
-            get_pybind_include(),
-            get_pybind_include(user=True),
-        ],
-        libraries=['atmisrvinteg', 'atmi', 'ubf', 'nstd', 'pthread', 'rt'],
-        language='c++'
-    ),
-]
-
-# As of Python 3.6, CCompiler has a `has_flag` method.
-# cf http://bugs.python.org/issue26689
-def has_flag(compiler, flagname):
-    """Return a boolean indicating whether a flag name is supported on
-    the specified compiler.
-    """
-    import tempfile
-    with tempfile.NamedTemporaryFile('w', suffix='.cpp') as f:
-        f.write('int main (int argc, char **argv) { return 0; }')
+class CMakeBuild(build_ext):
+    def run(self):
         try:
-            compiler.compile([f.name], extra_postargs=[flagname])
-        except setuptools.distutils.errors.CompileError:
-            return False
-    return True
+            out = subprocess.check_output(['cmake', '--version'])
+        except OSError:
+            raise RuntimeError(
+                "CMake must be installed to build the following extensions: " +
+                ", ".join(e.name for e in self.extensions))
 
-def cpp_flag(compiler):
-    """Return the -std=c++[11/14/17] compiler flag.
-    The newer version is prefered over c++11 (when it is available).
-    """
-    flags = ['-std=c++17', '-std=c++14', '-std=c++11']
-
-    for flag in flags:
-        if has_flag(compiler, flag): return flag
-
-    raise RuntimeError('Unsupported compiler -- at least C++11 support '
-                       'is needed!')
-
-class BuildExt(build_ext):
-    """A custom build extension for adding compiler-specific options."""
-    def build_extensions(self):
-        ct = self.compiler.compiler_type
-        opts = []
-        link_opts = []
-        if ct == 'unix':
-            opts.append('-DVERSION_INFO="%s"' % self.distribution.get_version())
-            opts.append(cpp_flag(self.compiler))
-            if has_flag(self.compiler, '-fvisibility=hidden'):
-                opts.append('-fvisibility=hidden')
+        if platform.system() == "Windows":
+            cmake_version = LooseVersion(re.search(r'version\s*([\d.]+)',
+                                         out.decode()).group(1))
+            if cmake_version < '3.1.0':
+                raise RuntimeError("CMake >= 3.1.0 is required on Windows")
 
         for ext in self.extensions:
-            ext.extra_compile_args = opts
-            ext.extra_link_args = link_opts
-            if ct == 'msvc': ext.libraries = []
-        build_ext.build_extensions(self)
+            self.build_extension(ext)
+
+    def build_extension(self, ext):
+        extdir = os.path.abspath(
+            os.path.dirname(self.get_ext_fullpath(ext.name)))
+        cmake_args = ['-DCMAKE_LIBRARY_OUTPUT_DIRECTORY=' + extdir,
+                      '-DPYTHON_EXECUTABLE=' + sys.executable]
+
+        cfg = 'Debug' if self.debug else 'Release'
+        build_args = ['--config', cfg]
+
+        if platform.system() == "Windows":
+            cmake_args += ['-DCMAKE_LIBRARY_OUTPUT_DIRECTORY_{}={}'.format(
+                cfg.upper(),
+                extdir)]
+            if sys.maxsize > 2**32:
+                cmake_args += ['-A', 'x64']
+            build_args += ['--', '/m']
+        else:
+            cmake_args += ['-DCMAKE_BUILD_TYPE=' + cfg]
+            build_args += ['--', '-j2']
+
+        env = os.environ.copy()
+        env['CXXFLAGS'] = '{} -DVERSION_INFO=\\"{}\\"'.format(
+            env.get('CXXFLAGS', ''),
+            self.distribution.get_version())
+        if not os.path.exists(self.build_temp):
+            os.makedirs(self.build_temp)
+        subprocess.check_call(['cmake', ext.sourcedir] + cmake_args,
+                              cwd=self.build_temp, env=env)
+        subprocess.check_call(['cmake', '--build', '.'] + build_args,
+                              cwd=self.build_temp)
+        # Copy *_test file to tests directory
+        #test_bin = os.path.join(self.build_temp, 'endurox_test')
+        #self.copy_test_file(test_bin)
+        print()  # Add an empty line for cleaner output
+
+    def copy_test_file(self, src_file):
+        '''
+        Copy ``src_file`` to ``dest_file`` ensuring parent directory exists.
+        By default, message like `creating directory /path/to/package` and
+        `copying directory /src/path/to/package -> path/to/package` are displayed on standard output. Adapted from scikit-build.
+        '''
+        # Create directory if needed
+        dest_dir = os.path.join(os.path.dirname(
+            os.path.abspath(__file__)), 'tests', 'bin')
+        if dest_dir != "" and not os.path.exists(dest_dir):
+            print("creating directory {}".format(dest_dir))
+            os.makedirs(dest_dir)
+
+        # Copy file
+        dest_file = os.path.join(dest_dir, os.path.basename(src_file))
+        print("copying {} -> {}".format(src_file, dest_file))
+        copyfile(src_file, dest_file)
+        copymode(src_file, dest_file)
 
 setup(
-    name=__name__,
-    version=__version__,
-    author='Mavimax SIA',
-    author_email='support@mavimax.com',
-    url='https://github.com/endurox-dev/endurox-python',
-    description='Python3 bindings for writing Enduro/X clients and servers',
+    name='endurox',
+    version='0.2',
+    author='Benjamin Jack',
+    author_email='benjamin.r.jack@gmail.com',
+    description='A hybrid Python/C++ test project',
     long_description='',
-    ext_modules=ext_modules,
-    setup_requires=['pybind11>=2.4'],
-    cmdclass={'build_ext': BuildExt},
-    license='MIT',
-    classifiers=[
-        'Programming Language :: Python :: 3',
-        'Programming Language :: C++',
-        'Operating System :: POSIX',
-        'Operating System :: Microsoft :: Windows',
-        'License :: OSI Approved :: MIT License',
-        'Topic :: Software Development',
-    ],
+    packages=find_packages('src'),
+    package_dir={'':'src'},
+    ext_modules=[CMakeExtension('endurox/endurox')],
+    cmdclass=dict(build_ext=CMakeBuild),
+    test_suite='tests',
     zip_safe=False,
-    packages=['endurox']
 )

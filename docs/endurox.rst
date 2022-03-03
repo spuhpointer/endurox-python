@@ -1,1 +1,1 @@
-.. automodule:: endurox
+.. automodule:: endurox.endurox

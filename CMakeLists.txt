@@ -1,15 +1,23 @@
-
-cmake_minimum_required(VERSION 3.4...3.18)
+cmake_minimum_required(VERSION 3.1)
 project(endurox-python)
 
+SET(SOURCE_DIR "src/endurox")
+# Tell cmake that headers are in alse in source_dir
+include_directories(${SOURCE_DIR})
+SET(SOURCES "${SOURCE_DIR}/endurox.cpp")
+
+#SET(TEST_DIR "tests")
+#SET(TESTS ${SOURCES}
+#    "${TEST_DIR}/test_main.cpp"
+#    "${TEST_DIR}/test_math.cpp")
+
+# Generate a test executable
+include_directories(${SOURCE_DIR})
+#add_executable("${PROJECT_NAME}_test" ${TESTS})
+
+# Generate python module
 add_subdirectory(pybind11)
-pybind11_add_module(_endurox src/endurox.cpp)
 
-#target_link_libraries(_math atmisrvinteg atmi ubf nstd)
+pybind11_add_module(endurox ${SOURCES})
+target_link_libraries(endurox PRIVATE atmisrvinteg atmi ubf nstd pthread rt)
 
-target_link_libraries(_endurox PRIVATE pybind11::module atmisrvinteg atmi ubf nstd pthread rt)
-
-# EXAMPLE_VERSION_INFO is defined by setup.py and passed into the C++ code as a
-# define (VERSION_INFO) here.
-target_compile_definitions(_endurox
-                           PRIVATE VERSION_INFO=${EXAMPLE_VERSION_INFO})

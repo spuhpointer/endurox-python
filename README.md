@@ -1,52 +1,55 @@
-# endurox for Python 3
+# endurox-python
 
-## Prerequisites
+This repository contains an example Python module which wraps C++ code. The code presented here was designed to meet four requirements:
 
-* A compiler with C++11 support
-* cmake is used for development time makefile preparation.
+1. Python bindings for C++ code (using [`pybind11`](http://pybind11.readthedocs.io/en/stable/index.html) and built with [CMake](http://cmake.org))
+2. Unit tests for C++ code (using [`catch`](http://catch-lib.net))
+3. Unit tests for Python code (using `unittest`)
+4. A `setuptools` setup.py script for building, installation, and testing
 
-## Installation
+Please see the [blog post that accompanies this repository](http://www.benjack.io/2018/02/02/python-cpp-revisited.html) for more information.
 
-Just clone this repository and pip install. Note the `--recursive` option which is
-needed for the pybind11 submodule:
+**NOTE**: If you'd like to see the version of the repository that corresponds to my [original June 2017 blog post](http://www.benjack.io/2017/06/12/python-cpp-tests.html), go to [this release](https://github.com/benjaminjack/endurox/tree/v0.1). However, I no longer recommend using the repository structure from this old release.
+
+# Installation
+
+To build and install `endurox`, clone or download this repository and then, from within the repository, run:
 
 ```bash
-git clone --recursive https://github.com/pybind/endurox.git
-pip install -v --global-option=build_ext ./endurox
+python3 ./setup.py install
 ```
 
-With the `setup.py` file included in this example, the `pip install` command will
-invoke CMake and build the pybind11 module as specified in `CMakeLists.txt`.
+or
 
-
-
-## Building the documentation
-
-Documentation for the example project is generated using Sphinx. Sphinx has the
-ability to automatically inspect the signatures and documentation strings in
-the extension module to generate beautiful documentation in a variety formats.
-The following command generates HTML-based reference documentation; for other
-formats please refer to the Sphinx manual:
-
- - `cd endurox/docs`
- - `make html`
-
-
-## License
-
-Pybind11 is provided under a BSD-style license that can be found in the LICENSE
-file. By using, distributing, or contributing to this project, you agree to the
-terms and conditions of this license.
-
-
-## Test call
-
-```python
-import endurox
-endurox.add(1, 2)
+```bash
+pip3 install .
 ```
 
-[`cibuildwheel`]:          https://cibuildwheel.readthedocs.io
-[FAQ]: http://pybind11.rtfd.io/en/latest/faq.html#working-with-ancient-visual-studio-2009-builds-on-windows
-[vs2015_runtime]: https://www.microsoft.com/en-us/download/details.aspx?id=48145
-[scikit-build]: https://scikit-build.readthedocs.io/en/latest/
+# Tests
+
+To execute all unit tests, run the following command:
+
+```bash
+python3 ./setup.py test
+```
+
+# Documentation
+
+Note that documentation is updated only when "pip install ." is re-run.
+
+```bash
+cd docs
+make html
+cd _build/html
+firefox index.html
+```
+
+# Requirements
+
+- Python 3
+- CMake 3.1 or higher
+- A modern compiler with C++11 support
+
+# Acknowledgements
+
+Much of the code in this repository was adapted from the [`pybind11` tutorial](http://pybind11.readthedocs.io/en/stable/basics.html) and the [`pybind11` example CMake repository](https://github.com/pybind/cmake_example).

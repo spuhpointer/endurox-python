@@ -421,7 +421,7 @@ static pytpreply pytpgetrply(int cd, long flags) {
   return pytpreply(tperrno, tpurcode, to_py(std::move(out)), cd);
 }
 
-#define MODULE "_endurox"
+#define MODULE "endurox"
 struct svcresult {
   int rval;
   long rcode;
@@ -745,7 +745,7 @@ static void register_exceptions(py::module &m) {
   });
 }
 
-PYBIND11_MODULE(_endurox, m) {
+PYBIND11_MODULE(endurox, m) {
 
 
   register_exceptions(m);
@@ -848,10 +848,11 @@ PYBIND11_MODULE(_endurox, m) {
         
         For more deatils see C call *tpterm(3)*.
 
-        :raise: XatmiException, with following error codes:
-        	*TPEPROTO* - Called from XATMI server (main thread)
-        	*TPESYSTEM* - Enduro/X System error occurred
-        	*TPEOS* - Operating system error occurred.
+        :raise XatmiException: 
+            | Following error codes may be present:
+            | *TPEPROTO* - Called from XATMI server (main thread),
+            | *TPESYSTEM* - Enduro/X System error occurred,
+            | *TPEOS* - Operating system error occurred.
 
         Parameters
         ----------
