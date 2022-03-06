@@ -1,7 +1,6 @@
 
 #include <dlfcn.h>
 
-
 #include <atmi.h>
 #include <tpadm.h>
 #include <userlog.h>
@@ -10,6 +9,7 @@
 #undef _
 
 #include "exceptions.h"
+#include "ndrx_pymod.h"
 
 #include <pybind11/functional.h>
 #include <pybind11/pybind11.h>
@@ -20,646 +20,705 @@
 
 namespace py = pybind11;
 
-/**
- * XATMI buffer handling routines
- */
-struct xatmibuf {
+struct pytpreply
+{
+    int rval;
+    long rcode;
+    py::object data;
+    int cd;
 
-  xatmibuf() : pp(&p), len(0), p(nullptr) {}
-
-  xatmibuf(TPSVCINFO *svcinfo)
-      : pp(&svcinfo->data), len(svcinfo->len), p(nullptr) {}
-
-  xatmibuf(const char *type, long len) : pp(&p), len(len), p(nullptr) {
-    reinit(type, len);
-  }
-  void reinit(const char *type, long len_) {
-    if (*pp == nullptr) {
-      len = len_;
-      *pp = tpalloc(const_cast<char *>(type), nullptr, len);
-      if (*pp == nullptr) {
-        throw std::bad_alloc();
-      }
-    } else {
-      /* always UBF? */
-      UBFH *fbfr = reinterpret_cast<UBFH *>(*pp);
-      Binit(fbfr, Bsizeof(fbfr));
-    }
-  }
-
-  xatmibuf(xatmibuf &&other) : xatmibuf() { swap(other); }
-
-  xatmibuf &operator=(xatmibuf &&other) {
-    swap(other);
-    return *this;
-  }
-
-  ~xatmibuf() {
-    if (p != nullptr) {
-      tpfree(p);
-    }
-  }
-
-  xatmibuf(const xatmibuf &) = delete;
-  xatmibuf &operator=(const xatmibuf &) = delete;
-
-  char *release() {
-    char *ret = p;
-    p = nullptr;
-    return ret;
-  }
-
-  UBFH **fbfr() { return reinterpret_cast<UBFH **>(pp); }
-
-  char **pp;
-  long len;
-
-  void mutate(std::function<int(UBFH *)> f) {
-    while (true) {
-      int rc = f(*fbfr());
-      if (rc == -1) {
-        if (Berror == BNOSPACE) {
-          len *= 2;
-          *pp = tprealloc(*pp, len);
-        } else {
-          throw ubf_exception(Berror);
-        }
-      } else {
-        break;
-      }
-    }
-  }
-
-  char *p;
-
- private:
-  void swap(xatmibuf &other) noexcept {
-    std::swap(p, other.p);
-    std::swap(len, other.len);
-  }
-};
-
-struct pytpreply {
-  int rval;
-  long rcode;
-  py::object data;
-  int cd;
-
-  pytpreply(int rval, long rcode, py::object data, int cd = -1)
-      : rval(rval), rcode(rcode), data(data), cd(cd) {}
+    pytpreply(int rval, long rcode, py::object data, int cd = -1)
+        : rval(rval), rcode(rcode), data(data), cd(cd) {}
 };
 
 static py::object server;
 
-static py::object to_py(UBFH *fbfr, BFLDLEN buflen = 0) {
-  BFLDID fieldid = BFIRSTFLDID;
-  BFLDOCC oc = 0;
 
-  py::dict result;
-  py::list val;
-
-  if (buflen == 0) {
-    buflen = Bsizeof(fbfr);
-  }
-  std::unique_ptr<char> value(new char[buflen]);
-
-  for (;;) {
-    BFLDLEN len = buflen;
-
-    int r = Bnext(fbfr, &fieldid, &oc, value.get(), &len);
-    if (r == -1) {
-      throw ubf_exception(Berror);
-    } else if (r == 0) {
-      break;
+/**
+ * @brief Extend the XATMI C struct with python specific fields
+ */
+struct pytpsvcinfo: TPSVCINFO
+{
+    pytpsvcinfo(TPSVCINFO *inf)
+    {
+        NDRX_STRCPY_SAFE(name, inf->name);
+        NDRX_STRCPY_SAFE(fname, inf->fname);
+        len = inf->len;
+        flags = inf->flags;
+        cd = inf->cd;
+        appkey = inf->appkey;
+        CLIENTID cltid;
+        memcpy(&cltid, &inf->cltid, sizeof(cltid));
     }
+    py::object data;
+};
 
-    if (oc == 0) {
-      val = py::list();
+//Mapping of advertised functions
+std::map<std::string, py::object> M_dispmap {};
 
-      char *name = Bfname(fieldid);
-      if (name != nullptr) {
-        result[name] = val;
-      } else {
-        result[py::int_(fieldid)] = val;
-      }
+static py::object to_py(UBFH *fbfr, BFLDLEN buflen = 0)
+{
+    BFLDID fieldid = BFIRSTFLDID;
+    BFLDOCC oc = 0;
+
+    py::dict result;
+    py::list val;
+
+    if (buflen == 0)
+    {
+        buflen = Bsizeof(fbfr);
     }
+    std::unique_ptr<char> value(new char[buflen]);
 
-    switch (Bfldtype(fieldid)) {
-      case BFLD_CHAR:
-        val.append(py::cast(value.get()[0]));
-        break;
-      case BFLD_SHORT:
-        val.append(py::cast(*reinterpret_cast<short *>(value.get())));
-        break;
-      case BFLD_LONG:
-        val.append(py::cast(*reinterpret_cast<long *>(value.get())));
-        break;
-      case BFLD_FLOAT:
-        val.append(py::cast(*reinterpret_cast<float *>(value.get())));
-        break;
-      case BFLD_DOUBLE:
-        val.append(py::cast(*reinterpret_cast<double *>(value.get())));
-        break;
-      case BFLD_STRING:
-        val.append(
+    for (;;)
+    {
+        BFLDLEN len = buflen;
+
+        int r = Bnext(fbfr, &fieldid, &oc, value.get(), &len);
+        if (r == -1)
+        {
+            throw ubf_exception(Berror);
+        }
+        else if (r == 0)
+        {
+            break;
+        }
+
+        if (oc == 0)
+        {
+            val = py::list();
+
+            char *name = Bfname(fieldid);
+            if (name != nullptr)
+            {
+                result[name] = val;
+            }
+            else
+            {
+                result[py::int_(fieldid)] = val;
+            }
+        }
+
+        switch (Bfldtype(fieldid))
+        {
+        case BFLD_CHAR:
+            val.append(py::cast(value.get()[0]));
+            break;
+        case BFLD_SHORT:
+            val.append(py::cast(*reinterpret_cast<short *>(value.get())));
+            break;
+        case BFLD_LONG:
+            val.append(py::cast(*reinterpret_cast<long *>(value.get())));
+            break;
+        case BFLD_FLOAT:
+            val.append(py::cast(*reinterpret_cast<float *>(value.get())));
+            break;
+        case BFLD_DOUBLE:
+            val.append(py::cast(*reinterpret_cast<double *>(value.get())));
+            break;
+        case BFLD_STRING:
+            val.append(
 #if PY_MAJOR_VERSION >= 3
-            py::str(PyUnicode_DecodeLocale(value.get(), "surrogateescape"))
+                py::str(PyUnicode_DecodeLocale(value.get(), "surrogateescape"))
 #else
-            py::bytes(value.get(), len - 1)
+                py::bytes(value.get(), len - 1)
 #endif
-        );
-        break;
-      case BFLD_CARRAY:
-        val.append(py::bytes(value.get(), len));
-        break;
-      case BFLD_UBF:
-        val.append(to_py(reinterpret_cast<UBFH *>(value.get()), buflen));
-        break;
-      default:
-        throw std::invalid_argument("Unsupported field " +
-                                    std::to_string(fieldid));
+            );
+            break;
+        case BFLD_CARRAY:
+            val.append(py::bytes(value.get(), len));
+            break;
+        case BFLD_UBF:
+            val.append(to_py(reinterpret_cast<UBFH *>(value.get()), buflen));
+            break;
+        default:
+            throw std::invalid_argument("Unsupported field " +
+                                        std::to_string(fieldid));
+        }
     }
-  }
-  return result;
+    return result;
 }
 
-static py::object to_py(xatmibuf buf) {
-  char type[8];
-  char subtype[16];
-  if (tptypes(*buf.pp, type, subtype) == -1) {
-    throw std::invalid_argument("Invalid buffer type");
-  }
-  if (strcmp(type, "STRING") == 0) {
-    return py::cast(*buf.pp);
-  } else if (strcmp(type, "CARRAY") == 0 || strcmp(type, "X_OCTET") == 0) {
-    return py::bytes(*buf.pp, buf.len);
-  } else if (strcmp(type, "UBF") == 0) {
-    return to_py(*buf.fbfr());
-  } else {
-    throw std::invalid_argument("Unsupported buffer type");
-  }
+static py::object to_py(xatmibuf buf)
+{
+    char type[8];
+    char subtype[16];
+    if (tptypes(*buf.pp, type, subtype) == -1)
+    {
+        throw std::invalid_argument("Invalid buffer type");
+    }
+    if (strcmp(type, "STRING") == 0)
+    {
+        return py::cast(*buf.pp);
+    }
+    else if (strcmp(type, "CARRAY") == 0 || strcmp(type, "X_OCTET") == 0)
+    {
+        return py::bytes(*buf.pp, buf.len);
+    }
+    else if (strcmp(type, "UBF") == 0)
+    {
+        return to_py(*buf.fbfr());
+    }
+    else
+    {
+        throw std::invalid_argument("Unsupported buffer type");
+    }
 }
 
 static void from_py(py::dict obj, xatmibuf &b);
 static void from_py1(xatmibuf &buf, BFLDID fieldid, BFLDOCC oc,
-                     py::handle obj, xatmibuf &b) {
-  if (obj.is_none()) {
-    // pass
+                     py::handle obj, xatmibuf &b)
+{
+    if (obj.is_none())
+    {
+        // pass
 #if PY_MAJOR_VERSION >= 3
-  } else if (py::isinstance<py::bytes>(obj)) {
-    std::string val(PyBytes_AsString(obj.ptr()), PyBytes_Size(obj.ptr()));
+    }
+    else if (py::isinstance<py::bytes>(obj))
+    {
+        std::string val(PyBytes_AsString(obj.ptr()), PyBytes_Size(obj.ptr()));
 
-    buf.mutate([&](UBFH *fbfr) {
-      return CBchg(fbfr, fieldid, oc, const_cast<char *>(val.data()),
-                     val.size(), BFLD_CARRAY);
-    });
+        buf.mutate([&](UBFH *fbfr)
+                   { return CBchg(fbfr, fieldid, oc, const_cast<char *>(val.data()),
+                                  val.size(), BFLD_CARRAY); });
 #endif
-  } else if (py::isinstance<py::str>(obj)) {
+    }
+    else if (py::isinstance<py::str>(obj))
+    {
 #if PY_MAJOR_VERSION >= 3
-    py::bytes b = py::reinterpret_steal<py::bytes>(
-        PyUnicode_EncodeLocale(obj.ptr(), "surrogateescape"));
-    std::string val(PyBytes_AsString(b.ptr()), PyBytes_Size(b.ptr()));
+        py::bytes b = py::reinterpret_steal<py::bytes>(
+            PyUnicode_EncodeLocale(obj.ptr(), "surrogateescape"));
+        std::string val(PyBytes_AsString(b.ptr()), PyBytes_Size(b.ptr()));
 #else
-    if (PyUnicode_Check(obj.ptr())) {
-      obj = PyUnicode_AsEncodedString(obj.ptr(), "utf-8", "surrogateescape");
-    }
-    std::string val(PyString_AsString(obj.ptr()), PyString_Size(obj.ptr()));
+        if (PyUnicode_Check(obj.ptr()))
+        {
+            obj = PyUnicode_AsEncodedString(obj.ptr(), "utf-8", "surrogateescape");
+        }
+        std::string val(PyString_AsString(obj.ptr()), PyString_Size(obj.ptr()));
 #endif
-    buf.mutate([&](UBFH *fbfr) {
-      return CBchg(fbfr, fieldid, oc, const_cast<char *>(val.data()),
-                     val.size(), BFLD_CARRAY);
-    });
-  } else if (py::isinstance<py::int_>(obj)) {
-    long val = obj.cast<py::int_>();
-    buf.mutate([&](UBFH *fbfr) {
-      return CBchg(fbfr, fieldid, oc, reinterpret_cast<char *>(&val), 0,
-                     BFLD_LONG);
-    });
-
-  } else if (py::isinstance<py::float_>(obj)) {
-    double val = obj.cast<py::float_>();
-    buf.mutate([&](UBFH *fbfr) {
-      return CBchg(fbfr, fieldid, oc, reinterpret_cast<char *>(&val), 0,
-                     BFLD_DOUBLE);
-    });
-  } else if (py::isinstance<py::dict>(obj)) {
-    from_py(obj.cast<py::dict>(), b);
-    buf.mutate([&](UBFH *fbfr) {
-      return Bchg(fbfr, fieldid, oc, reinterpret_cast<char *>(*b.fbfr()), 0);
-    });
-  } else {
-    throw std::invalid_argument("Unsupported type");
-  }
-}
-
-static void from_py(py::dict obj, xatmibuf &b) {
-  b.reinit("UBF", 1024);
-  xatmibuf f;
-
-  for (auto it : obj) {
-    BFLDID fieldid;
-    if (py::isinstance<py::int_>(it.first)) {
-      fieldid = it.first.cast<py::int_>();
-    } else {
-      fieldid =
-          Bfldid(const_cast<char *>(std::string(py::str(it.first)).c_str()));
+        buf.mutate([&](UBFH *fbfr)
+                   { return CBchg(fbfr, fieldid, oc, const_cast<char *>(val.data()),
+                                  val.size(), BFLD_CARRAY); });
     }
-
-    py::handle o = it.second;
-    if (py::isinstance<py::list>(o)) {
-      BFLDOCC oc = 0;
-      for (auto e : o.cast<py::list>()) {
-        from_py1(b, fieldid, oc++, e, f);
-      }
-    } else {
-      // Handle single elements instead of lists for convenience
-      from_py1(b, fieldid, 0, o, f);
+    else if (py::isinstance<py::int_>(obj))
+    {
+        long val = obj.cast<py::int_>();
+        buf.mutate([&](UBFH *fbfr)
+                   { return CBchg(fbfr, fieldid, oc, reinterpret_cast<char *>(&val), 0,
+                                  BFLD_LONG); });
     }
-  }
-}
-
-static xatmibuf from_py(py::object obj) {
-  if (py::isinstance<py::bytes>(obj)) {
-    xatmibuf buf("CARRAY", PyBytes_Size(obj.ptr()));
-    memcpy(*buf.pp, PyBytes_AsString(obj.ptr()), PyBytes_Size(obj.ptr()));
-    return buf;
-  } else if (py::isinstance<py::str>(obj)) {
-    std::string s = py::str(obj);
-    xatmibuf buf("STRING", s.size() + 1);
-    strcpy(*buf.pp, s.c_str());
-    return buf;
-  } else if (py::isinstance<py::dict>(obj)) {
-    xatmibuf buf("UBF", 1024);
-
-    from_py(static_cast<py::dict>(obj), buf);
-
-    return buf;
-  } else {
-    throw std::invalid_argument("Unsupported buffer type");
-  }
-}
-
-static py::object pytpexport(py::object idata, long flags) {
-  auto in = from_py(idata);
-  std::vector<char> ostr;
-  ostr.resize(512 + in.len * 2);
-
-  long olen = ostr.capacity();
-  int rc = tpexport(in.p, in.len, &ostr[0], &olen, flags);
-  if (rc == -1) {
-    throw xatmi_exception(tperrno);
-  }
-
-  if (flags == 0) {
-    return py::bytes(&ostr[0], olen);
-  }
-  return py::str(&ostr[0]);
-}
-
-static py::object pytpimport(const std::string istr, long flags) {
-  xatmibuf obuf("UBF", istr.size());
-
-  long olen = 0;
-  int rc = tpimport(const_cast<char *>(istr.c_str()), istr.size(), obuf.pp,
-                    &olen, flags);
-  if (rc == -1) {
-    throw xatmi_exception(tperrno);
-  }
-
-  return to_py(std::move(obuf));
-}
-
-static void pytppost(const std::string eventname, py::object data, long flags) {
-  auto in = from_py(data);
-
-  {
-    py::gil_scoped_release release;
-    int rc =
-        tppost(const_cast<char *>(eventname.c_str()), *in.pp, in.len, flags);
-    if (rc == -1) {
-      throw xatmi_exception(tperrno);
+    else if (py::isinstance<py::float_>(obj))
+    {
+        double val = obj.cast<py::float_>();
+        buf.mutate([&](UBFH *fbfr)
+                   { return CBchg(fbfr, fieldid, oc, reinterpret_cast<char *>(&val), 0,
+                                  BFLD_DOUBLE); });
     }
-  }
+    else if (py::isinstance<py::dict>(obj))
+    {
+        from_py(obj.cast<py::dict>(), b);
+        buf.mutate([&](UBFH *fbfr)
+                   { return Bchg(fbfr, fieldid, oc, reinterpret_cast<char *>(*b.fbfr()), 0); });
+    }
+    else
+    {
+        throw std::invalid_argument("Unsupported type");
+    }
 }
 
-static pytpreply pytpcall(const char *svc, py::object idata, long flags) {
+static void from_py(py::dict obj, xatmibuf &b)
+{
+    b.reinit("UBF", 1024);
+    xatmibuf f;
 
-  auto in = from_py(idata);
-  xatmibuf out("UBF", 1024);
-  {
-    py::gil_scoped_release release;
-    int rc = tpcall(const_cast<char *>(svc), *in.pp, in.len, out.pp, &out.len,
-                    flags);
-    if (rc == -1) {
-      if (tperrno != TPESVCFAIL) {
+    for (auto it : obj)
+    {
+        BFLDID fieldid;
+        if (py::isinstance<py::int_>(it.first))
+        {
+            fieldid = it.first.cast<py::int_>();
+        }
+        else
+        {
+            fieldid =
+                Bfldid(const_cast<char *>(std::string(py::str(it.first)).c_str()));
+        }
+
+        py::handle o = it.second;
+        if (py::isinstance<py::list>(o))
+        {
+            BFLDOCC oc = 0;
+            for (auto e : o.cast<py::list>())
+            {
+                from_py1(b, fieldid, oc++, e, f);
+            }
+        }
+        else
+        {
+            // Handle single elements instead of lists for convenience
+            from_py1(b, fieldid, 0, o, f);
+        }
+    }
+}
+
+static xatmibuf from_py(py::object obj)
+{
+    if (py::isinstance<py::bytes>(obj))
+    {
+        xatmibuf buf("CARRAY", PyBytes_Size(obj.ptr()));
+        memcpy(*buf.pp, PyBytes_AsString(obj.ptr()), PyBytes_Size(obj.ptr()));
+        return buf;
+    }
+    else if (py::isinstance<py::str>(obj))
+    {
+        std::string s = py::str(obj);
+        xatmibuf buf("STRING", s.size() + 1);
+        strcpy(*buf.pp, s.c_str());
+        return buf;
+    }
+    else if (py::isinstance<py::dict>(obj))
+    {
+        xatmibuf buf("UBF", 1024);
+
+        from_py(static_cast<py::dict>(obj), buf);
+
+        return buf;
+    }
+    else
+    {
+        throw std::invalid_argument("Unsupported buffer type");
+    }
+}
+
+static py::object pytpexport(py::object idata, long flags)
+{
+    auto in = from_py(idata);
+    std::vector<char> ostr;
+    ostr.resize(512 + in.len * 2);
+
+    long olen = ostr.capacity();
+    int rc = tpexport(in.p, in.len, &ostr[0], &olen, flags);
+    if (rc == -1)
+    {
         throw xatmi_exception(tperrno);
-      }
     }
-  }
-  return pytpreply(tperrno, tpurcode, to_py(std::move(out)));
+
+    if (flags == 0)
+    {
+        return py::bytes(&ostr[0], olen);
+    }
+    return py::str(&ostr[0]);
+}
+
+static py::object pytpimport(const std::string istr, long flags)
+{
+    xatmibuf obuf("UBF", istr.size());
+
+    long olen = 0;
+    int rc = tpimport(const_cast<char *>(istr.c_str()), istr.size(), obuf.pp,
+                      &olen, flags);
+    if (rc == -1)
+    {
+        throw xatmi_exception(tperrno);
+    }
+
+    return to_py(std::move(obuf));
+}
+
+static void pytppost(const std::string eventname, py::object data, long flags)
+{
+    auto in = from_py(data);
+
+    {
+        py::gil_scoped_release release;
+        int rc =
+            tppost(const_cast<char *>(eventname.c_str()), *in.pp, in.len, flags);
+        if (rc == -1)
+        {
+            throw xatmi_exception(tperrno);
+        }
+    }
+}
+
+static pytpreply pytpcall(const char *svc, py::object idata, long flags)
+{
+
+    auto in = from_py(idata);
+    xatmibuf out("UBF", 1024);
+    {
+        py::gil_scoped_release release;
+        int rc = tpcall(const_cast<char *>(svc), *in.pp, in.len, out.pp, &out.len,
+                        flags);
+        if (rc == -1)
+        {
+            if (tperrno != TPESVCFAIL)
+            {
+                throw xatmi_exception(tperrno);
+            }
+        }
+    }
+    return pytpreply(tperrno, tpurcode, to_py(std::move(out)));
 }
 
 static TPQCTL pytpenqueue(const char *qspace, const char *qname, TPQCTL *ctl,
-                          py::object data, long flags) {
-  auto in = from_py(data);
-  {
-    py::gil_scoped_release release;
-    int rc = tpenqueue(const_cast<char *>(qspace), const_cast<char *>(qname),
-                       ctl, *in.pp, in.len, flags);
-    if (rc == -1) {
-      if (tperrno == TPEDIAGNOSTIC) {
-        throw qm_exception(ctl->diagnostic);
-      }
-      throw xatmi_exception(tperrno);
+                          py::object data, long flags)
+{
+    auto in = from_py(data);
+    {
+        py::gil_scoped_release release;
+        int rc = tpenqueue(const_cast<char *>(qspace), const_cast<char *>(qname),
+                           ctl, *in.pp, in.len, flags);
+        if (rc == -1)
+        {
+            if (tperrno == TPEDIAGNOSTIC)
+            {
+                throw qm_exception(ctl->diagnostic);
+            }
+            throw xatmi_exception(tperrno);
+        }
     }
-  }
-  return *ctl;
+    return *ctl;
 }
 
 static std::pair<TPQCTL, py::object> pytpdequeue(const char *qspace,
                                                  const char *qname, TPQCTL *ctl,
-                                                 long flags) {
-  xatmibuf out("UBF", 1024);
-  {
-    py::gil_scoped_release release;
-    int rc = tpdequeue(const_cast<char *>(qspace), const_cast<char *>(qname),
-                       ctl, out.pp, &out.len, flags);
-    if (rc == -1) {
-      if (tperrno == TPEDIAGNOSTIC) {
-        throw qm_exception(ctl->diagnostic);
-      }
-      throw xatmi_exception(tperrno);
+                                                 long flags)
+{
+    xatmibuf out("UBF", 1024);
+    {
+        py::gil_scoped_release release;
+        int rc = tpdequeue(const_cast<char *>(qspace), const_cast<char *>(qname),
+                           ctl, out.pp, &out.len, flags);
+        if (rc == -1)
+        {
+            if (tperrno == TPEDIAGNOSTIC)
+            {
+                throw qm_exception(ctl->diagnostic);
+            }
+            throw xatmi_exception(tperrno);
+        }
     }
-  }
-  return std::make_pair(*ctl, to_py(std::move(out)));
+    return std::make_pair(*ctl, to_py(std::move(out)));
 }
 
-static int pytpacall(const char *svc, py::object idata, long flags) {
+static int pytpacall(const char *svc, py::object idata, long flags)
+{
 
-  auto in = from_py(idata);
+    auto in = from_py(idata);
 
-  py::gil_scoped_release release;
-  int rc = tpacall(const_cast<char *>(svc), *in.pp, in.len, flags);
-  if (rc == -1) {
-    throw xatmi_exception(tperrno);
-  }
-  return rc;
-}
-
-static pytpreply pytpgetrply(int cd, long flags) {
-
-  xatmibuf out("UBF", 1024);
-  {
     py::gil_scoped_release release;
-    int rc = tpgetrply(&cd, out.pp, &out.len, flags);
-    if (rc == -1) {
-      if (tperrno != TPESVCFAIL) {
+    int rc = tpacall(const_cast<char *>(svc), *in.pp, in.len, flags);
+    if (rc == -1)
+    {
         throw xatmi_exception(tperrno);
-      }
     }
-  }
-  return pytpreply(tperrno, tpurcode, to_py(std::move(out)), cd);
+    return rc;
+}
+
+static pytpreply pytpgetrply(int cd, long flags)
+{
+
+    xatmibuf out("UBF", 1024);
+    {
+        py::gil_scoped_release release;
+        int rc = tpgetrply(&cd, out.pp, &out.len, flags);
+        if (rc == -1)
+        {
+            if (tperrno != TPESVCFAIL)
+            {
+                throw xatmi_exception(tperrno);
+            }
+        }
+    }
+    return pytpreply(tperrno, tpurcode, to_py(std::move(out)), cd);
 }
 
 #define MODULE "endurox"
-struct svcresult {
-  int rval;
-  long rcode;
-  char *odata;
-  long olen;
-  char name[XATMI_SERVICE_NAME_LENGTH];
-  bool forward;
-  bool clean;
+struct svcresult
+{
+    int rval;
+    long rcode;
+    char *odata;
+    long olen;
+    char name[XATMI_SERVICE_NAME_LENGTH];
+    bool forward;
+    bool clean;
 };
 static thread_local svcresult tsvcresult;
 
-static void pytpreturn(int rval, long rcode, py::object data, long flags) {
-  if (!tsvcresult.clean) {
-    throw std::runtime_error("tpreturn already called");
-  }
-  tsvcresult.clean = false;
-  tsvcresult.rval = rval;
-  tsvcresult.rcode = rcode;
-  auto &&odata = from_py(data);
-  tsvcresult.olen = odata.len;
-  tsvcresult.odata = odata.release();
-  tsvcresult.forward = false;
-}
-static void pytpforward(const std::string &svc, py::object data, long flags) {
-  if (!tsvcresult.clean) {
-    throw std::runtime_error("tpreturn already called");
-  }
-  tsvcresult.clean = false;
-  strncpy(tsvcresult.name, svc.c_str(), sizeof(tsvcresult.name));
-  auto &&odata = from_py(data);
-  tsvcresult.olen = odata.len;
-  tsvcresult.odata = odata.release();
-  tsvcresult.forward = true;
-}
-
-static pytpreply pytpadmcall(py::object idata, long flags) {
-  auto in = from_py(idata);
-  xatmibuf out("UBF", 1024);
-  {
-    py::gil_scoped_release release;
-    int rc = tpadmcall(*in.fbfr(), out.fbfr(), flags);
-    if (rc == -1) {
-      if (tperrno != TPESVCFAIL) {
-        throw xatmi_exception(tperrno);
-      }
+static void pytpreturn(int rval, long rcode, py::object data, long flags)
+{
+    if (!tsvcresult.clean)
+    {
+        throw std::runtime_error("tpreturn already called");
     }
-  }
-  return pytpreply(tperrno, 0, to_py(std::move(out)));
+    tsvcresult.clean = false;
+    tsvcresult.rval = rval;
+    tsvcresult.rcode = rcode;
+    auto &&odata = from_py(data);
+    tsvcresult.olen = odata.len;
+    tsvcresult.odata = odata.release();
+    tsvcresult.forward = false;
 }
-
-int tpsvrinit(int argc, char *argv[]) {
-
-  if (tpopen() == -1) {
-    userlog(const_cast<char *>("Failed tpopen() = %d / %s"), tperrno,
-            tpstrerror(tperrno));
-    return -1;
-  }
-  py::gil_scoped_acquire acquire;
-  if (hasattr(server, __func__)) {
-    std::vector<std::string> args;
-    for (int i = 0; i < argc; i++) {
-      args.push_back(argv[i]);
+static void pytpforward(const std::string &svc, py::object data, long flags)
+{
+    if (!tsvcresult.clean)
+    {
+        throw std::runtime_error("tpreturn already called");
     }
-    return server.attr(__func__)(args).cast<int>();
-  }
-  return 0;
+    tsvcresult.clean = false;
+    strncpy(tsvcresult.name, svc.c_str(), sizeof(tsvcresult.name));
+    auto &&odata = from_py(data);
+    tsvcresult.olen = odata.len;
+    tsvcresult.odata = odata.release();
+    tsvcresult.forward = true;
 }
-void tpsvrdone() {
-  py::gil_scoped_acquire acquire;
-  if (hasattr(server, __func__)) {
-    server.attr(__func__)();
-  }
-}
-int tpsvrthrinit(int argc, char *argv[]) {
 
-  // Create a new Python thread
-  // otherwise pybind11 creates and deletes one
-  // and messes up threading.local
-  auto const &internals = pybind11::detail::get_internals();
-  PyThreadState_New(internals.istate);
-
-  if (tpopen() == -1) {
-    userlog(const_cast<char *>("Failed tpopen() = %d / %s"), tperrno,
-            tpstrerror(tperrno));
-    return -1;
-  }
-  py::gil_scoped_acquire acquire;
-  if (hasattr(server, __func__)) {
-    std::vector<std::string> args;
-    for (int i = 0; i < argc; i++) {
-      args.push_back(argv[i]);
+static pytpreply pytpadmcall(py::object idata, long flags)
+{
+    auto in = from_py(idata);
+    xatmibuf out("UBF", 1024);
+    {
+        py::gil_scoped_release release;
+        int rc = tpadmcall(*in.fbfr(), out.fbfr(), flags);
+        if (rc == -1)
+        {
+            if (tperrno != TPESVCFAIL)
+            {
+                throw xatmi_exception(tperrno);
+            }
+        }
     }
-    return server.attr(__func__)(args).cast<int>();
-  }
-  return 0;
+    return pytpreply(tperrno, 0, to_py(std::move(out)));
 }
-void tpsvrthrdone() {
-  py::gil_scoped_acquire acquire;
-  if (hasattr(server, __func__)) {
-    server.attr(__func__)();
-  }
-}
-void PY(TPSVCINFO *svcinfo) {
 
+int tpsvrinit(int argc, char *argv[])
+{
 
-  tsvcresult.clean = true;
-
-  try {
+    if (tpopen() == -1)
+    {
+        userlog(const_cast<char *>("Failed tpopen() = %d / %s"), tperrno,
+                tpstrerror(tperrno));
+        return -1;
+    }
     py::gil_scoped_acquire acquire;
-    auto idata = to_py(xatmibuf(svcinfo));
+    if (hasattr(server, __func__))
+    {
+        std::vector<std::string> args;
+        for (int i = 0; i < argc; i++)
+        {
+            args.push_back(argv[i]);
+        }
+        return server.attr(__func__)(args).cast<int>();
+    }
+    return 0;
+}
+void tpsvrdone()
+{
+    py::gil_scoped_acquire acquire;
+    if (hasattr(server, __func__))
+    {
+        server.attr(__func__)();
+    }
+}
+int tpsvrthrinit(int argc, char *argv[])
+{
 
-    auto &&func = server.attr(svcinfo->name);
-    auto &&code = func.attr("__code__");
-    long argcount = (code.attr("co_argcount") + code.attr("co_kwonlyargcount"))
-                        .cast<py::int_>();
-    auto &&args = code.attr("co_varnames")[py::slice(0, argcount, 1)];
-    py::dict kwargs;
-    if (args.contains(py::str("name"))) {
-      kwargs[py::str("name")] = py::str(svcinfo->name);
+    // Create a new Python thread
+    // otherwise pybind11 creates and deletes one
+    // and messes up threading.local
+    auto const &internals = pybind11::detail::get_internals();
+    PyThreadState_New(internals.istate);
+
+    if (tpopen() == -1)
+    {
+        userlog(const_cast<char *>("Failed tpopen() = %d / %s"), tperrno,
+                tpstrerror(tperrno));
+        return -1;
     }
-    if (args.contains(py::str("flags"))) {
-      kwargs[py::str("flags")] = py::int_(svcinfo->flags);
+    py::gil_scoped_acquire acquire;
+    if (hasattr(server, __func__))
+    {
+        std::vector<std::string> args;
+        for (int i = 0; i < argc; i++)
+        {
+            args.push_back(argv[i]);
+        }
+        return server.attr(__func__)(args).cast<int>();
     }
-    if (args.contains(py::str("cd"))) {
-      kwargs[py::str("cd")] = py::int_(svcinfo->cd);
+    return 0;
+}
+void tpsvrthrdone()
+{
+    py::gil_scoped_acquire acquire;
+    if (hasattr(server, __func__))
+    {
+        server.attr(__func__)();
     }
-    if (args.contains(py::str("appkey"))) {
-      kwargs[py::str("appkey")] = py::int_(svcinfo->appkey);
+}
+/**
+ * @brief Server dispatch function
+ * 
+ * @param svcinfo standard XATMI call descriptor
+ */
+void PY(TPSVCINFO *svcinfo)
+{
+    tsvcresult.clean = true;
+
+    try
+    {
+        py::gil_scoped_acquire acquire;
+        auto idata = to_py(xatmibuf(svcinfo));
+
+        pytpsvcinfo info(svcinfo);
+
+        info.data = idata;
+
+        auto && func = M_dispmap[svcinfo->fname];
+
+        func(&info);
+
+        if (tsvcresult.clean)
+        {
+            userlog(const_cast<char *>("tpreturn() not called"));
+            tpreturn(TPEXIT, 0, nullptr, 0, 0);
+        }
     }
-    if (args.contains(py::str("cltid"))) {
-      kwargs[py::str("cltid")] = py::bytes(
-          reinterpret_cast<char *>(&svcinfo->cltid), sizeof(svcinfo->cltid));
+    catch (const std::exception &e)
+    {
+        userlog(const_cast<char *>("%s"), e.what());
+        tpreturn(TPEXIT, 0, nullptr, 0, 0);
     }
 
-    func(idata, **kwargs);
-
-    if (tsvcresult.clean) {
-      userlog(const_cast<char *>("tpreturn() not called"));
-      tpreturn(TPEXIT, 0, nullptr, 0, 0);
+    if (tsvcresult.forward)
+    {
+        tpforward(tsvcresult.name, tsvcresult.odata, tsvcresult.olen, 0);
     }
-  } catch (const std::exception &e) {
-    userlog(const_cast<char *>("%s"), e.what());
-    tpreturn(TPEXIT, 0, nullptr, 0, 0);
-  }
-
-  if (tsvcresult.forward) {
-    tpforward(tsvcresult.name, tsvcresult.odata, tsvcresult.olen, 0);
-  } else {
-    tpreturn(tsvcresult.rval, tsvcresult.rcode, tsvcresult.odata,
-             tsvcresult.olen, 0);
-  }
+    else
+    {
+        tpreturn(tsvcresult.rval, tsvcresult.rcode, tsvcresult.odata,
+                 tsvcresult.olen, 0);
+    }
 }
 
 /**
  * Standard tpadvertise()
+ * @param [in] svcname service name
+ * @param [in] funcname function name
+ * @param [in] func python function pointer
  */
-static void pytpadvertise(std::string svcname, long flags) {
-  if (tpadvertise_full(const_cast<char *>(svcname.c_str()), PY, (char *)"PY") == -1) {
-    throw xatmi_exception(tperrno);
-  }
+static void pytpadvertise(std::string svcname, std::string funcname, const py::object &func)
+{
+    if (tpadvertise_full(const_cast<char *>(svcname.c_str()), PY, 
+        const_cast<char *>(funcname.c_str())) == -1)
+    {
+        throw xatmi_exception(tperrno);
+    }
+
+    //Add name mapping to hashmap
+    //TODO: might want to check for duplicate advertises, so that function pointers are the same?
+    if (M_dispmap.end() == M_dispmap.find(funcname))
+    {
+        M_dispmap[funcname] = func;
+    }
+
 }
 
-extern "C" {
-extern struct xa_switch_t tmnull_switch;
-extern int _tmbuilt_with_thread_option;
+extern "C"
+{
+    extern struct xa_switch_t tmnull_switch;
+    extern int _tmbuilt_with_thread_option;
 }
 
 static struct tmdsptchtbl_t _tmdsptchtbl[] = {
     {(char *)"", (char *)"PY", PY, 0, 0}, {nullptr, nullptr, nullptr, 0, 0}};
 
 static struct tmsvrargs_t tmsvrargs = {
-    nullptr,      &_tmdsptchtbl[0], 0,           tpsvrinit, tpsvrdone,
-    nullptr, nullptr,          nullptr,     nullptr,   nullptr,
-    tpsvrthrinit,     tpsvrthrdone};
+    nullptr, &_tmdsptchtbl[0], 0, tpsvrinit, tpsvrdone,
+    nullptr, nullptr, nullptr, nullptr, nullptr,
+    tpsvrthrinit, tpsvrthrdone};
 
 typedef void *(xao_svc_ctx)(void *);
 static xao_svc_ctx *xao_svc_ctx_ptr;
-struct tmsvrargs_t *_tmgetsvrargs(const char *rmname) {
-  tmsvrargs.reserved1 = nullptr;
-  tmsvrargs.reserved2 = nullptr;
-  if (strcasecmp(rmname, "NONE") == 0) {
-    tmsvrargs.xa_switch = &tmnull_switch;
-  } else if (strcasecmp(rmname, "Oracle_XA") == 0) {
-    const char *orahome = getenv("ORACLE_HOME");
-    auto lib =
-        std::string((orahome == nullptr ? "" : orahome)) + "/lib/libclntsh.so";
-    void *handle = dlopen(lib.c_str(), RTLD_NOW);
-    if (!handle) {
-      throw std::runtime_error(
-          std::string("Failed loading $ORACLE_HOME/lib/libclntsh.so ") +
-          dlerror());
+struct tmsvrargs_t *_tmgetsvrargs(const char *rmname)
+{
+    tmsvrargs.reserved1 = nullptr;
+    tmsvrargs.reserved2 = nullptr;
+    if (strcasecmp(rmname, "NONE") == 0)
+    {
+        tmsvrargs.xa_switch = &tmnull_switch;
     }
-    tmsvrargs.xa_switch =
-        reinterpret_cast<xa_switch_t *>(dlsym(handle, "xaosw"));
-    if (tmsvrargs.xa_switch == nullptr) {
-      throw std::runtime_error("xa_switch_t named xaosw not found");
+    else if (strcasecmp(rmname, "Oracle_XA") == 0)
+    {
+        const char *orahome = getenv("ORACLE_HOME");
+        auto lib =
+            std::string((orahome == nullptr ? "" : orahome)) + "/lib/libclntsh.so";
+        void *handle = dlopen(lib.c_str(), RTLD_NOW);
+        if (!handle)
+        {
+            throw std::runtime_error(
+                std::string("Failed loading $ORACLE_HOME/lib/libclntsh.so ") +
+                dlerror());
+        }
+        tmsvrargs.xa_switch =
+            reinterpret_cast<xa_switch_t *>(dlsym(handle, "xaosw"));
+        if (tmsvrargs.xa_switch == nullptr)
+        {
+            throw std::runtime_error("xa_switch_t named xaosw not found");
+        }
+        xao_svc_ctx_ptr =
+            reinterpret_cast<xao_svc_ctx *>(dlsym(handle, "xaoSvcCtx"));
+        if (xao_svc_ctx_ptr == nullptr)
+        {
+            throw std::runtime_error("xa_switch_t named xaosw not found");
+        }
     }
-    xao_svc_ctx_ptr =
-        reinterpret_cast<xao_svc_ctx *>(dlsym(handle, "xaoSvcCtx"));
-    if (xao_svc_ctx_ptr == nullptr) {
-      throw std::runtime_error("xa_switch_t named xaosw not found");
+    else
+    {
+        throw std::invalid_argument("Unsupported Resource Manager");
     }
-  } else {
-    throw std::invalid_argument("Unsupported Resource Manager");
-  }
-  return &tmsvrargs;
+    return &tmsvrargs;
 }
 
 static void pyrun(py::object svr, std::vector<std::string> args,
-                  const char *rmname) {
-  server = svr;
-  try {
-    py::gil_scoped_release release;
-    _tmbuilt_with_thread_option = 1;
-    std::vector<char *> argv(args.size());
-    for (size_t i = 0; i < args.size(); i++) {
-      argv[i] = const_cast<char *>(args[i].c_str());
+                  const char *rmname)
+{
+    server = svr;
+    try
+    {
+        py::gil_scoped_release release;
+        _tmbuilt_with_thread_option = 1;
+        std::vector<char *> argv(args.size());
+        for (size_t i = 0; i < args.size(); i++)
+        {
+            argv[i] = const_cast<char *>(args[i].c_str());
+        }
+        (void)_tmstartserver(args.size(), &argv[0], _tmgetsvrargs(rmname));
+        server = py::none();
     }
-    (void)_tmstartserver(args.size(), &argv[0], _tmgetsvrargs(rmname));
-    server = py::none();
-  } catch (...) {
-    server = py::none();
-    throw;
-  }
+    catch (...)
+    {
+        server = py::none();
+        throw;
+    }
 }
 
-static PyObject *EnduroxException_code(PyObject *selfPtr, void *closure) {
-  try {
-    py::handle self(selfPtr);
-    py::tuple args = self.attr("args");
-    py::object code = args[1];
-    code.inc_ref();
-    return code.ptr();
-  } catch (py::error_already_set &e) {
-    py::none ret;
-    ret.inc_ref();
-    return ret.ptr();
-  }
+static PyObject *EnduroxException_code(PyObject *selfPtr, void *closure)
+{
+    try
+    {
+        py::handle self(selfPtr);
+        py::tuple args = self.attr("args");
+        py::object code = args[1];
+        code.inc_ref();
+        return code.ptr();
+    }
+    catch (py::error_already_set &e)
+    {
+        py::none ret;
+        ret.inc_ref();
+        return ret.ptr();
+    }
 }
 
 static PyGetSetDef EnduroxException_getsetters[] = {
@@ -667,61 +726,70 @@ static PyGetSetDef EnduroxException_getsetters[] = {
      nullptr},
     {nullptr}};
 
-static PyObject *EnduroxException_tp_str(PyObject *selfPtr) {
-  py::str ret;
-  try {
-    py::handle self(selfPtr);
-    py::tuple args = self.attr("args");
-    ret = py::str(args[0]);
-  } catch (py::error_already_set &e) {
-    ret = "";
-  }
+static PyObject *EnduroxException_tp_str(PyObject *selfPtr)
+{
+    py::str ret;
+    try
+    {
+        py::handle self(selfPtr);
+        py::tuple args = self.attr("args");
+        ret = py::str(args[0]);
+    }
+    catch (py::error_already_set &e)
+    {
+        ret = "";
+    }
 
-  ret.inc_ref();
-  return ret.ptr();
+    ret.inc_ref();
+    return ret.ptr();
 }
 
-static void register_exceptions(py::module &m) {
-  static PyObject *XatmiException =
-      PyErr_NewException(MODULE ".XatmiException", nullptr, nullptr);
-  if (XatmiException) {
-    PyTypeObject *as_type = reinterpret_cast<PyTypeObject *>(XatmiException);
-    as_type->tp_str = EnduroxException_tp_str;
-    PyObject *descr = PyDescr_NewGetSet(as_type, EnduroxException_getsetters);
-    auto dict = py::reinterpret_borrow<py::dict>(as_type->tp_dict);
-    dict[py::handle(((PyDescrObject *)(descr))->d_name)] = py::handle(descr);
+static void register_exceptions(py::module &m)
+{
+    static PyObject *XatmiException =
+        PyErr_NewException(MODULE ".XatmiException", nullptr, nullptr);
+    if (XatmiException)
+    {
+        PyTypeObject *as_type = reinterpret_cast<PyTypeObject *>(XatmiException);
+        as_type->tp_str = EnduroxException_tp_str;
+        PyObject *descr = PyDescr_NewGetSet(as_type, EnduroxException_getsetters);
+        auto dict = py::reinterpret_borrow<py::dict>(as_type->tp_dict);
+        dict[py::handle(((PyDescrObject *)(descr))->d_name)] = py::handle(descr);
 
-    Py_XINCREF(XatmiException);
-    m.add_object("XatmiException", py::handle(XatmiException));
-  }
+        Py_XINCREF(XatmiException);
+        m.add_object("XatmiException", py::handle(XatmiException));
+    }
 
-  static PyObject *QmException =
-      PyErr_NewException(MODULE ".QmException", nullptr, nullptr);
-  if (QmException) {
-    PyTypeObject *as_type = reinterpret_cast<PyTypeObject *>(QmException);
-    as_type->tp_str = EnduroxException_tp_str;
-    PyObject *descr = PyDescr_NewGetSet(as_type, EnduroxException_getsetters);
-    auto dict = py::reinterpret_borrow<py::dict>(as_type->tp_dict);
-    dict[py::handle(((PyDescrObject *)(descr))->d_name)] = py::handle(descr);
+    static PyObject *QmException =
+        PyErr_NewException(MODULE ".QmException", nullptr, nullptr);
+    if (QmException)
+    {
+        PyTypeObject *as_type = reinterpret_cast<PyTypeObject *>(QmException);
+        as_type->tp_str = EnduroxException_tp_str;
+        PyObject *descr = PyDescr_NewGetSet(as_type, EnduroxException_getsetters);
+        auto dict = py::reinterpret_borrow<py::dict>(as_type->tp_dict);
+        dict[py::handle(((PyDescrObject *)(descr))->d_name)] = py::handle(descr);
 
-    Py_XINCREF(QmException);
-    m.add_object("QmException", py::handle(QmException));
-  }
+        Py_XINCREF(QmException);
+        m.add_object("QmException", py::handle(QmException));
+    }
 
-  static PyObject *ubfException =
-      PyErr_NewException(MODULE ".ubfException", nullptr, nullptr);
-  if (ubfException) {
-    PyTypeObject *as_type = reinterpret_cast<PyTypeObject *>(ubfException);
-    as_type->tp_str = EnduroxException_tp_str;
-    PyObject *descr = PyDescr_NewGetSet(as_type, EnduroxException_getsetters);
-    auto dict = py::reinterpret_borrow<py::dict>(as_type->tp_dict);
-    dict[py::handle(((PyDescrObject *)(descr))->d_name)] = py::handle(descr);
+    static PyObject *ubfException =
+        PyErr_NewException(MODULE ".ubfException", nullptr, nullptr);
+    if (ubfException)
+    {
+        PyTypeObject *as_type = reinterpret_cast<PyTypeObject *>(ubfException);
+        as_type->tp_str = EnduroxException_tp_str;
+        PyObject *descr = PyDescr_NewGetSet(as_type, EnduroxException_getsetters);
+        auto dict = py::reinterpret_borrow<py::dict>(as_type->tp_dict);
+        dict[py::handle(((PyDescrObject *)(descr))->d_name)] = py::handle(descr);
 
-    Py_XINCREF(ubfException);
-    m.add_object("ubfException", py::handle(ubfException));
-  }
+        Py_XINCREF(ubfException);
+        m.add_object("ubfException", py::handle(ubfException));
+    }
 
-  py::register_exception_translator([](std::exception_ptr p) {
+    py::register_exception_translator([](std::exception_ptr p)
+                                      {
     try {
       if (p) {
         std::rethrow_exception(p);
@@ -741,23 +809,34 @@ static void register_exceptions(py::module &m) {
       args[0] = e.what();
       args[1] = e.code();
       PyErr_SetObject(ubfException, args.ptr());
-    }
-  });
+    } });
 }
 
-PYBIND11_MODULE(endurox, m) {
+PYBIND11_MODULE(endurox, m)
+{
 
+    register_exceptions(m);
 
-  register_exceptions(m);
+    // Service call info object
+    py::class_<pytpsvcinfo>(m, "pytpsvcinfo")
+        .def_readonly("name", &pytpsvcinfo::name)
+        .def_readonly("fname", &pytpsvcinfo::fname)
+        .def_readonly("flags", &pytpsvcinfo::flags)
+        .def_readonly("appkey", &pytpsvcinfo::appkey)
+        .def_readonly("cd", &pytpsvcinfo::cd)
+        .def("cltid", [](pytpsvcinfo &inf) { 
+            return py::bytes(reinterpret_cast<char *>(&inf.cltid), sizeof(inf.cltid)); })
+        .def_readonly("data", &pytpsvcinfo::data);
 
-  // Poor man's namedtuple
-  py::class_<pytpreply>(m, "TpReply")
-      .def_readonly("rval", &pytpreply::rval)
-      .def_readonly("rcode", &pytpreply::rcode)
-      .def_readonly("data", &pytpreply::data)
-      .def_readonly("cd", &pytpreply::cd)  // Does not unpack as the use is
-                                           // rare case of tpgetrply(TPGETANY)
-      .def("__getitem__", [](const pytpreply &s, size_t i) -> py::object {
+    // Poor man's namedtuple
+    py::class_<pytpreply>(m, "TpReply")
+        .def_readonly("rval", &pytpreply::rval)
+        .def_readonly("rcode", &pytpreply::rcode)
+        .def_readonly("data", &pytpreply::data)
+        .def_readonly("cd", &pytpreply::cd) // Does not unpack as the use is
+                                            // rare case of tpgetrply(TPGETANY)
+        .def("__getitem__", [](const pytpreply &s, size_t i) -> py::object
+             {
         if (i == 0) {
           return py::int_(s.rval);
         } else if (i == 1) {
@@ -766,14 +845,14 @@ PYBIND11_MODULE(endurox, m) {
           return s.data;
         } else {
           throw py::index_error();
-        }
-      });
+        } });
 
-  py::class_<TPQCTL>(m, "TPQCTL")
-      .def(py::init([](long flags, long deq_time, long priority, long exp_time,
-                       long urcode, long delivery_qos, long reply_qos,
-                       const char *msgid, const char *corrid,
-                       const char *replyqueue, const char *failurequeue) {
+    py::class_<TPQCTL>(m, "TPQCTL")
+        .def(py::init([](long flags, long deq_time, long priority, long exp_time,
+                         long urcode, long delivery_qos, long reply_qos,
+                         const char *msgid, const char *corrid,
+                         const char *replyqueue, const char *failurequeue)
+                      {
              auto p = std::make_unique<TPQCTL>();
              memset(p.get(), 0, sizeof(TPQCTL));
              p->flags = flags;
@@ -797,53 +876,54 @@ PYBIND11_MODULE(endurox, m) {
                snprintf(p->failurequeue, sizeof(p->failurequeue), "%s",
                         failurequeue);
              }
-             return p;
-           }),
+             return p; }),
 
-           py::arg("flags") = 0, py::arg("deq_time") = 0,
-           py::arg("priority") = 0, py::arg("exp_time") = 0,
-           py::arg("urcode") = 0, py::arg("delivery_qos") = 0,
-           py::arg("reply_qos") = 0, py::arg("msgid") = nullptr,
-           py::arg("corrid") = nullptr, py::arg("replyqueue") = nullptr,
-           py::arg("failurequeue") = nullptr)
+             py::arg("flags") = 0, py::arg("deq_time") = 0,
+             py::arg("priority") = 0, py::arg("exp_time") = 0,
+             py::arg("urcode") = 0, py::arg("delivery_qos") = 0,
+             py::arg("reply_qos") = 0, py::arg("msgid") = nullptr,
+             py::arg("corrid") = nullptr, py::arg("replyqueue") = nullptr,
+             py::arg("failurequeue") = nullptr)
 
-      .def_readonly("flags", &TPQCTL::flags)
-      .def_readonly("msgid", &TPQCTL::msgid)
-      .def_readonly("diagnostic", &TPQCTL::diagnostic)
-      .def_readonly("priority", &TPQCTL::priority)
-      .def_readonly("corrid", &TPQCTL::corrid)
-      .def_readonly("urcode", &TPQCTL::urcode)
-      .def_readonly("replyqueue", &TPQCTL::replyqueue)
-      .def_readonly("failurequeue", &TPQCTL::failurequeue)
-      .def_readonly("delivery_qos", &TPQCTL::delivery_qos)
-      .def_readonly("reply_qos", &TPQCTL::reply_qos);
+        .def_readonly("flags", &TPQCTL::flags)
+        .def_readonly("msgid", &TPQCTL::msgid)
+        .def_readonly("diagnostic", &TPQCTL::diagnostic)
+        .def_readonly("priority", &TPQCTL::priority)
+        .def_readonly("corrid", &TPQCTL::corrid)
+        .def_readonly("urcode", &TPQCTL::urcode)
+        .def_readonly("replyqueue", &TPQCTL::replyqueue)
+        .def_readonly("failurequeue", &TPQCTL::failurequeue)
+        .def_readonly("delivery_qos", &TPQCTL::delivery_qos)
+        .def_readonly("reply_qos", &TPQCTL::reply_qos);
 
-  m.def(
-      "tpinit",
-      [](const char *usrname, const char *cltname, const char *passwd,
-         const char *grpname, long flags) {
-        py::gil_scoped_release release;
+    m.def(
+        "tpinit",
+        [](const char *usrname, const char *cltname, const char *passwd,
+           const char *grpname, long flags)
+        {
+            py::gil_scoped_release release;
 
-        if (tpinit(NULL) == -1) {
-          throw xatmi_exception(tperrno);
-        }
+            if (tpinit(NULL) == -1)
+            {
+                throw xatmi_exception(tperrno);
+            }
+        },
+        "Joins an application", py::arg("usrname") = nullptr,
+        py::arg("cltname") = nullptr, py::arg("passwd") = nullptr,
+        py::arg("grpname") = nullptr, py::arg("flags") = 0);
 
-      },
-      "Joins an application", py::arg("usrname") = nullptr,
-      py::arg("cltname") = nullptr, py::arg("passwd") = nullptr,
-      py::arg("grpname") = nullptr, py::arg("flags") = 0);
+    m.def(
+        "tpterm",
+        []()
+        {
+            py::gil_scoped_release release;
 
-  m.def(
-      "tpterm",
-      []() {
-        py::gil_scoped_release release;
-
-        if (tpterm() == -1) {
-          throw xatmi_exception(tperrno);
-        }
-
-      },
-      R"pbdoc(
+            if (tpterm() == -1)
+            {
+                throw xatmi_exception(tperrno);
+            }
+        },
+        R"pbdoc(
         Leaves application, closes XATMI session.
         
         For more deatils see C call *tpterm(3)*.
@@ -868,391 +948,430 @@ PYBIND11_MODULE(endurox, m) {
 
      )pbdoc");
 
-  m.def(
-      "tpbegin",
-      [](unsigned long timeout, long flags) {
-        py::gil_scoped_release release;
-        if (tpbegin(timeout, flags) == -1) {
-          throw xatmi_exception(tperrno);
-        }
-      },
-      "Routine for beginning a transaction", py::arg("timeout"),
-      py::arg("flags") = 0);
+    m.def(
+        "tpbegin",
+        [](unsigned long timeout, long flags)
+        {
+            py::gil_scoped_release release;
+            if (tpbegin(timeout, flags) == -1)
+            {
+                throw xatmi_exception(tperrno);
+            }
+        },
+        "Routine for beginning a transaction", py::arg("timeout"),
+        py::arg("flags") = 0);
 
-  m.def(
-      "tpsuspend",
-      [](long flags) {
-        TPTRANID tranid;
-        py::gil_scoped_release release;
-        if (tpsuspend(&tranid, flags) == -1) {
-          throw xatmi_exception(tperrno);
-        }
-        return py::bytes(reinterpret_cast<char *>(&tranid), sizeof(tranid));
-      },
-      "Suspend a global transaction", py::arg("flags") = 0);
+    m.def(
+        "tpsuspend",
+        [](long flags)
+        {
+            TPTRANID tranid;
+            py::gil_scoped_release release;
+            if (tpsuspend(&tranid, flags) == -1)
+            {
+                throw xatmi_exception(tperrno);
+            }
+            return py::bytes(reinterpret_cast<char *>(&tranid), sizeof(tranid));
+        },
+        "Suspend a global transaction", py::arg("flags") = 0);
 
-  m.def(
-      "tpresume",
-      [](py::bytes tranid, long flags) {
-        py::gil_scoped_release release;
-        if (tpresume(reinterpret_cast<TPTRANID *>(
+    m.def(
+        "tpresume",
+        [](py::bytes tranid, long flags)
+        {
+            py::gil_scoped_release release;
+            if (tpresume(reinterpret_cast<TPTRANID *>(
 #if PY_MAJOR_VERSION >= 3
-                         PyBytes_AsString(tranid.ptr())
+                             PyBytes_AsString(tranid.ptr())
 #else
-                         PyString_AsString(tranid.ptr())
+                             PyString_AsString(tranid.ptr())
 #endif
-                             ),
-                     flags) == -1) {
-          throw xatmi_exception(tperrno);
-        }
-      },
-      "Resume a global transaction", py::arg("tranid"), py::arg("flags") = 0);
+                                 ),
+                         flags) == -1)
+            {
+                throw xatmi_exception(tperrno);
+            }
+        },
+        "Resume a global transaction", py::arg("tranid"), py::arg("flags") = 0);
 
-  m.def(
-      "tpcommit",
-      [](long flags) {
-        py::gil_scoped_release release;
-        if (tpcommit(flags) == -1) {
-          throw xatmi_exception(tperrno);
-        }
-      },
-      "Routine for committing current transaction", py::arg("flags") = 0);
+    m.def(
+        "tpcommit",
+        [](long flags)
+        {
+            py::gil_scoped_release release;
+            if (tpcommit(flags) == -1)
+            {
+                throw xatmi_exception(tperrno);
+            }
+        },
+        "Routine for committing current transaction", py::arg("flags") = 0);
 
-  m.def(
-      "tpabort",
-      [](long flags) {
-        py::gil_scoped_release release;
-        if (tpabort(flags) == -1) {
-          throw xatmi_exception(tperrno);
-        }
-      },
-      "Routine for aborting current transaction", py::arg("flags") = 0);
+    m.def(
+        "tpabort",
+        [](long flags)
+        {
+            py::gil_scoped_release release;
+            if (tpabort(flags) == -1)
+            {
+                throw xatmi_exception(tperrno);
+            }
+        },
+        "Routine for aborting current transaction", py::arg("flags") = 0);
 
-  m.def(
-      "tpgetlev",
-      []() {
-        int rc;
-        if ((rc = tpgetlev()) == -1) {
-          throw xatmi_exception(tperrno);
-        }
-        return py::bool_(rc);
-      },
-      "Routine for checking if a transaction is in progress");
+    m.def(
+        "tpgetlev",
+        []()
+        {
+            int rc;
+            if ((rc = tpgetlev()) == -1)
+            {
+                throw xatmi_exception(tperrno);
+            }
+            return py::bool_(rc);
+        },
+        "Routine for checking if a transaction is in progress");
 
-  m.def(
-      "userlog",
-      [](const char *message) {
-        py::gil_scoped_release release;
-        userlog(const_cast<char *>("%s"), message);
-      },
-      "Writes a message to the Endurox ATMI system central event log",
-      py::arg("message"));
+    m.def(
+        "userlog",
+        [](const char *message)
+        {
+            py::gil_scoped_release release;
+            userlog(const_cast<char *>("%s"), message);
+        },
+        "Writes a message to the Endurox ATMI system central event log",
+        py::arg("message"));
 
-  m.def(
-      "tpadvertise", [](const char *svcname) { pytpadvertise(svcname, 0); },
-      "Routine for advertising a service name", py::arg("svcname"));
+    m.def(
+        "tpadvertise", [](const char *svcname, const char *funcname, const py::object &func)
+        { pytpadvertise(svcname, funcname, func); },
+        "Routine for advertising a service name", py::arg("svcname"), py::arg("funcname"), py::arg("func"));
 
-  m.def("run", &pyrun, "Run Endurox server", py::arg("server"), py::arg("args"),
-        py::arg("rmname") = "NONE");
+    m.def("run", &pyrun, "Run Endurox server", py::arg("server"), py::arg("args"),
+          py::arg("rmname") = "NONE");
 
-  m.def("tpadmcall", &pytpadmcall, "Administers unbooted application",
-        py::arg("idata"), py::arg("flags") = 0);
+    m.def("tpadmcall", &pytpadmcall, "Administers unbooted application",
+          py::arg("idata"), py::arg("flags") = 0);
 
-  m.def("tpreturn", &pytpreturn, "Routine for returning from a service routine",
-        py::arg("rval"), py::arg("rcode"), py::arg("data"),
-        py::arg("flags") = 0);
-  m.def("tpforward", &pytpforward,
-        "Routine for forwarding a service request to another service routine",
-        py::arg("svc"), py::arg("data"), py::arg("flags") = 0);
+    m.def("tpreturn", &pytpreturn, "Routine for returning from a service routine",
+          py::arg("rval"), py::arg("rcode"), py::arg("data"),
+          py::arg("flags") = 0);
+    m.def("tpforward", &pytpforward,
+          "Routine for forwarding a service request to another service routine",
+          py::arg("svc"), py::arg("data"), py::arg("flags") = 0);
 
-  m.def(
-      "xaoSvcCtx",
-      []() {
-        if (xao_svc_ctx_ptr == nullptr) {
-          throw std::runtime_error("xaoSvcCtx is null");
-        }
-        return reinterpret_cast<unsigned long long>(
-            (*xao_svc_ctx_ptr)(nullptr));
-      },
-      "Returns the OCI service handle for a given XA connection");
+    m.def(
+        "xaoSvcCtx",
+        []()
+        {
+            if (xao_svc_ctx_ptr == nullptr)
+            {
+                throw std::runtime_error("xaoSvcCtx is null");
+            }
+            return reinterpret_cast<unsigned long long>(
+                (*xao_svc_ctx_ptr)(nullptr));
+        },
+        "Returns the OCI service handle for a given XA connection");
 
-  m.def("tpenqueue", &pytpenqueue, "Routine to enqueue a message.",
-        py::arg("qspace"), py::arg("qname"), py::arg("ctl"), py::arg("data"),
-        py::arg("flags") = 0);
+    m.def("tpenqueue", &pytpenqueue, "Routine to enqueue a message.",
+          py::arg("qspace"), py::arg("qname"), py::arg("ctl"), py::arg("data"),
+          py::arg("flags") = 0);
 
-  m.def("tpdequeue", &pytpdequeue, "Routine to dequeue a message from a queue.",
-        py::arg("qspace"), py::arg("qname"), py::arg("ctl"),
-        py::arg("flags") = 0);
+    m.def("tpdequeue", &pytpdequeue, "Routine to dequeue a message from a queue.",
+          py::arg("qspace"), py::arg("qname"), py::arg("ctl"),
+          py::arg("flags") = 0);
 
-  m.def("tpcall", &pytpcall,
-        "Routine for sending service request and awaiting its reply",
-        py::arg("svc"), py::arg("idata"), py::arg("flags") = 0);
+    m.def("tpcall", &pytpcall,
+          "Routine for sending service request and awaiting its reply",
+          py::arg("svc"), py::arg("idata"), py::arg("flags") = 0);
 
-  m.def("tpacall", &pytpacall, "Routine for sending a service request",
-        py::arg("svc"), py::arg("idata"), py::arg("flags") = 0);
-  m.def("tpgetrply", &pytpgetrply,
-        "Routine for getting a reply from a previous request", py::arg("cd"),
-        py::arg("flags") = 0);
+    m.def("tpacall", &pytpacall, "Routine for sending a service request",
+          py::arg("svc"), py::arg("idata"), py::arg("flags") = 0);
+    m.def("tpgetrply", &pytpgetrply,
+          "Routine for getting a reply from a previous request", py::arg("cd"),
+          py::arg("flags") = 0);
 
-  m.def("tpexport", &pytpexport,
-        "Converts a typed message buffer into an exportable, "
-        "machine-independent string representation, that includes digital "
-        "signatures and encryption seals",
-        py::arg("ibuf"), py::arg("flags") = 0);
-  m.def("tpimport", &pytpimport,
-        "Converts an exported representation back into a typed message buffer",
-        py::arg("istr"), py::arg("flags") = 0);
+    m.def("tpexport", &pytpexport,
+          "Converts a typed message buffer into an exportable, "
+          "machine-independent string representation, that includes digital "
+          "signatures and encryption seals",
+          py::arg("ibuf"), py::arg("flags") = 0);
+    m.def("tpimport", &pytpimport,
+          "Converts an exported representation back into a typed message buffer",
+          py::arg("istr"), py::arg("flags") = 0);
 
-  m.def("tppost", &pytppost, "Posts an event", py::arg("eventname"),
-        py::arg("data"), py::arg("flags") = 0);
+    m.def("tppost", &pytppost, "Posts an event", py::arg("eventname"),
+          py::arg("data"), py::arg("flags") = 0);
 
-  m.def(
-      "tpgblktime",
-      [](long flags) {
-        int rc = tpgblktime(flags);
-        if (rc == -1) {
-          throw xatmi_exception(tperrno);
-        }
-        return rc;
-      },
-      "Retrieves a previously set, per second or millisecond, blocktime value",
-      py::arg("flags"));
+    m.def(
+        "tpgblktime",
+        [](long flags)
+        {
+            int rc = tpgblktime(flags);
+            if (rc == -1)
+            {
+                throw xatmi_exception(tperrno);
+            }
+            return rc;
+        },
+        "Retrieves a previously set, per second or millisecond, blocktime value",
+        py::arg("flags"));
 
-  m.def(
-      "tpsblktime",
-      [](int blktime, long flags) {
-        if (tpsblktime(blktime, flags) == -1) {
-          throw xatmi_exception(tperrno);
-        }
-      },
-      "Routine for setting blocktime in seconds or milliseconds for the next "
-      "service call or for all service calls",
-      py::arg("blktime"), py::arg("flags"));
+    m.def(
+        "tpsblktime",
+        [](int blktime, long flags)
+        {
+            if (tpsblktime(blktime, flags) == -1)
+            {
+                throw xatmi_exception(tperrno);
+            }
+        },
+        "Routine for setting blocktime in seconds or milliseconds for the next "
+        "service call or for all service calls",
+        py::arg("blktime"), py::arg("flags"));
 
-  m.def(
-      "Bfldtype", [](BFLDID fieldid) { return Bfldtype(fieldid); },
-      "Maps field identifier to field type", py::arg("fieldid"));
-  m.def(
-      "Bfldno", [](BFLDID fieldid) { return Bfldno(fieldid); },
-      "Maps field identifier to field number", py::arg("fieldid"));
-  m.def(
-      "Bmkfldid", [](int type, BFLDID num) { return Bmkfldid(type, num); },
-      "Makes a field identifier", py::arg("type"), py::arg("num"));
+    m.def(
+        "Bfldtype", [](BFLDID fieldid)
+        { return Bfldtype(fieldid); },
+        "Maps field identifier to field type", py::arg("fieldid"));
+    m.def(
+        "Bfldno", [](BFLDID fieldid)
+        { return Bfldno(fieldid); },
+        "Maps field identifier to field number", py::arg("fieldid"));
+    m.def(
+        "Bmkfldid", [](int type, BFLDID num)
+        { return Bmkfldid(type, num); },
+        "Makes a field identifier", py::arg("type"), py::arg("num"));
 
-  m.def(
-      "Bfname",
-      [](BFLDID fieldid) {
-        auto *name = Bfname(fieldid);
-        if (name == nullptr) {
-          throw ubf_exception(Berror);
-        }
-        return name;
-      },
-      "Maps field identifier to field name", py::arg("fieldid"));
-  m.def(
-      "BFLDID",
-      [](const char *name) {
-        auto id = Bfldid(const_cast<char *>(name));
-        if (id == BBADFLDID) {
-          throw ubf_exception(Berror);
-        }
-        return id;
-      },
-      "Maps field name to field identifier", py::arg("name"));
+    m.def(
+        "Bfname",
+        [](BFLDID fieldid)
+        {
+            auto *name = Bfname(fieldid);
+            if (name == nullptr)
+            {
+                throw ubf_exception(Berror);
+            }
+            return name;
+        },
+        "Maps field identifier to field name", py::arg("fieldid"));
+    m.def(
+        "BFLDID",
+        [](const char *name)
+        {
+            auto id = Bfldid(const_cast<char *>(name));
+            if (id == BBADFLDID)
+            {
+                throw ubf_exception(Berror);
+            }
+            return id;
+        },
+        "Maps field name to field identifier", py::arg("name"));
 
-  m.def(
-      "Bboolpr",
-      [](const char *expression, py::object iop) {
-        std::unique_ptr<char, decltype(&free)> guard(
-            Bboolco(const_cast<char *>(expression)), &free);
-        if (guard.get() == nullptr) {
-          throw ubf_exception(Berror);
-        }
+    m.def(
+        "Bboolpr",
+        [](const char *expression, py::object iop)
+        {
+            std::unique_ptr<char, decltype(&free)> guard(
+                Bboolco(const_cast<char *>(expression)), &free);
+            if (guard.get() == nullptr)
+            {
+                throw ubf_exception(Berror);
+            }
 
-        int fd = iop.attr("fileno")().cast<py::int_>();
-        std::unique_ptr<FILE, decltype(&fclose)> fiop(fdopen(dup(fd), "w"),
-                                                      &fclose);
-        Bboolpr(guard.get(), fiop.get());
-      },
-      "Print Boolean expression as parsed", py::arg("expression"),
-      py::arg("iop"));
+            int fd = iop.attr("fileno")().cast<py::int_>();
+            std::unique_ptr<FILE, decltype(&fclose)> fiop(fdopen(dup(fd), "w"),
+                                                          &fclose);
+            Bboolpr(guard.get(), fiop.get());
+        },
+        "Print Boolean expression as parsed", py::arg("expression"),
+        py::arg("iop"));
 
-  m.def(
-      "Bboolev",
-      [](py::object fbfr, const char *expression) {
-        std::unique_ptr<char, decltype(&free)> guard(
-            Bboolco(const_cast<char *>(expression)), &free);
-        if (guard.get() == nullptr) {
-          throw ubf_exception(Berror);
-        }
-        auto buf = from_py(fbfr);
-        auto rc = Bboolev(*buf.fbfr(), guard.get());
-        if (rc == -1) {
-          throw ubf_exception(Berror);
-        }
-        return rc == 1;
-      },
-      "Evaluates buffer against expression", py::arg("fbfr"),
-      py::arg("expression"));
+    m.def(
+        "Bboolev",
+        [](py::object fbfr, const char *expression)
+        {
+            std::unique_ptr<char, decltype(&free)> guard(
+                Bboolco(const_cast<char *>(expression)), &free);
+            if (guard.get() == nullptr)
+            {
+                throw ubf_exception(Berror);
+            }
+            auto buf = from_py(fbfr);
+            auto rc = Bboolev(*buf.fbfr(), guard.get());
+            if (rc == -1)
+            {
+                throw ubf_exception(Berror);
+            }
+            return rc == 1;
+        },
+        "Evaluates buffer against expression", py::arg("fbfr"),
+        py::arg("expression"));
 
-  m.def(
-      "Bfloatev",
-      [](py::object fbfr, const char *expression) {
-        std::unique_ptr<char, decltype(&free)> guard(
-            Bboolco(const_cast<char *>(expression)), &free);
-        if (guard.get() == nullptr) {
-          throw ubf_exception(Berror);
-        }
-        auto buf = from_py(fbfr);
-        auto rc = Bfloatev(*buf.fbfr(), guard.get());
-        if (rc == -1) {
-          throw ubf_exception(Berror);
-        }
-        return rc;
-      },
-      "Returns value of expression as a double", py::arg("fbfr"),
-      py::arg("expression"));
+    m.def(
+        "Bfloatev",
+        [](py::object fbfr, const char *expression)
+        {
+            std::unique_ptr<char, decltype(&free)> guard(
+                Bboolco(const_cast<char *>(expression)), &free);
+            if (guard.get() == nullptr)
+            {
+                throw ubf_exception(Berror);
+            }
+            auto buf = from_py(fbfr);
+            auto rc = Bfloatev(*buf.fbfr(), guard.get());
+            if (rc == -1)
+            {
+                throw ubf_exception(Berror);
+            }
+            return rc;
+        },
+        "Returns value of expression as a double", py::arg("fbfr"),
+        py::arg("expression"));
 
-  m.def(
-      "Bfprint",
-      [](py::object fbfr, py::object iop) {
-        auto buf = from_py(fbfr);
-        int fd = iop.attr("fileno")().cast<py::int_>();
-        std::unique_ptr<FILE, decltype(&fclose)> fiop(fdopen(dup(fd), "w"),
-                                                      &fclose);
-        auto rc = Bfprint(*buf.fbfr(), fiop.get());
-        if (rc == -1) {
-          throw ubf_exception(Berror);
-        }
-      },
-      "Prints fielded buffer to specified stream", py::arg("fbfr"),
-      py::arg("iop"));
+    m.def(
+        "Bfprint",
+        [](py::object fbfr, py::object iop)
+        {
+            auto buf = from_py(fbfr);
+            int fd = iop.attr("fileno")().cast<py::int_>();
+            std::unique_ptr<FILE, decltype(&fclose)> fiop(fdopen(dup(fd), "w"),
+                                                          &fclose);
+            auto rc = Bfprint(*buf.fbfr(), fiop.get());
+            if (rc == -1)
+            {
+                throw ubf_exception(Berror);
+            }
+        },
+        "Prints fielded buffer to specified stream", py::arg("fbfr"),
+        py::arg("iop"));
 
-  m.def(
-      "Bextread",
-      [](py::object iop) {
-        xatmibuf obuf("UBF", 1024);
-        int fd = iop.attr("fileno")().cast<py::int_>();
-        std::unique_ptr<FILE, decltype(&fclose)> fiop(fdopen(dup(fd), "r"),
-                                                      &fclose);
+    m.def(
+        "Bextread",
+        [](py::object iop)
+        {
+            xatmibuf obuf("UBF", 1024);
+            int fd = iop.attr("fileno")().cast<py::int_>();
+            std::unique_ptr<FILE, decltype(&fclose)> fiop(fdopen(dup(fd), "r"),
+                                                          &fclose);
 
-        obuf.mutate([&](UBFH *fbfr) { return Bextread(fbfr, fiop.get()); });
-        return to_py(std::move(obuf));
-      },
-      "Builds fielded buffer from printed format", py::arg("iop"));
+            obuf.mutate([&](UBFH *fbfr)
+                        { return Bextread(fbfr, fiop.get()); });
+            return to_py(std::move(obuf));
+        },
+        "Builds fielded buffer from printed format", py::arg("iop"));
 
-  m.attr("TPNOFLAGS") = py::int_(TPNOFLAGS);
+    m.attr("TPNOFLAGS") = py::int_(TPNOFLAGS);
 
-  m.attr("TPNOBLOCK") = py::int_(TPNOBLOCK);
-  m.attr("TPSIGRSTRT") = py::int_(TPSIGRSTRT);
-  m.attr("TPNOREPLY") = py::int_(TPNOREPLY);
-  m.attr("TPNOTRAN") = py::int_(TPNOTRAN);
-  m.attr("TPTRAN") = py::int_(TPTRAN);
-  m.attr("TPNOTIME") = py::int_(TPNOTIME);
-  m.attr("TPABSOLUTE") = py::int_(TPABSOLUTE);
-  m.attr("TPGETANY") = py::int_(TPGETANY);
-  m.attr("TPNOCHANGE") = py::int_(TPNOCHANGE);
-  m.attr("TPCONV") = py::int_(TPCONV);
-  m.attr("TPSENDONLY") = py::int_(TPSENDONLY);
-  m.attr("TPRECVONLY") = py::int_(TPRECVONLY);
+    m.attr("TPNOBLOCK") = py::int_(TPNOBLOCK);
+    m.attr("TPSIGRSTRT") = py::int_(TPSIGRSTRT);
+    m.attr("TPNOREPLY") = py::int_(TPNOREPLY);
+    m.attr("TPNOTRAN") = py::int_(TPNOTRAN);
+    m.attr("TPTRAN") = py::int_(TPTRAN);
+    m.attr("TPNOTIME") = py::int_(TPNOTIME);
+    m.attr("TPABSOLUTE") = py::int_(TPABSOLUTE);
+    m.attr("TPGETANY") = py::int_(TPGETANY);
+    m.attr("TPNOCHANGE") = py::int_(TPNOCHANGE);
+    m.attr("TPCONV") = py::int_(TPCONV);
+    m.attr("TPSENDONLY") = py::int_(TPSENDONLY);
+    m.attr("TPRECVONLY") = py::int_(TPRECVONLY);
 
-  m.attr("TPFAIL") = py::int_(TPFAIL);
-  m.attr("TPSUCCESS") = py::int_(TPSUCCESS);
-  m.attr("TPEXIT") = py::int_(TPEXIT);
+    m.attr("TPFAIL") = py::int_(TPFAIL);
+    m.attr("TPSUCCESS") = py::int_(TPSUCCESS);
+    m.attr("TPEXIT") = py::int_(TPEXIT);
 
-  m.attr("TPEABORT") = py::int_(TPEABORT);
-  m.attr("TPEBADDESC") = py::int_(TPEBADDESC);
-  m.attr("TPEBLOCK") = py::int_(TPEBLOCK);
-  m.attr("TPEINVAL") = py::int_(TPEINVAL);
-  m.attr("TPELIMIT") = py::int_(TPELIMIT);
-  m.attr("TPENOENT") = py::int_(TPENOENT);
-  m.attr("TPEOS") = py::int_(TPEOS);
-  m.attr("TPEPERM") = py::int_(TPEPERM);
-  m.attr("TPEPROTO") = py::int_(TPEPROTO);
-  m.attr("TPESVCERR") = py::int_(TPESVCERR);
-  m.attr("TPESVCFAIL") = py::int_(TPESVCFAIL);
-  m.attr("TPESYSTEM") = py::int_(TPESYSTEM);
-  m.attr("TPETIME") = py::int_(TPETIME);
-  m.attr("TPETRAN") = py::int_(TPETRAN);
-  m.attr("TPGOTSIG") = py::int_(TPGOTSIG);
-  m.attr("TPERMERR") = py::int_(TPERMERR);
-  m.attr("TPEITYPE") = py::int_(TPEITYPE);
-  m.attr("TPEOTYPE") = py::int_(TPEOTYPE);
-  m.attr("TPERELEASE") = py::int_(TPERELEASE);
-  m.attr("TPEHAZARD") = py::int_(TPEHAZARD);
-  m.attr("TPEHEURISTIC") = py::int_(TPEHEURISTIC);
-  m.attr("TPEEVENT") = py::int_(TPEEVENT);
-  m.attr("TPEMATCH") = py::int_(TPEMATCH);
-  m.attr("TPEDIAGNOSTIC") = py::int_(TPEDIAGNOSTIC);
-  m.attr("TPEMIB") = py::int_(TPEMIB);
+    m.attr("TPEABORT") = py::int_(TPEABORT);
+    m.attr("TPEBADDESC") = py::int_(TPEBADDESC);
+    m.attr("TPEBLOCK") = py::int_(TPEBLOCK);
+    m.attr("TPEINVAL") = py::int_(TPEINVAL);
+    m.attr("TPELIMIT") = py::int_(TPELIMIT);
+    m.attr("TPENOENT") = py::int_(TPENOENT);
+    m.attr("TPEOS") = py::int_(TPEOS);
+    m.attr("TPEPERM") = py::int_(TPEPERM);
+    m.attr("TPEPROTO") = py::int_(TPEPROTO);
+    m.attr("TPESVCERR") = py::int_(TPESVCERR);
+    m.attr("TPESVCFAIL") = py::int_(TPESVCFAIL);
+    m.attr("TPESYSTEM") = py::int_(TPESYSTEM);
+    m.attr("TPETIME") = py::int_(TPETIME);
+    m.attr("TPETRAN") = py::int_(TPETRAN);
+    m.attr("TPGOTSIG") = py::int_(TPGOTSIG);
+    m.attr("TPERMERR") = py::int_(TPERMERR);
+    m.attr("TPEITYPE") = py::int_(TPEITYPE);
+    m.attr("TPEOTYPE") = py::int_(TPEOTYPE);
+    m.attr("TPERELEASE") = py::int_(TPERELEASE);
+    m.attr("TPEHAZARD") = py::int_(TPEHAZARD);
+    m.attr("TPEHEURISTIC") = py::int_(TPEHEURISTIC);
+    m.attr("TPEEVENT") = py::int_(TPEEVENT);
+    m.attr("TPEMATCH") = py::int_(TPEMATCH);
+    m.attr("TPEDIAGNOSTIC") = py::int_(TPEDIAGNOSTIC);
+    m.attr("TPEMIB") = py::int_(TPEMIB);
 
-  m.attr("QMEINVAL") = py::int_(QMEINVAL);
-  m.attr("QMEBADRMID") = py::int_(QMEBADRMID);
-  m.attr("QMENOTOPEN") = py::int_(QMENOTOPEN);
-  m.attr("QMETRAN") = py::int_(QMETRAN);
-  m.attr("QMEBADMSGID") = py::int_(QMEBADMSGID);
-  m.attr("QMESYSTEM") = py::int_(QMESYSTEM);
-  m.attr("QMEOS") = py::int_(QMEOS);
-  m.attr("QMEABORTED") = py::int_(QMEABORTED);
-  m.attr("QMENOTA") = py::int_(QMENOTA);
-  m.attr("QMEPROTO") = py::int_(QMEPROTO);
-  m.attr("QMEBADQUEUE") = py::int_(QMEBADQUEUE);
-  m.attr("QMENOMSG") = py::int_(QMENOMSG);
-  m.attr("QMEINUSE") = py::int_(QMEINUSE);
-  m.attr("QMENOSPACE") = py::int_(QMENOSPACE);
-  m.attr("QMERELEASE") = py::int_(QMERELEASE);
-  m.attr("QMEINVHANDLE") = py::int_(QMEINVHANDLE);
-  m.attr("QMESHARE") = py::int_(QMESHARE);
+    m.attr("QMEINVAL") = py::int_(QMEINVAL);
+    m.attr("QMEBADRMID") = py::int_(QMEBADRMID);
+    m.attr("QMENOTOPEN") = py::int_(QMENOTOPEN);
+    m.attr("QMETRAN") = py::int_(QMETRAN);
+    m.attr("QMEBADMSGID") = py::int_(QMEBADMSGID);
+    m.attr("QMESYSTEM") = py::int_(QMESYSTEM);
+    m.attr("QMEOS") = py::int_(QMEOS);
+    m.attr("QMEABORTED") = py::int_(QMEABORTED);
+    m.attr("QMENOTA") = py::int_(QMENOTA);
+    m.attr("QMEPROTO") = py::int_(QMEPROTO);
+    m.attr("QMEBADQUEUE") = py::int_(QMEBADQUEUE);
+    m.attr("QMENOMSG") = py::int_(QMENOMSG);
+    m.attr("QMEINUSE") = py::int_(QMEINUSE);
+    m.attr("QMENOSPACE") = py::int_(QMENOSPACE);
+    m.attr("QMERELEASE") = py::int_(QMERELEASE);
+    m.attr("QMEINVHANDLE") = py::int_(QMEINVHANDLE);
+    m.attr("QMESHARE") = py::int_(QMESHARE);
 
-  m.attr("BFLD_SHORT") = py::int_(BFLD_SHORT);
-  m.attr("BFLD_LONG") = py::int_(BFLD_LONG);
-  m.attr("BFLD_CHAR") = py::int_(BFLD_CHAR);
-  m.attr("BFLD_FLOAT") = py::int_(BFLD_FLOAT);
-  m.attr("BFLD_DOUBLE") = py::int_(BFLD_DOUBLE);
-  m.attr("BFLD_STRING") = py::int_(BFLD_STRING);
-  m.attr("BFLD_CARRAY") = py::int_(BFLD_CARRAY);
-  m.attr("BFLD_UBF") = py::int_(BFLD_UBF);
-  m.attr("BBADFLDID") = py::int_(BBADFLDID);
+    m.attr("BFLD_SHORT") = py::int_(BFLD_SHORT);
+    m.attr("BFLD_LONG") = py::int_(BFLD_LONG);
+    m.attr("BFLD_CHAR") = py::int_(BFLD_CHAR);
+    m.attr("BFLD_FLOAT") = py::int_(BFLD_FLOAT);
+    m.attr("BFLD_DOUBLE") = py::int_(BFLD_DOUBLE);
+    m.attr("BFLD_STRING") = py::int_(BFLD_STRING);
+    m.attr("BFLD_CARRAY") = py::int_(BFLD_CARRAY);
+    m.attr("BFLD_UBF") = py::int_(BFLD_UBF);
+    m.attr("BBADFLDID") = py::int_(BBADFLDID);
 
-  m.attr("TPEX_STRING") = py::int_(TPEX_STRING);
+    m.attr("TPEX_STRING") = py::int_(TPEX_STRING);
 
-  m.attr("TPMULTICONTEXTS") = py::int_(TPMULTICONTEXTS);
+    m.attr("TPMULTICONTEXTS") = py::int_(TPMULTICONTEXTS);
 
-  m.attr("MIB_LOCAL") = py::int_(MIB_LOCAL);
+    m.attr("MIB_LOCAL") = py::int_(MIB_LOCAL);
 
-  m.attr("TAOK") = py::int_(TAOK);
-  m.attr("TAUPDATED") = py::int_(TAUPDATED);
-  m.attr("TAPARTIAL") = py::int_(TAPARTIAL);
+    m.attr("TAOK") = py::int_(TAOK);
+    m.attr("TAUPDATED") = py::int_(TAUPDATED);
+    m.attr("TAPARTIAL") = py::int_(TAPARTIAL);
 
-  m.attr("TPBLK_NEXT") = py::int_(TPBLK_NEXT);
-  m.attr("TPBLK_ALL") = py::int_(TPBLK_ALL);
+    m.attr("TPBLK_NEXT") = py::int_(TPBLK_NEXT);
+    m.attr("TPBLK_ALL") = py::int_(TPBLK_ALL);
 
-  m.attr("TPQCORRID") = py::int_(TPQCORRID);
-  m.attr("TPQFAILUREQ") = py::int_(TPQFAILUREQ);
-  m.attr("TPQBEFOREMSGID") = py::int_(TPQBEFOREMSGID);
-  m.attr("TPQGETBYMSGIDOLD") = py::int_(TPQGETBYMSGIDOLD);
-  m.attr("TPQMSGID") = py::int_(TPQMSGID);
-  m.attr("TPQPRIORITY") = py::int_(TPQPRIORITY);
-  m.attr("TPQTOP") = py::int_(TPQTOP);
-  m.attr("TPQWAIT") = py::int_(TPQWAIT);
-  m.attr("TPQREPLYQ") = py::int_(TPQREPLYQ);
-  m.attr("TPQTIME_ABS") = py::int_(TPQTIME_ABS);
-  m.attr("TPQTIME_REL") = py::int_(TPQTIME_REL);
-  m.attr("TPQGETBYCORRIDOLD") = py::int_(TPQGETBYCORRIDOLD);
-  m.attr("TPQPEEK") = py::int_(TPQPEEK);
-  m.attr("TPQDELIVERYQOS") = py::int_(TPQDELIVERYQOS);
-  m.attr("TPQREPLYQOS  ") = py::int_(TPQREPLYQOS);
-  m.attr("TPQEXPTIME_ABS") = py::int_(TPQEXPTIME_ABS);
-  m.attr("TPQEXPTIME_REL") = py::int_(TPQEXPTIME_REL);
-  m.attr("TPQEXPTIME_NONE ") = py::int_(TPQEXPTIME_NONE);
-  m.attr("TPQGETBYMSGID") = py::int_(TPQGETBYMSGID);
-  m.attr("TPQGETBYCORRID") = py::int_(TPQGETBYCORRID);
-  m.attr("TPQQOSDEFAULTPERSIST") = py::int_(TPQQOSDEFAULTPERSIST);
-  m.attr("TPQQOSPERSISTENT ") = py::int_(TPQQOSPERSISTENT);
-  m.attr("TPQQOSNONPERSISTENT") = py::int_(TPQQOSNONPERSISTENT);
+    m.attr("TPQCORRID") = py::int_(TPQCORRID);
+    m.attr("TPQFAILUREQ") = py::int_(TPQFAILUREQ);
+    m.attr("TPQBEFOREMSGID") = py::int_(TPQBEFOREMSGID);
+    m.attr("TPQGETBYMSGIDOLD") = py::int_(TPQGETBYMSGIDOLD);
+    m.attr("TPQMSGID") = py::int_(TPQMSGID);
+    m.attr("TPQPRIORITY") = py::int_(TPQPRIORITY);
+    m.attr("TPQTOP") = py::int_(TPQTOP);
+    m.attr("TPQWAIT") = py::int_(TPQWAIT);
+    m.attr("TPQREPLYQ") = py::int_(TPQREPLYQ);
+    m.attr("TPQTIME_ABS") = py::int_(TPQTIME_ABS);
+    m.attr("TPQTIME_REL") = py::int_(TPQTIME_REL);
+    m.attr("TPQGETBYCORRIDOLD") = py::int_(TPQGETBYCORRIDOLD);
+    m.attr("TPQPEEK") = py::int_(TPQPEEK);
+    m.attr("TPQDELIVERYQOS") = py::int_(TPQDELIVERYQOS);
+    m.attr("TPQREPLYQOS  ") = py::int_(TPQREPLYQOS);
+    m.attr("TPQEXPTIME_ABS") = py::int_(TPQEXPTIME_ABS);
+    m.attr("TPQEXPTIME_REL") = py::int_(TPQEXPTIME_REL);
+    m.attr("TPQEXPTIME_NONE ") = py::int_(TPQEXPTIME_NONE);
+    m.attr("TPQGETBYMSGID") = py::int_(TPQGETBYMSGID);
+    m.attr("TPQGETBYCORRID") = py::int_(TPQGETBYCORRID);
+    m.attr("TPQQOSDEFAULTPERSIST") = py::int_(TPQQOSDEFAULTPERSIST);
+    m.attr("TPQQOSPERSISTENT ") = py::int_(TPQQOSPERSISTENT);
+    m.attr("TPQQOSNONPERSISTENT") = py::int_(TPQQOSNONPERSISTENT);
 
-  m.doc() =
-      R"pbdoc(
+    m.doc() =
+        R"pbdoc(
 Python3 bindings for writing Endurox clients and servers
 --------------------------------------------------------
 

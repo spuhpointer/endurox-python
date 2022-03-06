@@ -4,7 +4,7 @@ project(endurox-python)
 SET(SOURCE_DIR "src/endurox")
 # Tell cmake that headers are in alse in source_dir
 include_directories(${SOURCE_DIR})
-SET(SOURCES "${SOURCE_DIR}/endurox.cpp")
+SET(SOURCES "${SOURCE_DIR}/endurox.cpp" "${SOURCE_DIR}/xatmibuf.cpp")
 
 #SET(TEST_DIR "tests")
 #SET(TESTS ${SOURCES}
