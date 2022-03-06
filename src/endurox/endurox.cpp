@@ -68,7 +68,7 @@ static py::object to_py(UBFH *fbfr, BFLDLEN buflen = 0)
     {
         buflen = Bsizeof(fbfr);
     }
-    std::unique_ptr<char> value(new char[buflen]);
+    std::unique_ptr<char[]> value(new char[buflen]);
 
     for (;;)
     {
@@ -119,7 +119,10 @@ static py::object to_py(UBFH *fbfr, BFLDLEN buflen = 0)
         case BFLD_STRING:
             val.append(
 #if PY_MAJOR_VERSION >= 3
-                py::str(PyUnicode_DecodeLocale(value.get(), "surrogateescape"))
+                py::str(value.get())
+                //Seems like this one causes memory leak:
+                //Thus assume t
+                //py::str(PyUnicode_DecodeLocale(value.get(), "surrogateescape"))
 #else
                 py::bytes(value.get(), len - 1)
 #endif
@@ -171,7 +174,7 @@ static void from_py1(xatmibuf &buf, BFLDID fieldid, BFLDOCC oc,
 {
     if (obj.is_none())
     {
-        // pass
+
 #if PY_MAJOR_VERSION >= 3
     }
     else if (py::isinstance<py::bytes>(obj))
@@ -520,6 +523,7 @@ void tpsvrdone()
     {
         server.attr(__func__)();
     }
+    M_dispmap.clear();
 }
 int tpsvrthrinit(int argc, char *argv[])
 {

@@ -97,9 +97,10 @@
 			<sysopt>-e ${NDRX_ULOG}/cconfsrv.log -r</sysopt>
 		</server>
 		<server name="server.py">
-			<min>1</min>
-			<max>1</max>
+			<min>5</min>
+			<max>5</max>
 			<srvid>3000</srvid>
+			<rqaddr>YOPT</rqaddr>
 			<sysopt>-e ${NDRX_ULOG}/server.log -r -- -k3 -i1</sysopt>
 		</server>
 	</servers>

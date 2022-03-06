@@ -1,5 +1,11 @@
 cmake_minimum_required(VERSION 3.1)
 project(endurox-python)
+SET(CMAKE_BUILD_TYPE Debug)
+
+#IF (DEFINE_SANITIZE)
+#	SET(CMAKE_C_FLAGS "-fsanitize=address -fno-omit-frame-pointer -O0 -ggdb ${CMAKE_C_FLAGS}")
+#        SET(CMAKE_CXX_FLAGS "-fsanitize=address -fno-omit-frame-pointer -O0 -ggdb ${CMAKE_CXX_FLAGS}")
+#ENDIF()
 
 SET(SOURCE_DIR "src/endurox")
 # Tell cmake that headers are in alse in source_dir

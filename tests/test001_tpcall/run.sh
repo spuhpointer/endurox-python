@@ -8,6 +8,7 @@
 # Load system settings...
 #
 source ~/ndrx_home
+export PYTHONPATH=`pwd`/../libs
 
 TIMES=200
 pushd .
@@ -50,7 +51,7 @@ cd conf
 . settest1
 
 # So we are in runtime directory
-cd ..
+cd ../bin
 # Be on safe side...
 unset NDRX_CCTAG 
 xadmin start -y
@@ -71,11 +72,13 @@ function go_out {
 echo "Running UBF test"
 ################################################################################
 
+python3 -m unittest client.py
+
 RET=$?
 
 if [[ $RET != 0 ]]; then
-	echo "testcl $COMMAND: failed"
-	go_out 28
+    echo "testcl $COMMAND: failed"
+    go_out -1
 fi
 
 ###############################################################################

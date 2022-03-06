@@ -1,18 +1,27 @@
 import unittest
 import endurox as e
+import exutils as u
+import gc
 
 class TestTpcall(unittest.TestCase):
 
     # TODO: we add some testing here
     # also check that memory leaks are not present.
     # intially probably with xmemck.
+    # TODO: Test all data types.
     def test_ubf_tpcall(self):
-        for i in range(0,999999999):
-            e.tpcall("UBFTEST", {
+        w = u.NdrxStopwatch()
+        while w.get_delta_sec() < 30:
+            tperrno, tpurcode, retbuf = e.tpcall("UBFTEST", {
                 "T_CHAR_2_FLD": ["X", "Y"],
                 "T_STRING_FLD": "HELLO INPUT",
+                "T_STRING_2_FLD": "HELLO INPUT 2",
                 },);
-        #self.assertEqual('foo'.upper(), 'FOO')
+            self.assertEqual(tperrno, 0)
+            self.assertEqual(tpurcode, 0)
+            self.assertEqual(retbuf["T_STRING_FLD"][0], "HELLO FROM SERVER")
+            self.assertEqual(retbuf["T_STRING_FLD"][1], "hello 2")
+            self.assertEqual(retbuf["T_STRING_2_FLD"][0], "HELLO INPUT 2")
 
 if __name__ == '__main__':
     unittest.main()

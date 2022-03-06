@@ -2,6 +2,7 @@
 
 import os
 import sys
+import gc
 
 import endurox as e
 
@@ -23,6 +24,7 @@ class Server:
         args.data['T_STRING_FLD']=['HELLO FROM SERVER']
         args.data['T_STRING_FLD'].append('hello 2')
         args.data['T_CHAR_FLD']=args.data['T_CHAR_2_FLD']
+#        gc.collect()
 
         return e.tpreturn(e.TPSUCCESS, 0, args.data)
 
