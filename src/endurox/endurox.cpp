@@ -59,7 +59,9 @@ std::map<std::string, py::object> M_dispmap {};
 static py::object to_py(UBFH *fbfr, BFLDLEN buflen = 0)
 {
     BFLDID fieldid = BFIRSTFLDID;
+    Bnext_state_t state;
     BFLDOCC oc = 0;
+    char *d_ptr;
 
     py::dict result;
     py::list val;
@@ -68,13 +70,14 @@ static py::object to_py(UBFH *fbfr, BFLDLEN buflen = 0)
     {
         buflen = Bsizeof(fbfr);
     }
-    std::unique_ptr<char[]> value(new char[buflen]);
+    /*std::unique_ptr<char[]> value(new char[buflen]); */
 
     for (;;)
     {
         BFLDLEN len = buflen;
-
-        int r = Bnext(fbfr, &fieldid, &oc, value.get(), &len);
+        //Seems in Enduro/X state is not associate with particular buffer
+        //Looks like Tuxedo stores iteration state within buffer it self.
+        int r = Bnext2(&state, fbfr, &fieldid, &oc, NULL, &len, &d_ptr);
         if (r == -1)
         {
             throw ubf_exception(Berror);
@@ -102,37 +105,37 @@ static py::object to_py(UBFH *fbfr, BFLDLEN buflen = 0)
         switch (Bfldtype(fieldid))
         {
         case BFLD_CHAR:
-            val.append(py::cast(value.get()[0]));
+            val.append(py::cast(d_ptr[0]));
             break;
         case BFLD_SHORT:
-            val.append(py::cast(*reinterpret_cast<short *>(value.get())));
+            val.append(py::cast(*reinterpret_cast<short *>(d_ptr)));
             break;
         case BFLD_LONG:
-            val.append(py::cast(*reinterpret_cast<long *>(value.get())));
+            val.append(py::cast(*reinterpret_cast<long *>(d_ptr)));
             break;
         case BFLD_FLOAT:
-            val.append(py::cast(*reinterpret_cast<float *>(value.get())));
+            val.append(py::cast(*reinterpret_cast<float *>(d_ptr)));
             break;
         case BFLD_DOUBLE:
-            val.append(py::cast(*reinterpret_cast<double *>(value.get())));
+            val.append(py::cast(*reinterpret_cast<double *>(d_ptr)));
             break;
         case BFLD_STRING:
             val.append(
 #if PY_MAJOR_VERSION >= 3
-                py::str(value.get())
+                py::str(d_ptr)
                 //Seems like this one causes memory leak:
                 //Thus assume t
                 //py::str(PyUnicode_DecodeLocale(value.get(), "surrogateescape"))
 #else
-                py::bytes(value.get(), len - 1)
+                py::bytes(d_ptr, len - 1)
 #endif
             );
             break;
         case BFLD_CARRAY:
-            val.append(py::bytes(value.get(), len));
+            val.append(py::bytes(d_ptr, len));
             break;
         case BFLD_UBF:
-            val.append(to_py(reinterpret_cast<UBFH *>(value.get()), buflen));
+            val.append(to_py(reinterpret_cast<UBFH *>(d_ptr), buflen));
             break;
         default:
             throw std::invalid_argument("Unsupported field " +

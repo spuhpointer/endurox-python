@@ -4,6 +4,7 @@
 # @(#) Test 001 - Python tpcall tests
 #
 
+(
 #
 # Load system settings...
 #
@@ -13,6 +14,7 @@ export PYTHONPATH=`pwd`/../libs
 TIMES=200
 pushd .
 rm -rf runtime/log
+rm runtime/ULOG*
 mkdir runtime/log
 
 cd runtime
@@ -85,10 +87,7 @@ fi
 echo "Done"
 ###############################################################################
 
-# go_out will shutdown
-#xadmin stop -c -y
-
-
 go_out 0
 
+) > test.out 2>&1
 
