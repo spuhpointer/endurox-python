@@ -7,6 +7,8 @@ SET(CMAKE_BUILD_TYPE Debug)
 #        SET(CMAKE_CXX_FLAGS "-fsanitize=address -fno-omit-frame-pointer -O0 -ggdb ${CMAKE_CXX_FLAGS}")
 #ENDIF()
 
+set (CMAKE_CXX_STANDARD 14)
+
 SET(SOURCE_DIR "src/endurox")
 # Tell cmake that headers are in alse in source_dir
 include_directories(${SOURCE_DIR})

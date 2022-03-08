@@ -500,13 +500,6 @@ static pytpreply pytpadmcall(py::object idata, long flags)
 
 int tpsvrinit(int argc, char *argv[])
 {
-
-    if (tpopen() == -1)
-    {
-        userlog(const_cast<char *>("Failed tpopen() = %d / %s"), tperrno,
-                tpstrerror(tperrno));
-        return -1;
-    }
     py::gil_scoped_acquire acquire;
     if (hasattr(server, __func__))
     {
@@ -537,12 +530,6 @@ int tpsvrthrinit(int argc, char *argv[])
     auto const &internals = pybind11::detail::get_internals();
     PyThreadState_New(internals.istate);
 
-    if (tpopen() == -1)
-    {
-        userlog(const_cast<char *>("Failed tpopen() = %d / %s"), tperrno,
-                tpstrerror(tperrno));
-        return -1;
-    }
     py::gil_scoped_acquire acquire;
     if (hasattr(server, __func__))
     {
@@ -1038,6 +1025,30 @@ PYBIND11_MODULE(endurox, m)
         },
         "Routine for checking if a transaction is in progress");
 
+    m.def(
+        "tpopen",
+        []()
+        {
+            int rc;
+            if ((rc = tpopen()) == -1)
+            {
+                throw xatmi_exception(tperrno);
+            }
+            return py::bool_(rc);
+        },
+        "Open XA Sub-system");
+    m.def(
+        "tpclose",
+        []()
+        {
+            int rc;
+            if ((rc = tpclose()) == -1)
+            {
+                throw xatmi_exception(tperrno);
+            }
+            return py::bool_(rc);
+        },
+        "Close XA Sub-system");
     m.def(
         "userlog",
         [](const char *message)
