@@ -109,30 +109,41 @@ static py::object to_py(UBFH *fbfr, BFLDLEN buflen = 0)
     return result;
 }
 
+/**
+ * @brief This will add all XATMI related stuff under the {"data":<XATMI data...>}
+ * 
+ * @param buf 
+ * @return expublic 
+ */
 expublic py::object ndrx_to_py(xatmibuf buf)
 {
     char type[8];
     char subtype[16];
+
+    py::dict result;
+
     if (tptypes(*buf.pp, type, subtype) == -1)
     {
         throw std::invalid_argument("Invalid buffer type");
     }
     if (strcmp(type, "STRING") == 0)
     {
-        return py::cast(*buf.pp);
+        result["data"]=py::cast(*buf.pp);
     }
     else if (strcmp(type, "CARRAY") == 0 || strcmp(type, "X_OCTET") == 0)
     {
-        return py::bytes(*buf.pp, buf.len);
+        result["data"]=py::bytes(*buf.pp, buf.len);
     }
     else if (strcmp(type, "UBF") == 0)
     {
-        return to_py(*buf.fbfr());
+        result["data"]=to_py(*buf.fbfr());
     }
     else
     {
         throw std::invalid_argument("Unsupported buffer type");
     }
+
+    return result;
 }
 
 static void from_py1(xatmibuf &buf, BFLDID fieldid, BFLDOCC oc,
@@ -230,26 +241,48 @@ static void from_py(py::dict obj, xatmibuf &b)
     }
 }
 
+/**
+ * @brief Must be dict with "data" key. So valid buffer is:
+ * 
+ * {"data":<XATMI_BUFFER>, "buftype":"UBF|VIEW|STRING|JSON|CARRAY|NULL", "subtype":"<VIEW_TYPE>", ["callinfo":{<UBF_DATA>}]}
+ * 
+ * For NULL buffers, data field is not present.
+ * 
+ * @param obj Pyton object
+ * @return converted XATMI buffer
+ */
 expublic xatmibuf ndrx_from_py(py::object obj)
 {
-    if (py::isinstance<py::bytes>(obj))
+
+    if (!py::isinstance<py::dict>(obj))
     {
-        xatmibuf buf("CARRAY", PyBytes_Size(obj.ptr()));
-        memcpy(*buf.pp, PyBytes_AsString(obj.ptr()), PyBytes_Size(obj.ptr()));
+        throw std::invalid_argument("Unsupported buffer type");
+    }
+    //Get the data field
+
+    auto dict = static_cast<py::dict>(obj);
+
+    //data i
+    auto data = dict["data"];
+
+    if (py::isinstance<py::bytes>(data))
+    {
+        xatmibuf buf("CARRAY", PyBytes_Size(data.ptr()));
+        memcpy(*buf.pp, PyBytes_AsString(data.ptr()), PyBytes_Size(data.ptr()));
         return buf;
     }
-    else if (py::isinstance<py::str>(obj))
+    else if (py::isinstance<py::str>(data))
     {
-        std::string s = py::str(obj);
+        std::string s = py::str(data);
         xatmibuf buf("STRING", s.size() + 1);
         strcpy(*buf.pp, s.c_str());
         return buf;
     }
-    else if (py::isinstance<py::dict>(obj))
+    else if (py::isinstance<py::dict>(data))
     {
         xatmibuf buf("UBF", 1024);
 
-        from_py(static_cast<py::dict>(obj), buf);
+        from_py(static_cast<py::dict>(data), buf);
 
         return buf;
     }

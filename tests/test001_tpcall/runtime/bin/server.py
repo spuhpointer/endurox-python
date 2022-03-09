@@ -21,9 +21,9 @@ class Server:
     def UBFTEST(self, args):
 #        e.userlog(args.name)
 #        e.userlog(args.data['T_STRING_FLD'][0])
-        args.data['T_STRING_FLD']=['HELLO FROM SERVER']
-        args.data['T_STRING_FLD'].append('hello 2')
-        args.data['T_CHAR_FLD']=args.data['T_CHAR_2_FLD']
+        args.data["data"]['T_STRING_FLD']=['HELLO FROM SERVER']
+        args.data["data"]['T_STRING_FLD'].append('hello 2')
+        args.data["data"]['T_CHAR_FLD']=args.data["data"]['T_CHAR_2_FLD']
 #        gc.collect()
 
         return e.tpreturn(e.TPSUCCESS, 0, args.data)
