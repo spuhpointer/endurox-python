@@ -1,4 +1,3 @@
-
 // ndrx_pymod.h
 #ifndef NDRX_PYMOD_H
 #define NDRX_PYMOD_H
@@ -40,5 +39,8 @@ public:
 private:
     void swap(xatmibuf &other) noexcept;
 };
+
+extern xatmibuf ndrx_from_py(py::object obj);
+extern py::object ndrx_to_py(xatmibuf buf);
 
 #endif /* NDRX_PYMOD.H */
