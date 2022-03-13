@@ -12,7 +12,13 @@ set (CMAKE_CXX_STANDARD 14)
 SET(SOURCE_DIR "src/endurox")
 # Tell cmake that headers are in alse in source_dir
 include_directories(${SOURCE_DIR})
-SET(SOURCES "${SOURCE_DIR}/endurox.cpp" "${SOURCE_DIR}/xatmibuf.cpp" "${SOURCE_DIR}/bufconv.cpp")
+SET(SOURCES 
+	"${SOURCE_DIR}/endurox.cpp"
+	"${SOURCE_DIR}/xatmibuf.cpp"
+	"${SOURCE_DIR}/bufconv.cpp"
+	"${SOURCE_DIR}/bufconv_view.cpp"
+	"${SOURCE_DIR}/bufconv_ubf.cpp"
+   )
 
 #SET(TEST_DIR "tests")
 #SET(TESTS ${SOURCES}

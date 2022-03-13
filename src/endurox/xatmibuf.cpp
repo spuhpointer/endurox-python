@@ -1,4 +1,41 @@
+/**
+ * @brief Enduro/X Python module
+ *
+ * @file ndrx_pymod.h
+ */
+/* -----------------------------------------------------------------------------
+ * Enduro/X Middleware Platform for Distributed Transaction Processing
+ * Copyright (C) 2009-2016, ATR Baltic, Ltd. All Rights Reserved.
+ * Copyright (C) 2017-2022, Mavimax, Ltd. All Rights Reserved.
+ * This software is released under MIT license.
+ * 
+ * -----------------------------------------------------------------------------
+ * MIT License
+ * Copyright (C) 2019 Aivars Kalvans <aivars.kalvans@gmail.com> 
+ * Copyright (C) 2022 Mavimax SIA
+ * 
+ * Permission is hereby granted, free of charge, to any person obtaining a copy
+ * of this software and associated documentation files (the "Software"), to deal
+ * in the Software without restriction, including without limitation the rights
+ * to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+ * copies of the Software, and to permit persons to whom the Software is
+ * furnished to do so, subject to the following conditions:
+ * 
+ * The above copyright notice and this permission notice shall be included in all
+ * copies or substantial portions of the Software.
+ * 
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+ * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+ * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+ * AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+ * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+ * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+ * SOFTWARE.
+ * -----------------------------------------------------------------------------
+ */
 
+
+/*---------------------------Includes-----------------------------------*/
 #include <dlfcn.h>
 
 #include <atmi.h>
@@ -18,6 +55,14 @@
 #include <functional>
 #include <map>
 
+/*---------------------------Externs------------------------------------*/
+/*---------------------------Macros-------------------------------------*/
+/*---------------------------Enums--------------------------------------*/
+/*---------------------------Typedefs-----------------------------------*/
+/*---------------------------Globals------------------------------------*/
+/*---------------------------Statics------------------------------------*/
+/*---------------------------Prototypes---------------------------------*/
+
 namespace py = pybind11;
 
 
@@ -26,25 +71,46 @@ xatmibuf::xatmibuf() : pp(&p), len(0), p(nullptr) {}
 xatmibuf::xatmibuf(TPSVCINFO *svcinfo)
     : pp(&svcinfo->data), len(svcinfo->len), p(nullptr) {}
 
-xatmibuf::xatmibuf(const char *type, long len) : pp(&p), len(len), p(nullptr)
+/**
+ * @brief Sub-type based allocation
+ * 
+ * @param type 
+ * @param subtype 
+ */
+xatmibuf::xatmibuf(const char *type, const char *subtype) : pp(&p), len(len), p(nullptr)
 {
-    reinit(type, len);
+    reinit(type, subtype, 1024);
 }
 
-void xatmibuf::reinit(const char *type, long len_)
+xatmibuf::xatmibuf(const char *type, long len) : pp(&p), len(len), p(nullptr)
 {
-    if (*pp == nullptr)
+    reinit(type, nullptr, len);
+}
+
+/**
+ * @brief Allocate / reallocate
+ * 
+ * @param type XATMI type
+ * @param subtype XATMI sub-type
+ * @param len_ len (where required)
+ */
+void xatmibuf::reinit(const char *type, const char *subtype, long len_)
+{
+    //Free up ptr if have any
+    if (nullptr==*pp)
     {
         len = len_;
-        *pp = tpalloc(const_cast<char *>(type), nullptr, len);
+        *pp = tpalloc(const_cast<char *>(type), const_cast<char *>(subtype), len);
         if (*pp == nullptr)
         {
-            throw std::bad_alloc();
+            throw xatmi_exception(tperrno);
         }
     }
     else
     {
-        /* always UBF? */
+        /* always UBF? 
+         * used for recursive buffer processing
+         */
         UBFH *fbfr = reinterpret_cast<UBFH *>(*pp);
         Binit(fbfr, Bsizeof(fbfr));
     }
@@ -108,3 +174,6 @@ void xatmibuf::swap(xatmibuf &other) noexcept
     std::swap(p, other.p);
     std::swap(len, other.len);
 }
+
+/* vim: set ts=4 sw=4 et smartindent: */
+
