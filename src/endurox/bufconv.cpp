@@ -92,6 +92,8 @@ expublic py::object ndrx_to_py(xatmibuf buf)
         result["subtype"]=subtype;
     }
 
+    NDRX_LOG(log_debug, "Converting buffer type [%s]", type);
+
     if (strcmp(type, "STRING") == 0)
     {
         result["data"]=py::cast(*buf.pp);
@@ -205,8 +207,12 @@ expublic xatmibuf ndrx_from_py(py::object obj)
     }
     else if (py::isinstance<py::dict>(data))
     {
+        NDRX_LOG(log_debug, "Converting out UBF dict...");
         if (buftype!="" && buftype!="UBF")
         {
+            NDRX_LOG(log_error, "For dict data "
+                "expected UBF buftype, got [%s]", buftype);
+
             throw std::invalid_argument("For dict data "
                 "expected UBF buftype, got: "+buftype);
         }
@@ -214,6 +220,7 @@ expublic xatmibuf ndrx_from_py(py::object obj)
 
         ndrxpy_from_py_ubf(static_cast<py::dict>(data), buf);
 
+       
         return buf;
     }
     else
