@@ -109,7 +109,7 @@ static pytpreply pytpcall(const char *svc, py::object idata, long flags)
 {
 
     auto in = ndrx_from_py(idata);
-    xatmibuf out("UBF", 1024);
+    xatmibuf out("NULL", (int)0);
     {
         py::gil_scoped_release release;
         int rc = tpcall(const_cast<char *>(svc), *in.pp, in.len, out.pp, &out.len,
@@ -223,7 +223,12 @@ static void pytpreturn(int rval, long rcode, py::object data, long flags)
     auto &&odata = ndrx_from_py(data);
     tsvcresult.olen = odata.len;
     tsvcresult.odata = odata.release();
+
     tsvcresult.forward = false;
+    NDRX_LOG(log_error, "YOPT OK TPRETURN?");
+    //ValueError: embedded null character
+    //PyErr_Print();
+
 }
 static void pytpforward(const std::string &svc, py::object data, long flags)
 {
@@ -339,6 +344,7 @@ void PY(TPSVCINFO *svcinfo)
     }
     catch (const std::exception &e)
     {
+        NDRX_LOG(log_error, "Got exception at tpreturn: %s", e.what());
         userlog(const_cast<char *>("%s"), e.what());
         tpreturn(TPEXIT, 0, nullptr, 0, 0);
     }
@@ -1158,7 +1164,36 @@ Python3 bindings for writing Endurox clients and servers
         :toctree: _generate
 
         tpterm
-           
+
+XATMI buffer formats
+********************
+
+Core of **XATMI** **IPC** consists of messages being sent between binaries. Message may
+encode different type of data. Enduro/X supports following data buffer types:
+
+- | **UBF** (Unified Buffer Format) which is similar to **JSON** or **YAML** buffer format, except
+  | that it is typed and all fields must be defined in definition (fd) files. Basically
+  | it is dictionary where every field may have several occurrences (i.e. kind of array).
+  | Following field types are supported: *BFLD_CHAR* (C char type), *BFLD_SHORT* (C short type),
+  | *BFLD_LONG* (C long type), *BFLD_FLOAT* (C float type), *BFLD_DOUBLE* (C double type),
+  | *BFLD_STRING* (C zero terminated string type), *BFLD_CARRAY* (byte array), *BFLD_VIEW*
+  | (C structure record), *BFLD_UBF* (recursive buffer) and *BFLD_PTR* (pointer to another
+  | XATMI buffer).
+- | STRING this is plain C string buffer. When using with Python, data is converted \
+  | from to/from *UTF-8* format.
+
+
+UBF Data encoding
+=================
+
+.. code-block:: python
+   :caption: this.py
+   :name: this-py
+
+   print 'Explicit is better than implicit.'
+
+All XATMI buffer data in Python3 Enduro/X binding is encoded with dictionary. With
+following examples.
 
 Flags to service routines:
 

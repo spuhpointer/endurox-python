@@ -81,6 +81,8 @@ expublic py::object ndrxpy_to_py_ubf(UBFH *fbfr, BFLDLEN buflen = 0)
     py::dict result;
     py::list val;
 
+    NDRX_LOG(log_debug, "Into ndrxpy_to_py_ubf()");
+
     if (buflen == 0)
     {
         buflen = Bsizeof(fbfr);

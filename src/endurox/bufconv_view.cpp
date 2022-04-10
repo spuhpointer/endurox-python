@@ -67,12 +67,117 @@ namespace py = pybind11;
  * @brief Covert VIEW buffer to python object
  * The output format is similar to UBF encoded in Python dictionary.
  * 
- * @param view_buf C structure of the view
+ * @param csturct C structure of the view
+ * @param view view name
+ * @param size size of the view buffer (used for temp storage)
  * @return py::object python dictionary.
  */
-expublic py::object ndrxpy_to_py_view(char *view_buf)
+expublic py::object ndrxpy_to_py_view(char *cstruct, char *view, long size)
 {
-    throw std::invalid_argument("Not implemented");
+    /*throw std::invalid_argument("Not implemented");*/
+    py::dict result;
+    py::list val;
+    int ret;
+    Bvnext_state_t state;
+    char cname[NDRX_VIEW_CNAME_LEN+1];
+    int fldtype;
+    BFLDOCC maxocc, fulloccs, occ;
+    long dim_size;
+    BFLDLEN len;
+    int realoccs;
+    bool first = true;
+
+    NDRX_LOG(log_debug, "To python view = [%s] size = [%ld]", view, size);
+    /* allocate temporary buffer */
+    tempbuf tmp(size);
+
+    while (1)
+    {
+        if (EXFAIL==(ret=Bvnext(&state, first?view:NULL, cname, 
+                &fldtype, &maxocc, &dim_size)))
+        {
+            NDRX_LOG(log_error, "Failed to iterate VIEW [%s]: %s", view, Bstrerror(Berror));
+            throw ubf_exception(Berror);
+
+        }
+
+        first = false;
+        UBF_LOG(log_debug, "Converting view=[%s] cname=[%s]", view, cname);
+
+        if (0==ret)
+        {
+            /* we are done */
+            break;
+        }
+
+        /* Get real occurrences */
+        if (EXFAIL==(fulloccs=Bvoccur(cstruct, view, cname, NULL, &realoccs, NULL, NULL)))
+        {
+            NDRX_LOG(log_error, "Failed to get view field %s.%s infos: %s", 
+                    view, cname, Bstrerror(Berror));
+            throw ubf_exception(Berror);
+        }
+
+        for (occ=0; occ<fulloccs; occ++)
+        {
+            if (occ == 0)
+            {
+                val = py::list();
+                result[cname] = val;
+            }
+            
+            /* read data according to the type... 
+             * give it full buffer size
+             */
+            len = size;
+            if (EXFAIL==CBvget(cstruct, view, cname, occ, tmp.buf, &len, fldtype, 0))
+            {
+                NDRX_LOG(log_error, "Failed to get view field %s.%s occ %d infos: %s", 
+                        view, cname, occ, Bstrerror(Berror));
+                throw ubf_exception(Berror);
+            }
+
+            switch (fldtype)
+            {
+            case BFLD_CHAR:
+                val.append(py::cast(tmp.buf[0]));
+                break;
+            case BFLD_SHORT:
+                val.append(py::cast(*reinterpret_cast<short *>(tmp.buf)));
+                break;
+            case BFLD_LONG:
+                val.append(py::cast(*reinterpret_cast<long *>(tmp.buf)));
+                break;
+            case BFLD_FLOAT:
+                val.append(py::cast(*reinterpret_cast<float *>(tmp.buf)));
+                break;
+            case BFLD_DOUBLE:
+                val.append(py::cast(*reinterpret_cast<double *>(tmp.buf)));
+                break;
+            case BFLD_STRING:
+
+                NDRX_LOG(log_debug, "Processing FLD_STRING...");
+                val.append(
+    #if PY_MAJOR_VERSION >= 3
+                    py::str(tmp.buf)
+                    //Seems like this one causes memory leak:
+                    //Thus assume t
+                    //py::str(PyUnicode_DecodeLocale(value.get(), "surrogateescape"))
+    #else
+                    py::bytes(tmp.buf, len - 1)
+    #endif
+                );
+                break;
+            case BFLD_CARRAY:
+                val.append(py::bytes(tmp.buf, len));
+                break;
+            default:
+                throw std::invalid_argument("Unsupported field type: " +
+                                            std::to_string(fldtype));
+            }
+        }
+    }
+    return result;
 }
 
 /**
@@ -108,10 +213,33 @@ static void from_py1_view(xatmibuf &buf, const char *view, const char *cname, BF
     }
     else if (py::isinstance<py::str>(obj))
     {
+        char *ptr_val =NULL;
+        BFLDLEN len;
+        char zerobyte[1] = {0x0};
+
 #if PY_MAJOR_VERSION >= 3
         py::bytes b = py::reinterpret_steal<py::bytes>(
             PyUnicode_EncodeLocale(obj.ptr(), "surrogateescape"));
-        std::string val(PyBytes_AsString(b.ptr()), PyBytes_Size(b.ptr()));
+
+        //If we get NULL ptr, then string contains null characters, and that is not supported
+        //In case of string we get EOS
+        //In case of single char field, will get NULL field.
+
+        if (nullptr!=b.ptr())
+        {
+            std::string val(PyBytes_AsString(b.ptr()), PyBytes_Size(b.ptr()));
+            ptr_val = const_cast<char *>(val.data());
+            len = val.size();
+        }
+        else
+        {
+            ptr_val = zerobyte;
+            len = 1;
+            //Print error + clear.
+            PyErr_Print();
+            PyErr_Clear();
+        }
+
 #else
         if (PyUnicode_Check(obj.ptr()))
         {
@@ -120,8 +248,8 @@ static void from_py1_view(xatmibuf &buf, const char *view, const char *cname, BF
         std::string val(PyString_AsString(obj.ptr()), PyString_Size(obj.ptr()));
 #endif
         if (EXSUCCEED!=CBvchg(*buf.pp, const_cast<char *>(view), 
-                    const_cast<char *>(cname), oc, const_cast<char *>(val.data()),
-                    val.size(), BFLD_CARRAY))
+                    const_cast<char *>(cname), oc, ptr_val,
+                    len, BFLD_CARRAY))
         {
             throw ubf_exception(Berror); 
         }
@@ -155,6 +283,9 @@ static void from_py1_view(xatmibuf &buf, const char *view, const char *cname, BF
 
 /**
  * @brief Convert PY to VIEW
+ * TODO: in case if operating view VIEW ocurrences in UBF, 
+ * we might get NULL views. While these are valid from UBF perspective
+ * for stand-alone perspective they are not valid.
  * 
  * @param obj 
  * @param b 
@@ -162,9 +293,8 @@ static void from_py1_view(xatmibuf &buf, const char *view, const char *cname, BF
  */
 expublic void ndrxpy_from_py_view(py::dict obj, xatmibuf &b, const char *view)
 {
-    b.reinit("UBF", nullptr, 1024);
-    xatmibuf f;
 
+    NDRX_LOG(log_debug, "into ndrxpy_from_py_view() %p", b.pp);
     for (auto it : obj)
     {
         auto cname = std::string(py::str(it.first));
@@ -183,6 +313,8 @@ expublic void ndrxpy_from_py_view(py::dict obj, xatmibuf &b, const char *view)
             from_py1_view(b, view, cname.c_str(), 0, o);
         }
     }
+
+    NDRX_LOG(log_debug, "into ndrxpy_from_py_view() %p -> done", b.pp);
 }
 
 /* vim: set ts=4 sw=4 et smartindent: */

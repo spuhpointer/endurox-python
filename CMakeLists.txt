@@ -7,6 +7,7 @@ SET(CMAKE_BUILD_TYPE Debug)
 #        SET(CMAKE_CXX_FLAGS "-fsanitize=address -fno-omit-frame-pointer -O0 -ggdb ${CMAKE_CXX_FLAGS}")
 #ENDIF()
 
+SET(CMAKE_CXX_FLAGS "-ggdb ${CMAKE_CXX_FLAGS}")
 set (CMAKE_CXX_STANDARD 14)
 
 SET(SOURCE_DIR "src/endurox")
@@ -31,7 +32,10 @@ include_directories(${SOURCE_DIR})
 
 # Generate python module
 add_subdirectory(pybind11)
+add_subdirectory(tests/views)
 
 pybind11_add_module(endurox ${SOURCES})
 target_link_libraries(endurox PRIVATE atmisrvinteg atmi ubf nstd pthread rt)
 
+# needed for testing
+add_dependencies (endurox ubftestvhdrs)

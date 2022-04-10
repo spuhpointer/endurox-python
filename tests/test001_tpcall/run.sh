@@ -14,7 +14,7 @@ export PYTHONPATH=`pwd`/../libs
 TIMES=200
 pushd .
 rm -rf runtime/log
-rm runtime/ULOG*
+rm -rf runtime/ULOG*
 mkdir runtime/log
 
 cd runtime
@@ -24,10 +24,6 @@ MACHINE_TYPE=`uname -m`
 OS=`uname -s`
 
 runbigmsg=0
-#
-# So we need to add some demo server
-# We need to add server process here + we need to register ubftab (test.fd)
-#
 msgsizemax=56000
 
 echo "OS=[$OS] matchine=[$MACHINE_TYPE]"

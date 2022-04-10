@@ -101,8 +101,10 @@ void xatmibuf::reinit(const char *type, const char *subtype, long len_)
     {
         len = len_;
         *pp = tpalloc(const_cast<char *>(type), const_cast<char *>(subtype), len);
-        if (*pp == nullptr)
+        //For null buffers we can accept NULL return
+        if (*pp == nullptr && 0!=strcmp(type, "NULL"))
         {
+            NDRX_LOG(log_error, "Failed to realloc: %s", tpstrerror(tperrno));
             throw xatmi_exception(tperrno);
         }
     }

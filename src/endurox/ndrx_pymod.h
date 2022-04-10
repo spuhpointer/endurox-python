@@ -44,6 +44,7 @@
 #include <userlog.h>
 #include <xa.h>
 #include <ubf.h>
+#include <ndebug.h>
 #undef _
 
 /*---------------------------Externs------------------------------------*/
@@ -84,6 +85,31 @@ private:
     void swap(xatmibuf &other) noexcept;
 };
 
+/**
+ * Temporary buffer allocator
+ */
+class tempbuf
+{
+
+public:
+
+    char *buf;
+    tempbuf(long size)
+    {
+        buf = reinterpret_cast<char *>(NDRX_FPMALLOC(size, 0));
+
+        if (NULL==buf)
+        {
+            throw std::bad_alloc();
+        }
+
+    }
+    ~tempbuf()
+    {
+        NDRX_FPFREE(buf);
+    }
+};
+
 /*---------------------------Globals------------------------------------*/
 /*---------------------------Statics------------------------------------*/
 /*---------------------------Prototypes---------------------------------*/
@@ -93,7 +119,7 @@ extern py::object ndrx_to_py(xatmibuf buf);
 
 //Buffer conversion support:
 extern void ndrxpy_from_py_view(py::dict obj, xatmibuf &b, const char *view);
-extern py::object ndrxpy_to_py_view(char *view_buf);
+extern py::object ndrxpy_to_py_view(char *cstruct, char *vname, long size);
 
 extern py::object ndrxpy_to_py_ubf(UBFH *fbfr, BFLDLEN buflen);
 extern void ndrxpy_from_py_ubf(py::dict obj, xatmibuf &b);

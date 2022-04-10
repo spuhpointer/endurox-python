@@ -72,17 +72,19 @@ namespace py = pybind11;
  */
 expublic py::object ndrx_to_py(xatmibuf buf)
 {
-    char type[8];
-    char subtype[16];
-
+    char type[8]={EXEOS};
+    char subtype[16]={EXEOS};
+    long size;
     py::dict result;
 
-    NDRX_LOG(log_debug, "Into ndrx_to_py()");
-
-    if (tptypes(*buf.pp, type, subtype) == -1)
+    if ((size=tptypes(*buf.pp, type, subtype)) == EXFAIL)
     {
+        NDRX_LOG(log_error, "Invalid buffer type");
         throw std::invalid_argument("Invalid buffer type");
     }
+
+    NDRX_LOG(log_debug, "Into ndrx_to_py() type=[%s] subtype=[%s] size=%ld", 
+        type, subtype, size);
 
     //Return buffer sub-type
     result["buftype"] = type;
@@ -105,6 +107,11 @@ expublic py::object ndrx_to_py(xatmibuf buf)
     else if (strcmp(type, "UBF") == 0)
     {
         result["data"]=ndrxpy_to_py_ubf(*buf.fbfr(), 0);
+    }
+    else if (strcmp(type, "VIEW") == 0)
+    {
+        //TODO: Build dict according to VIEW
+        result["data"] = ndrxpy_to_py_view(*buf.pp, subtype, size);
     }
     else
     {
@@ -152,6 +159,8 @@ expublic xatmibuf ndrx_from_py(py::object obj)
         subtype = py::str(dict[NDRXPY_DATA_SUBTYPE]);
     }
 
+    NDRX_LOG(log_debug, "Converting out: [%s] / [%s]", buftype.c_str(), subtype.c_str());
+
     /* process JSON data... as string */
     if (buftype=="JSON")
     {
@@ -177,6 +186,8 @@ expublic xatmibuf ndrx_from_py(py::object obj)
         xatmibuf buf("VIEW", subtype.c_str());
 
         ndrxpy_from_py_view(static_cast<py::dict>(data), buf, subtype.c_str());
+
+        NDRX_LOG(log_error, "YOPT %p %p", buf.p, buf.pp);
 
         return buf;
     }
