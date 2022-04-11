@@ -118,7 +118,8 @@ expublic py::object ndrxpy_to_py_view(char *cstruct, char *view, long size)
             throw ubf_exception(Berror);
         }
 
-        for (occ=0; occ<fulloccs; occ++)
+        /* convert only initialized fields */
+        for (occ=0; occ<realoccs; occ++)
         {
             if (occ == 0)
             {
@@ -140,7 +141,17 @@ expublic py::object ndrxpy_to_py_view(char *cstruct, char *view, long size)
             switch (fldtype)
             {
             case BFLD_CHAR:
-                val.append(py::cast(tmp.buf[0]));
+                /* if EOS char is used, convert to byte array.
+                 * as it is possible to get this value from C
+                 */
+                if  (EXEOS==tmp.buf[0])
+                {
+                    val.append(py::bytes(tmp.buf, len));
+                }
+                else
+                {
+                    val.append(py::cast(tmp.buf[0]));
+                }
                 break;
             case BFLD_SHORT:
                 val.append(py::cast(*reinterpret_cast<short *>(tmp.buf)));
@@ -215,7 +226,6 @@ static void from_py1_view(xatmibuf &buf, const char *view, const char *cname, BF
     {
         char *ptr_val =NULL;
         BFLDLEN len;
-        char zerobyte[1] = {0x0};
 
 #if PY_MAJOR_VERSION >= 3
         py::bytes b = py::reinterpret_steal<py::bytes>(
@@ -224,7 +234,6 @@ static void from_py1_view(xatmibuf &buf, const char *view, const char *cname, BF
         //If we get NULL ptr, then string contains null characters, and that is not supported
         //In case of string we get EOS
         //In case of single char field, will get NULL field.
-
         if (nullptr!=b.ptr())
         {
             std::string val(PyBytes_AsString(b.ptr()), PyBytes_Size(b.ptr()));
@@ -233,16 +242,16 @@ static void from_py1_view(xatmibuf &buf, const char *view, const char *cname, BF
         }
         else
         {
-            ptr_val = zerobyte;
-            len = 1;
-            //Print error + clear.
             PyErr_Print();
-            PyErr_Clear();
+            char tmp[64];
+            snprintf(tmp, sizeof(tmp), "Invalid string value probably contains 0x00 (len=%ld)",
+                PyBytes_Size(obj.ptr()));
+            throw std::invalid_argument(tmp);
         }
 
 #else
         if (PyUnicode_Check(obj.ptr()))
-        {
+        { 
             obj = PyUnicode_AsEncodedString(obj.ptr(), "utf-8", "surrogateescape");
         }
         std::string val(PyString_AsString(obj.ptr()), PyString_Size(obj.ptr()));
@@ -251,6 +260,8 @@ static void from_py1_view(xatmibuf &buf, const char *view, const char *cname, BF
                     const_cast<char *>(cname), oc, ptr_val,
                     len, BFLD_CARRAY))
         {
+            NDRX_LOG(log_error, "Failed to set view=[%s] cname=[%s] occ=%d: %s",
+                view, cname, oc, Bstrerror(Berror));
             throw ubf_exception(Berror); 
         }
     }
@@ -262,6 +273,8 @@ static void from_py1_view(xatmibuf &buf, const char *view, const char *cname, BF
                     const_cast<char *>(cname), oc, reinterpret_cast<char *>(&val), 0,
                                   BFLD_LONG))
         {
+            NDRX_LOG(log_error, "Failed to set view=[%s] cname=[%s] occ=%d: %s",
+                view, cname, oc, Bstrerror(Berror));
             throw ubf_exception(Berror); 
         }
     }
@@ -272,11 +285,14 @@ static void from_py1_view(xatmibuf &buf, const char *view, const char *cname, BF
                     const_cast<char *>(cname), oc, reinterpret_cast<char *>(&val), 0,
                                   BFLD_DOUBLE))
         {
+            NDRX_LOG(log_error, "Failed to set view=[%s] cname=[%s] occ=%d: %s",
+                view, cname, oc, Bstrerror(Berror));
             throw ubf_exception(Berror); 
         }
     }
     else
     {
+        NDRX_LOG(log_error, "Unsuported field type for view");
         throw std::invalid_argument("Unsupported type");
     }
 }
