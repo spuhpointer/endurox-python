@@ -228,6 +228,7 @@ static void from_py1_view(xatmibuf &buf, const char *view, const char *cname, BF
         BFLDLEN len;
 
 #if PY_MAJOR_VERSION >= 3
+       std::string val = "";
         py::bytes b = py::reinterpret_steal<py::bytes>(
             PyUnicode_EncodeLocale(obj.ptr(), "surrogateescape"));
 
@@ -236,7 +237,7 @@ static void from_py1_view(xatmibuf &buf, const char *view, const char *cname, BF
         //In case of single char field, will get NULL field.
         if (nullptr!=b.ptr())
         {
-            std::string val(PyBytes_AsString(b.ptr()), PyBytes_Size(b.ptr()));
+            val.assign(PyBytes_AsString(b.ptr()), PyBytes_Size(b.ptr()));
             ptr_val = const_cast<char *>(val.data());
             len = val.size();
         }
@@ -255,6 +256,10 @@ static void from_py1_view(xatmibuf &buf, const char *view, const char *cname, BF
             obj = PyUnicode_AsEncodedString(obj.ptr(), "utf-8", "surrogateescape");
         }
         std::string val(PyString_AsString(obj.ptr()), PyString_Size(obj.ptr()));
+
+        ptr_val = const_cast<char *>(val.data());
+        len = val.size();
+
 #endif
         if (EXSUCCEED!=CBvchg(*buf.pp, const_cast<char *>(view), 
                     const_cast<char *>(cname), oc, ptr_val,

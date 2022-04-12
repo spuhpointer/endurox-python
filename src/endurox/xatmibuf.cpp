@@ -87,6 +87,7 @@ xatmibuf::xatmibuf(const char *type, long len) : pp(&p), len(len), p(nullptr)
     reinit(type, nullptr, len);
 }
 
+
 /**
  * @brief Allocate / reallocate
  * 

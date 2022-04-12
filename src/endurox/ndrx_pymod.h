@@ -77,6 +77,11 @@ public:
     char *release();
     UBFH **fbfr();
     char **pp;
+
+    /**
+     * @brief This is used to release the buffer
+     *  in case if processing embedded views, this is set nullptr,
+     */
     char *p;
     long len;
     void mutate(std::function<int(UBFH *)> f);

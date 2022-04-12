@@ -77,6 +77,7 @@ expublic py::object ndrxpy_to_py_ubf(UBFH *fbfr, BFLDLEN buflen = 0)
     Bnext_state_t state;
     BFLDOCC oc = 0;
     char *d_ptr;
+    BVIEWFLD *p_vf;
 
     py::dict result;
     py::list val;
@@ -88,6 +89,8 @@ expublic py::object ndrxpy_to_py_ubf(UBFH *fbfr, BFLDLEN buflen = 0)
         buflen = Bsizeof(fbfr);
     }
     /*std::unique_ptr<char[]> value(new char[buflen]); */
+
+    Bprint(fbfr);
 
     for (;;)
     {
@@ -122,7 +125,17 @@ expublic py::object ndrxpy_to_py_ubf(UBFH *fbfr, BFLDLEN buflen = 0)
         switch (Bfldtype(fieldid))
         {
         case BFLD_CHAR:
-            val.append(py::cast(d_ptr[0]));
+            /* if EOS char is used, convert to byte array.
+             * as it is possible to get this value from C
+             */
+            if  (EXEOS==d_ptr[0])
+            {
+                val.append(py::bytes(d_ptr, 1));
+            }
+            else
+            {
+                val.append(py::cast(d_ptr[0]));
+            }            
             break;
         case BFLD_SHORT:
             val.append(py::cast(*reinterpret_cast<short *>(d_ptr)));
@@ -138,7 +151,7 @@ expublic py::object ndrxpy_to_py_ubf(UBFH *fbfr, BFLDLEN buflen = 0)
             break;
         case BFLD_STRING:
 
-            NDRX_LOG(log_debug, "Porcessing FLD_STRING...");
+            NDRX_LOG(log_debug, "Processing FLD_STRING... [%s]", d_ptr);
             val.append(
 #if PY_MAJOR_VERSION >= 3
                 py::str(d_ptr)
@@ -156,8 +169,18 @@ expublic py::object ndrxpy_to_py_ubf(UBFH *fbfr, BFLDLEN buflen = 0)
         case BFLD_UBF:
             val.append(ndrxpy_to_py_ubf(reinterpret_cast<UBFH *>(d_ptr), buflen));
             break;
-        /* TODO: Support for VIEWs: */
+        case BFLD_VIEW:
+        {
+            py::dict vdict;
+            /* d_ptr points to BVIEWFIELD */
+            p_vf = reinterpret_cast<BVIEWFLD *>(d_ptr);
+
+            vdict["vname"] = p_vf->vname;
+            vdict["data"]= ndrxpy_to_py_view(p_vf->data, p_vf->vname, len);
+            val.append(vdict);
+            break;
         /* TODO: Support for PTRs, if field type is PTR allocate new XATMI buffer accordingly */
+        }
         default:
             throw std::invalid_argument("Unsupported field " +
                                         std::to_string(fieldid));
@@ -194,20 +217,48 @@ static void from_py1_ubf(xatmibuf &buf, BFLDID fieldid, BFLDOCC oc,
     }
     else if (py::isinstance<py::str>(obj))
     {
+        char *ptr_val =NULL;
+        BFLDLEN len;
+
+        std::string yopt;
 #if PY_MAJOR_VERSION >= 3
         py::bytes b = py::reinterpret_steal<py::bytes>(
             PyUnicode_EncodeLocale(obj.ptr(), "surrogateescape"));
-        std::string val(PyBytes_AsString(b.ptr()), PyBytes_Size(b.ptr()));
+
+        //If we get NULL ptr, then string contains null characters, and that is not supported
+        //In case of string we get EOS
+        //In case of single char field, will get NULL field.
+        std::string val = "";
+
+        if (nullptr!=b.ptr())
+        {
+            //TODO: well this goes out of the scope?
+            val.assign(PyBytes_AsString(b.ptr()), PyBytes_Size(b.ptr()));
+            ptr_val = const_cast<char *>(val.data());
+            len = val.size();
+        }
+        else
+        {
+            PyErr_Print();
+            char tmp[128];
+            snprintf(tmp, sizeof(tmp), "Invalid string value probably contains 0x00 (len=%ld), field=%d",
+                PyBytes_Size(obj.ptr()), fieldid);
+            throw std::invalid_argument(tmp);
+        }
+
 #else
         if (PyUnicode_Check(obj.ptr()))
-        {
+        { 
             obj = PyUnicode_AsEncodedString(obj.ptr(), "utf-8", "surrogateescape");
         }
         std::string val(PyString_AsString(obj.ptr()), PyString_Size(obj.ptr()));
+
+        ptr_val = const_cast<char *>(val.data());
+        len = val.size();
+
 #endif
         buf.mutate([&](UBFH *fbfr)
-                   { return CBchg(fbfr, fieldid, oc, const_cast<char *>(val.data()),
-                                  val.size(), BFLD_CARRAY); });
+                   { return CBchg(fbfr, fieldid, oc, ptr_val, len, BFLD_CARRAY); });
     }
     else if (py::isinstance<py::int_>(obj))
     {
@@ -239,15 +290,20 @@ static void from_py1_ubf(xatmibuf &buf, BFLDID fieldid, BFLDOCC oc,
             auto view_d = obj.cast<py::dict>();
             auto vnamed = view_d["vname"];
             auto vdata = view_d["data"];
+            BVIEWFLD vf;
 
             std::string vname = py::str(vnamed);
 
-            xatmibuf vbuf("VIEW", const_cast<char *>(vname.c_str()));
+            NDRX_STRCPY_SAFE(vf.vname, vname.c_str());
+            xatmibuf vbuf("VIEW", vf.vname);
 
-            ndrxpy_from_py_view(vdata.cast<py::dict>(), vbuf, vname.c_str());
+            vf.data = *vbuf.pp;
+            vf.vflags=0;
+
+            ndrxpy_from_py_view(vdata.cast<py::dict>(), vbuf, vf.vname);
 
             buf.mutate([&](UBFH *fbfr)
-                    { return Bchg(fbfr, fieldid, oc, reinterpret_cast<char *>(vbuf.pp), 0); });
+                    { return Bchg(fbfr, fieldid, oc, reinterpret_cast<char *>(&vf), 0); });
 
         }
     }
@@ -296,6 +352,8 @@ expublic void ndrxpy_from_py_ubf(py::dict obj, xatmibuf &b)
             from_py1_ubf(b, fieldid, 0, o, f);
         }
     }
+
+    Bprint(*b.fbfr());
 }
 
 
