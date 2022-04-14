@@ -172,15 +172,23 @@ expublic py::object ndrxpy_to_py_ubf(UBFH *fbfr, BFLDLEN buflen = 0)
         case BFLD_VIEW:
         {
             py::dict vdict;
+
             /* d_ptr points to BVIEWFIELD */
             p_vf = reinterpret_cast<BVIEWFLD *>(d_ptr);
 
-            vdict["vname"] = p_vf->vname;
-            vdict["data"]= ndrxpy_to_py_view(p_vf->data, p_vf->vname, len);
+            if (EXEOS!=p_vf->vname[0])
+            {
+                /* not empty occ */
+                vdict["vname"] = p_vf->vname;
+                vdict["data"]= ndrxpy_to_py_view(p_vf->data, p_vf->vname, len);
+            }
+
             val.append(vdict);
             break;
-        /* TODO: Support for PTRs, if field type is PTR allocate new XATMI buffer accordingly */
         }
+        case BFLD_PTR:
+            /* PTR ?  */
+        break;
         default:
             throw std::invalid_argument("Unsupported field " +
                                         std::to_string(fieldid));
@@ -288,19 +296,44 @@ static void from_py1_ubf(xatmibuf &buf, BFLDID fieldid, BFLDOCC oc,
              * Syntax: data: { "VIEW_FIELD":{"vname":"VIEW_NAME", "data":{}} } 
              */
             auto view_d = obj.cast<py::dict>();
-            auto vnamed = view_d["vname"];
-            auto vdata = view_d["data"];
+
+            auto have_vnamed = view_d.contains("vname");
+            auto have_data = view_d.contains("data");
             BVIEWFLD vf;
+            memset(&vf, 0, sizeof(vf));
 
-            std::string vname = py::str(vnamed);
+            if (have_vnamed && !have_data)
+            {
+                //Invalid condition, but must be present
+                UBF_LOG(log_debug, "Failed to convert view field %d: vname present but no data", fieldid);
+                throw std::invalid_argument("vname present but no data");
+            }
+            else if (!have_vnamed && have_data)
+            {
+                //Invalid condition
+               UBF_LOG(log_debug, "Failed to convert view field %d: data present but no vname", fieldid);
+                throw std::invalid_argument("data present but no vname");
+            }
+            else if (!have_vnamed && !have_data)
+            {
+                //put empty..
+            }
+            else
+            {
+                auto vnamed = view_d["vname"];
+                auto vdata = view_d["data"];
+                
 
-            NDRX_STRCPY_SAFE(vf.vname, vname.c_str());
-            xatmibuf vbuf("VIEW", vf.vname);
+                std::string vname = py::str(vnamed);
 
-            vf.data = *vbuf.pp;
-            vf.vflags=0;
+                NDRX_STRCPY_SAFE(vf.vname, vname.c_str());
+                xatmibuf vbuf("VIEW", vf.vname);
 
-            ndrxpy_from_py_view(vdata.cast<py::dict>(), vbuf, vf.vname);
+                vf.data = *vbuf.pp;
+                vf.vflags=0;
+
+                ndrxpy_from_py_view(vdata.cast<py::dict>(), vbuf, vf.vname);
+            }
 
             buf.mutate([&](UBFH *fbfr)
                     { return Bchg(fbfr, fieldid, oc, reinterpret_cast<char *>(&vf), 0); });

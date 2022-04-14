@@ -110,13 +110,14 @@ expublic py::object ndrx_to_py(xatmibuf buf)
     }
     else if (strcmp(type, "VIEW") == 0)
     {
-        //TODO: Build dict according to VIEW
         result["data"] = ndrxpy_to_py_view(*buf.pp, subtype, size);
     }
     else
     {
         throw std::invalid_argument("Unsupported buffer type");
     }
+
+    /* TODO: process any call info (if have one...) */
 
     return result;
 }

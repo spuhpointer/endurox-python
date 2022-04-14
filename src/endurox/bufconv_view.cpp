@@ -86,10 +86,10 @@ expublic py::object ndrxpy_to_py_view(char *cstruct, char *view, long size)
     BFLDLEN len;
     int realoccs;
     bool first = true;
-
-    NDRX_LOG(log_debug, "To python view = [%s] size = [%ld]", view, size);
     /* allocate temporary buffer */
     tempbuf tmp(size);
+
+    NDRX_LOG(log_debug, "To python view = [%s] size = [%ld]", view, size);
 
     while (1)
     {
@@ -188,6 +188,7 @@ expublic py::object ndrxpy_to_py_view(char *cstruct, char *view, long size)
             }
         }
     }
+out:
     return result;
 }
 

@@ -17,7 +17,8 @@ tperrno, tpurcode, retbuf = e.tpcall("ECHO", { "data":{
     "T_STRING_FLD": "HELLO INPUT",
     "T_STRING_2_FLD": "HELLO INPUT 2ĀČ",
     "T_UBF_FLD": {"T_SHORT_FLD":99, "T_UBF_FLD":{"T_LONG_2_FLD":1000091}},
-    "T_VIEW_FLD": {"vname":"UBTESTVIEW2", "data":{"tshort1":5} },
+# empty occ -> {}
+    "T_VIEW_FLD": [{}, {"vname":"UBTESTVIEW2", "data":{"tshort1":5} }],
 #    "T_PTR_FLD": {"buftype":"UBF", "data":{}}
 }})
 
