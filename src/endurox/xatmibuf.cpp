@@ -135,6 +135,9 @@ xatmibuf::~xatmibuf()
 {
     if (p != nullptr)
     {
+        //TODO: Free up PTRs down here if the buffer type if UBF
+        //Add custom func: extern ndrx_Bnext_ptr_offs() to get buffer
+        //offset to clean up the ptrs in BFLD_PTR and BFLD_UBF
         tpfree(p);
     }
 }

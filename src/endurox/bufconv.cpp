@@ -76,6 +76,7 @@ expublic py::object ndrx_to_py(xatmibuf buf)
     char subtype[16]={EXEOS};
     long size;
     py::dict result;
+    int ret;
 
     if ((size=tptypes(*buf.pp, type, subtype)) == EXFAIL)
     {
@@ -112,14 +113,68 @@ expublic py::object ndrx_to_py(xatmibuf buf)
     {
         result["data"] = ndrxpy_to_py_view(*buf.pp, subtype, size);
     }
+    else if (strcmp(type, "NULL") == 0)
+    {
+        /* data field not present -> NULL */
+    } 
     else
     {
         throw std::invalid_argument("Unsupported buffer type");
     }
 
-    /* TODO: process any call info (if have one...) */
+    // attach call info, if have any.
+    xatmibuf cibuf;
+    if (strcmp(type, "NULL") != 0)
+    {
+        if (EXSUCCEED==tpgetcallinfo(*buf.pp, reinterpret_cast<UBFH **>(cibuf.pp), 0))
+        {
+            // setup callinfo block
+            result[NDRXPY_DATA_CALLINFO]=ndrxpy_to_py_ubf(*cibuf.fbfr(), 0);
+        }
+        else if (TPESYSTEM!=tperrno)
+        {
+            NDRX_LOG(log_debug, "Error checking tpgetcallinfo()");
+            throw xatmi_exception(tperrno);
+        }
+    }
 
     return result;
+}
+
+/**
+ * @brief Process call info from main call dict
+ * 
+ * @param dict dictionary used for call
+ * @param buf prepared ATMI buffer
+ */
+exprivate void set_callinfo(py::dict & dict, xatmibuf &buf)
+{
+    if (dict.contains(NDRXPY_DATA_CALLINFO))
+    {
+        xatmibuf cibuf;
+        auto cibufdata = dict[NDRXPY_DATA_CALLINFO];
+
+        NDRX_LOG(log_debug, "Setting call info");
+
+        if (!py::isinstance<py::dict>(cibufdata))
+        {
+            NDRX_LOG(log_error, "callinfo must be dictionary but is not!");
+            throw std::invalid_argument("callinfo must be dictionary but is not!");
+        }
+
+        if (NULL==*buf.pp)
+        {
+            NDRX_LOG(log_error, "callinfo cannot be set for NULL buffers!");
+            throw std::invalid_argument("callinfo cannot be set for NULL buffers");
+        }
+
+        ndrxpy_from_py_ubf(static_cast<py::dict>(cibufdata), cibuf);
+
+        if (EXSUCCEED!=tpsetcallinfo(*buf.pp, *cibuf.fbfr(), 0))
+        {
+            throw xatmi_exception(tperrno);
+        }
+    }
 }
 
 /**
@@ -136,6 +191,7 @@ expublic xatmibuf ndrx_from_py(py::object obj)
 {
     std::string buftype = "";
     std::string subtype = "";
+    xatmibuf buf;
 
     NDRX_LOG(log_debug, "Into ndrx_from_py()");
 
@@ -147,8 +203,13 @@ expublic xatmibuf ndrx_from_py(py::object obj)
 
     auto dict = static_cast<py::dict>(obj);
 
-    //data i
-    auto data = dict[NDRXPY_DATA_DATA];
+    //for NULL buffers, we do not contain this...
+    py::dict data;
+    
+    if (dict.contains(NDRXPY_DATA_DATA))
+    {
+        data = dict[NDRXPY_DATA_DATA];
+    }
 
     if (dict.contains(NDRXPY_DATA_BUFTYPE))
     {
@@ -172,10 +233,8 @@ expublic xatmibuf ndrx_from_py(py::object obj)
 
         std::string s = py::str(data);
 
-        xatmibuf buf("JSON", s.size() + 1);
+        buf = xatmibuf("JSON", s.size() + 1);
         strcpy(*buf.pp, s.c_str());
-        return buf;
-
     }
     else if (buftype=="VIEW")
     {
@@ -184,13 +243,9 @@ expublic xatmibuf ndrx_from_py(py::object obj)
             throw std::invalid_argument("subtype expected for VIEW buffer");
         }
 
-        xatmibuf buf("VIEW", subtype.c_str());
+        buf = xatmibuf("VIEW", subtype.c_str());
 
         ndrxpy_from_py_view(static_cast<py::dict>(data), buf, subtype.c_str());
-
-        NDRX_LOG(log_error, "YOPT %p %p", buf.p, buf.pp);
-
-        return buf;
     }
     else if (py::isinstance<py::bytes>(data))
     {
@@ -200,9 +255,8 @@ expublic xatmibuf ndrx_from_py(py::object obj)
                 "expected CARRAY buftype, got: "+buftype);
         }
         
-        xatmibuf buf("CARRAY", PyBytes_Size(data.ptr()));
+        buf = xatmibuf("CARRAY", PyBytes_Size(data.ptr()));
         memcpy(*buf.pp, PyBytes_AsString(data.ptr()), PyBytes_Size(data.ptr()));
-        return buf;
     }
     else if (py::isinstance<py::str>(data))
     {
@@ -213,13 +267,18 @@ expublic xatmibuf ndrx_from_py(py::object obj)
         }
 
         std::string s = py::str(data);
-        xatmibuf buf("STRING", s.size() + 1);
+        buf = xatmibuf("STRING", s.size() + 1);
         strcpy(*buf.pp, s.c_str());
-        return buf;
+    }
+    else if (!dict.contains(NDRXPY_DATA_DATA))
+    {
+        NDRX_LOG(log_debug, "Converting out NULL buffer");
+        buf = xatmibuf("NULL", 1024);
     }
     else if (py::isinstance<py::dict>(data))
     {
         NDRX_LOG(log_debug, "Converting out UBF dict...");
+
         if (buftype!="" && buftype!="UBF")
         {
             NDRX_LOG(log_error, "For dict data "
@@ -228,17 +287,17 @@ expublic xatmibuf ndrx_from_py(py::object obj)
             throw std::invalid_argument("For dict data "
                 "expected UBF buftype, got: "+buftype);
         }
-        xatmibuf buf("UBF", 1024);
-
+        buf = xatmibuf("UBF", 1024);
         ndrxpy_from_py_ubf(static_cast<py::dict>(data), buf);
-
-       
-        return buf;
     }
     else
     {
         throw std::invalid_argument("Unsupported buffer type");
     }
+
+    set_callinfo(dict, buf);
+
+    return buf;
 }
 
 

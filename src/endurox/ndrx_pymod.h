@@ -52,6 +52,7 @@
 #define NDRXPY_DATA_DATA        "data"      /**< Actual data field          */
 #define NDRXPY_DATA_BUFTYPE     "buftype"   /**< optional buffer type field */
 #define NDRXPY_DATA_SUBTYPE     "subtype"   /**< subtype buffer             */
+#define NDRXPY_DATA_CALLINFO    "callinfo"  /**< callinfo block             */
 /*---------------------------Enums--------------------------------------*/
 /*---------------------------Typedefs-----------------------------------*/
 

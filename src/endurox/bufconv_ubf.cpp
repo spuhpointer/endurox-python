@@ -188,6 +188,9 @@ expublic py::object ndrxpy_to_py_ubf(UBFH *fbfr, BFLDLEN buflen = 0)
         }
         case BFLD_PTR:
             /* PTR ?  */
+            /* process stuff recursively + free up leave buffers,
+             * as we are not using them any more
+             */
         break;
         default:
             throw std::invalid_argument("Unsupported field " +
@@ -337,8 +340,13 @@ static void from_py1_ubf(xatmibuf &buf, BFLDID fieldid, BFLDOCC oc,
 
             buf.mutate([&](UBFH *fbfr)
                     { return Bchg(fbfr, fieldid, oc, reinterpret_cast<char *>(&vf), 0); });
-
         }
+        else if (BFLD_PTR==Bfldtype(fieldid))
+        {
+            //Load sub-xatmi buffer, add ptr to main UBF
+            //NOTE: after the tpcall if buffer type is UBF, it shall free up any ptrs
+        }
+
     }
     else
     {
