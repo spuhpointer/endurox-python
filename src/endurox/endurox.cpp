@@ -87,7 +87,7 @@ static py::object pytpimport(const std::string istr, long flags)
         throw xatmi_exception(tperrno);
     }
 
-    return ndrx_to_py(std::move(obuf));
+    return ndrx_to_py(std::move(obuf), true);
 }
 
 static void pytppost(const std::string eventname, py::object data, long flags)
@@ -109,7 +109,7 @@ static pytpreply pytpcall(const char *svc, py::object idata, long flags)
 {
 
     auto in = ndrx_from_py(idata);
-    xatmibuf out("NULL", (int)0);
+    xatmibuf out("NULL", (long)0);
     {
         py::gil_scoped_release release;
         int rc = tpcall(const_cast<char *>(svc), *in.pp, in.len, out.pp, &out.len,
@@ -122,7 +122,7 @@ static pytpreply pytpcall(const char *svc, py::object idata, long flags)
             }
         }
     }
-    return pytpreply(tperrno, tpurcode, ndrx_to_py(std::move(out)));
+    return pytpreply(tperrno, tpurcode, ndrx_to_py(std::move(out), true));
 }
 
 static TPQCTL pytpenqueue(const char *qspace, const char *qname, TPQCTL *ctl,
@@ -163,7 +163,7 @@ static std::pair<TPQCTL, py::object> pytpdequeue(const char *qspace,
             throw xatmi_exception(tperrno);
         }
     }
-    return std::make_pair(*ctl, ndrx_to_py(std::move(out)));
+    return std::make_pair(*ctl, ndrx_to_py(std::move(out), true));
 }
 
 static int pytpacall(const char *svc, py::object idata, long flags)
@@ -195,7 +195,7 @@ static pytpreply pytpgetrply(int cd, long flags)
             }
         }
     }
-    return pytpreply(tperrno, tpurcode, ndrx_to_py(std::move(out)), cd);
+    return pytpreply(tperrno, tpurcode, ndrx_to_py(std::move(out), true), cd);
 }
 
 #define MODULE "endurox"
@@ -259,7 +259,7 @@ static pytpreply pytpadmcall(py::object idata, long flags)
             }
         }
     }
-    return pytpreply(tperrno, 0, ndrx_to_py(std::move(out)));
+    return pytpreply(tperrno, 0, ndrx_to_py(std::move(out), true));
 }
 
 int tpsvrinit(int argc, char *argv[])
@@ -326,7 +326,7 @@ void PY(TPSVCINFO *svcinfo)
     try
     {
         py::gil_scoped_acquire acquire;
-        auto idata = ndrx_to_py(xatmibuf(svcinfo));
+        auto idata = ndrx_to_py(xatmibuf(svcinfo), true);
 
         pytpsvcinfo info(svcinfo);
 
@@ -1039,7 +1039,7 @@ PYBIND11_MODULE(endurox, m)
 
             obuf.mutate([&](UBFH *fbfr)
                         { return Bextread(fbfr, fiop.get()); });
-            return ndrx_to_py(std::move(obuf));
+            return ndrx_to_py(std::move(obuf), true);
         },
         "Builds fielded buffer from printed format", py::arg("iop"));
 

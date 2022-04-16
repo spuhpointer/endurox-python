@@ -66,10 +66,10 @@
 namespace py = pybind11;
 
 
-xatmibuf::xatmibuf() : pp(&p), len(0), p(nullptr) {}
+xatmibuf::xatmibuf() : pp(&p), len(0), p(nullptr), do_free_ptrs(NDRXPY_DO_DFLT) {}
 
 xatmibuf::xatmibuf(TPSVCINFO *svcinfo)
-    : pp(&svcinfo->data), len(svcinfo->len), p(nullptr) {}
+    : pp(&svcinfo->data), len(svcinfo->len), p(nullptr), do_free_ptrs(NDRXPY_DO_DFLT) {}
 
 /**
  * @brief Sub-type based allocation
@@ -77,12 +77,12 @@ xatmibuf::xatmibuf(TPSVCINFO *svcinfo)
  * @param type 
  * @param subtype 
  */
-xatmibuf::xatmibuf(const char *type, const char *subtype) : pp(&p), len(len), p(nullptr)
+xatmibuf::xatmibuf(const char *type, const char *subtype) : pp(&p), len(len), p(nullptr), do_free_ptrs(NDRXPY_DO_DFLT)
 {
     reinit(type, subtype, 1024);
 }
 
-xatmibuf::xatmibuf(const char *type, long len) : pp(&p), len(len), p(nullptr)
+xatmibuf::xatmibuf(const char *type, long len) : pp(&p), len(len), p(nullptr), do_free_ptrs(NDRXPY_DO_DFLT)
 {
     reinit(type, nullptr, len);
 }
@@ -96,7 +96,7 @@ xatmibuf::xatmibuf(const char *type, long len) : pp(&p), len(len), p(nullptr)
  * @param len_ len (where required)
  */
 void xatmibuf::reinit(const char *type, const char *subtype, long len_)
-{
+{    
     //Free up ptr if have any
     if (nullptr==*pp)
     {
@@ -108,6 +108,17 @@ void xatmibuf::reinit(const char *type, const char *subtype, long len_)
             NDRX_LOG(log_error, "Failed to realloc: %s", tpstrerror(tperrno));
             throw xatmi_exception(tperrno);
         }
+
+        //Never free?
+        NDRX_LOG(log_error, "YOPTEL [%s]", type);
+        if (0==strcmp(type, "UBF") &&
+            NDRXPY_DO_DFLT==do_free_ptrs)
+        {
+            NDRX_LOG(log_error, "YOPTEL2 [%s]", type);
+            do_free_ptrs=NDRXPY_DO_FREE;
+        }
+
+        NDRX_LOG(log_error, "YOPTEL3 [%s] %d", type, do_free_ptrs);
     }
     else
     {
@@ -131,13 +142,89 @@ xatmibuf &xatmibuf::operator=(xatmibuf &&other)
     return *this;
 }
 
+extern "C" {
+    void ndrx_mbuf_Bnext_ptr_first(UBFH *p_ub, Bnext_state_t *state);
+}
+
+/**
+ * @brief Free up UBF buffer
+ * this requires list to be setup, as several ptrs might point to the same buffer
+ * @param p_fb UBF buffer to process
+ * @param freelist list of ptrs to free
+ */
+void free_up(UBFH *p_fb, std::vector<char *> &freelist)
+{
+    Bnext_state_t state;
+    BFLDID bfldid=BBADFLDOCC;
+    BFLDOCC occ;
+    char *d_ptr;
+    int ret=EXSUCCEED;
+    int ftyp;
+    char **lptr;
+
+    NDRX_LOG(log_debug, "Free up buffer %p", p_fb);
+
+    tplogprintubf(log_error, "Free up UFB", p_fb);
+
+    ndrx_mbuf_Bnext_ptr_first(p_fb, &state);
+
+    while (EXTRUE==(ret=Bnext2(&state, p_fb, &bfldid, &occ, NULL, NULL, &d_ptr)))
+    {
+        ftyp = Bfldtype(bfldid);
+        
+        if (BFLD_PTR==ftyp)
+        {
+
+            /* resolve the VPTR */
+            lptr=(char **)d_ptr;
+            
+            NDRX_LOG(log_debug, "BFLD_PTR: Step into+free ptr=%p fldid=%d", *lptr, bfldid);
+
+            // step-in
+            free_up(reinterpret_cast<UBFH*>(*lptr), freelist);
+
+            freelist.push_back(*lptr);
+
+        }
+        else if (BFLD_UBF==ftyp)
+        {
+            // step-in
+            NDRX_LOG(log_debug, "BFLD_UBF: Step into ptr=%p fldid=%d", d_ptr, bfldid);
+            free_up(reinterpret_cast<UBFH*>(d_ptr), freelist);
+        }
+        else
+        {
+            /* we are done */
+            ret=EXSUCCEED;
+            break;
+        }
+    }
+
+    if (EXFAIL==ret)
+    {
+        NDRX_LOG(log_error, "Failed to Bnext2(): %s", Bstrerror(Berror));
+        throw ubf_exception(Berror);
+    }
+}
+
 xatmibuf::~xatmibuf()
 {
     if (p != nullptr)
     {
-        //TODO: Free up PTRs down here if the buffer type if UBF
-        //Add custom func: extern ndrx_Bnext_ptr_offs() to get buffer
-        //offset to clean up the ptrs in BFLD_PTR and BFLD_UBF
+        //In case of UBF do recrsive free
+        NDRX_LOG(log_debug, "Free ptrs: %d", do_free_ptrs);
+        if (NDRXPY_DO_FREE==do_free_ptrs)
+        {
+            std::vector<char *> freelist;
+
+            free_up(*fbfr(), freelist);
+
+            for(char * ptr : freelist) 
+            {
+                tpfree(ptr);
+            }
+        }
+
         tpfree(p);
     }
 }
@@ -179,6 +266,7 @@ void xatmibuf::swap(xatmibuf &other) noexcept
 {
     std::swap(p, other.p);
     std::swap(len, other.len);
+    std::swap(do_free_ptrs, other.do_free_ptrs);
 }
 
 /* vim: set ts=4 sw=4 et smartindent: */

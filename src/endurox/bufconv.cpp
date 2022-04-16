@@ -66,11 +66,12 @@ namespace py = pybind11;
 
 /**
  * @brief This will add all XATMI related stuff under the {"data":<XATMI data...>}
- * 
- * @param buf 
- * @return expublic 
+ *  TODO: Free incoming UBF buffer (somehere marking shall be put)
+ * @param buf XATMI buffer to conver to Python
+ * @param is_master is master buffer (from xatmi?)
+ * @return python object (dict)
  */
-expublic py::object ndrx_to_py(xatmibuf buf)
+expublic py::object ndrx_to_py(xatmibuf buf, bool is_master)
 {
     char type[8]={EXEOS};
     char subtype[16]={EXEOS};
@@ -108,6 +109,12 @@ expublic py::object ndrx_to_py(xatmibuf buf)
     else if (strcmp(type, "UBF") == 0)
     {
         result["data"]=ndrxpy_to_py_ubf(*buf.fbfr(), 0);
+
+        //Free up as master, recursive
+        if (is_master)
+        {
+            buf.do_free_ptrs=NDRXPY_DO_FREE;
+        }
     }
     else if (strcmp(type, "VIEW") == 0)
     {
@@ -288,6 +295,7 @@ expublic xatmibuf ndrx_from_py(py::object obj)
                 "expected UBF buftype, got: "+buftype);
         }
         buf = xatmibuf("UBF", 1024);
+        NDRX_LOG(log_error, "YOPT FREE %p %d", buf.p, buf.do_free_ptrs);
         ndrxpy_from_py_ubf(static_cast<py::dict>(data), buf);
     }
     else

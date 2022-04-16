@@ -53,6 +53,12 @@
 #define NDRXPY_DATA_BUFTYPE     "buftype"   /**< optional buffer type field */
 #define NDRXPY_DATA_SUBTYPE     "subtype"   /**< subtype buffer             */
 #define NDRXPY_DATA_CALLINFO    "callinfo"  /**< callinfo block             */
+
+
+#define NDRXPY_DO_DFLT          0           /**< No init                    */
+#define NDRXPY_DO_FREE          1           /**< free up buffer recursive   */
+#define NDRXPY_DO_NEVERFREE     2           /**< never free up buffer , recu*/
+
 /*---------------------------Enums--------------------------------------*/
 /*---------------------------Typedefs-----------------------------------*/
 
@@ -79,12 +85,15 @@ public:
     UBFH **fbfr();
     char **pp;
 
+    int do_free_ptrs;
+    
     /**
      * @brief This is used to release the buffer
      *  in case if processing embedded views, this is set nullptr,
      */
     char *p;
     long len;
+    
     void mutate(std::function<int(UBFH *)> f);
 
 private:
@@ -121,7 +130,7 @@ public:
 /*---------------------------Prototypes---------------------------------*/
 
 extern xatmibuf ndrx_from_py(py::object obj);
-extern py::object ndrx_to_py(xatmibuf buf);
+extern py::object ndrx_to_py(xatmibuf buf, bool is_master);
 
 //Buffer conversion support:
 extern void ndrxpy_from_py_view(py::dict obj, xatmibuf &b, const char *view);

@@ -187,10 +187,14 @@ expublic py::object ndrxpy_to_py_ubf(UBFH *fbfr, BFLDLEN buflen = 0)
             break;
         }
         case BFLD_PTR:
-            /* PTR ?  */
+        {
+            xatmibuf ptrbuf;
+            ptrbuf.pp=reinterpret_cast<char **>(d_ptr);
             /* process stuff recursively + free up leave buffers,
              * as we are not using them any more
              */
+            val.append(ndrx_to_py(std::move(ptrbuf), false));
+        }
         break;
         default:
             throw std::invalid_argument("Unsupported field " +
@@ -326,7 +330,6 @@ static void from_py1_ubf(xatmibuf &buf, BFLDID fieldid, BFLDOCC oc,
                 auto vnamed = view_d["vname"];
                 auto vdata = view_d["data"];
                 
-
                 std::string vname = py::str(vnamed);
 
                 NDRX_STRCPY_SAFE(vf.vname, vname.c_str());
@@ -343,10 +346,22 @@ static void from_py1_ubf(xatmibuf &buf, BFLDID fieldid, BFLDOCC oc,
         }
         else if (BFLD_PTR==Bfldtype(fieldid))
         {
-            //Load sub-xatmi buffer, add ptr to main UBF
-            //NOTE: after the tpcall if buffer type is UBF, it shall free up any ptrs
-        }
+            if (!py::isinstance<py::dict>(obj))
+            {
+                char tmp[128];
+                snprintf(tmp, sizeof(tmp), "Field id=%d is PTR, expected dictionary, but is not", 
+                        fieldid);
+                NDRX_LOG(log_error, "%s", tmp);
+                throw std::invalid_argument(tmp);
+            }
+            xatmibuf tmp = ndrx_from_py(obj.cast<py::object>());
 
+            //Master buffer will perform 
+            tmp.do_free_ptrs=false;
+            buf.mutate([&](UBFH *fbfr)
+                    { return Bchg(fbfr, fieldid, oc, reinterpret_cast<char *>(tmp.pp), 0); });
+
+        }
     }
     else
     {
@@ -364,6 +379,9 @@ expublic void ndrxpy_from_py_ubf(py::dict obj, xatmibuf &b)
 {
     b.reinit("UBF", nullptr, 1024);
     xatmibuf f;
+
+    //this is temporary buffer.
+    f.do_free_ptrs=NDRXPY_DO_NEVERFREE;
 
     for (auto it : obj)
     {
