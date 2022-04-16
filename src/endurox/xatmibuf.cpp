@@ -69,7 +69,7 @@ namespace py = pybind11;
 xatmibuf::xatmibuf() : pp(&p), len(0), p(nullptr), do_free_ptrs(NDRXPY_DO_DFLT) {}
 
 xatmibuf::xatmibuf(TPSVCINFO *svcinfo)
-    : pp(&svcinfo->data), len(svcinfo->len), p(nullptr), do_free_ptrs(NDRXPY_DO_DFLT) {}
+    : pp(&p), len(svcinfo->len), p(svcinfo->data), do_free_ptrs(NDRXPY_DO_DFLT) {}
 
 /**
  * @brief Sub-type based allocation

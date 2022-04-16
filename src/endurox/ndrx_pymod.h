@@ -134,7 +134,7 @@ public:
 /*---------------------------Prototypes---------------------------------*/
 
 extern xatmibuf ndrx_from_py(py::object obj);
-extern py::object ndrx_to_py(xatmibuf buf, bool is_master);
+extern py::object ndrx_to_py(xatmibuf &buf, bool is_master);
 
 //Buffer conversion support:
 extern void ndrxpy_from_py_view(py::dict obj, xatmibuf &b, const char *view);

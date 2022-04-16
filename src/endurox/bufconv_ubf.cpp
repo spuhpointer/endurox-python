@@ -195,7 +195,7 @@ expublic py::object ndrxpy_to_py_ubf(UBFH *fbfr, BFLDLEN buflen = 0)
             /* process stuff recursively + free up leave buffers,
              * as we are not using them any more
              */
-            val.append(ndrx_to_py(std::move(ptrbuf), false));
+            val.append(ndrx_to_py(ptrbuf, false));
         }
         break;
         default:

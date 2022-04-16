@@ -71,7 +71,7 @@ namespace py = pybind11;
  * @param is_master is master buffer (from xatmi?)
  * @return python object (dict)
  */
-expublic py::object ndrx_to_py(xatmibuf buf, bool is_master)
+expublic py::object ndrx_to_py(xatmibuf &buf, bool is_master)
 {
     char type[8]={EXEOS};
     char subtype[16]={EXEOS};

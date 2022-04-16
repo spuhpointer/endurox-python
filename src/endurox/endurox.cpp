@@ -87,7 +87,7 @@ static py::object pytpimport(const std::string istr, long flags)
         throw xatmi_exception(tperrno);
     }
 
-    return ndrx_to_py(std::move(obuf), true);
+    return ndrx_to_py(obuf, true);
 }
 
 static void pytppost(const std::string eventname, py::object data, long flags)
@@ -122,7 +122,7 @@ static pytpreply pytpcall(const char *svc, py::object idata, long flags)
             }
         }
     }
-    return pytpreply(tperrno, tpurcode, ndrx_to_py(std::move(out), true));
+    return pytpreply(tperrno, tpurcode, ndrx_to_py(out, true));
 }
 
 static TPQCTL pytpenqueue(const char *qspace, const char *qname, TPQCTL *ctl,
@@ -163,7 +163,7 @@ static std::pair<TPQCTL, py::object> pytpdequeue(const char *qspace,
             throw xatmi_exception(tperrno);
         }
     }
-    return std::make_pair(*ctl, ndrx_to_py(std::move(out), true));
+    return std::make_pair(*ctl, ndrx_to_py(out, true));
 }
 
 static int pytpacall(const char *svc, py::object idata, long flags)
@@ -195,7 +195,7 @@ static pytpreply pytpgetrply(int cd, long flags)
             }
         }
     }
-    return pytpreply(tperrno, tpurcode, ndrx_to_py(std::move(out), true), cd);
+    return pytpreply(tperrno, tpurcode, ndrx_to_py(out, true), cd);
 }
 
 #define MODULE "endurox"
@@ -259,7 +259,7 @@ static pytpreply pytpadmcall(py::object idata, long flags)
             }
         }
     }
-    return pytpreply(tperrno, 0, ndrx_to_py(std::move(out), true));
+    return pytpreply(tperrno, 0, ndrx_to_py(out, true));
 }
 
 extern "C" long G_libatmisrv_flags;
@@ -332,7 +332,8 @@ void PY(TPSVCINFO *svcinfo)
     try
     {
         py::gil_scoped_acquire acquire;
-        auto idata = ndrx_to_py(xatmibuf(svcinfo), true);
+        auto ibuf=xatmibuf(svcinfo);
+        auto idata = ndrx_to_py(ibuf, true);
 
         pytpsvcinfo info(svcinfo);
 
@@ -340,7 +341,13 @@ void PY(TPSVCINFO *svcinfo)
 
         auto && func = M_dispmap[svcinfo->fname];
 
+        //fetch
+        ibuf.recurs_free_fetch();
         func(&info);
+
+        //fetch & release...
+        //As this it is auto-buf, it will be freed up...
+        ibuf.release();
 
         if (tsvcresult.clean)
         {
@@ -1035,7 +1042,7 @@ PYBIND11_MODULE(endurox, m)
 
             obuf.mutate([&](UBFH *fbfr)
                         { return Bextread(fbfr, fiop.get()); });
-            return ndrx_to_py(std::move(obuf), true);
+            return ndrx_to_py(obuf, true);
         },
         "Builds fielded buffer from printed format", py::arg("iop"));
 
