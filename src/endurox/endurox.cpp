@@ -221,13 +221,10 @@ static void pytpreturn(int rval, long rcode, py::object data, long flags)
     tsvcresult.rval = rval;
     tsvcresult.rcode = rcode;
     auto &&odata = ndrx_from_py(data);
-    tsvcresult.olen = odata.len;
-    tsvcresult.odata = odata.release();
-
-    tsvcresult.forward = false;
-    NDRX_LOG(log_error, "YOPT OK TPRETURN?");
-    //ValueError: embedded null character
-    //PyErr_Print();
+    odata.recurs_free_fetch();
+    tpreturn(tsvcresult.rval, tsvcresult.rcode, odata.p, odata.len, 0);
+    odata.release();
+    //Normal destructors apply... as running in nojump mode
 
 }
 static void pytpforward(const std::string &svc, py::object data, long flags)
@@ -239,9 +236,12 @@ static void pytpforward(const std::string &svc, py::object data, long flags)
     tsvcresult.clean = false;
     strncpy(tsvcresult.name, svc.c_str(), sizeof(tsvcresult.name));
     auto &&odata = ndrx_from_py(data);
-    tsvcresult.olen = odata.len;
-    tsvcresult.odata = odata.release();
-    tsvcresult.forward = true;
+    //Read list of ptrs...
+    odata.recurs_free_fetch();
+    tpforward(tsvcresult.name, odata.p, odata.len, 0);
+    odata.release();
+
+    //Normal destructors apply... as running in nojump mode.
 }
 
 static pytpreply pytpadmcall(py::object idata, long flags)
@@ -262,9 +262,15 @@ static pytpreply pytpadmcall(py::object idata, long flags)
     return pytpreply(tperrno, 0, ndrx_to_py(std::move(out), true));
 }
 
+extern "C" long G_libatmisrv_flags;
+
 int tpsvrinit(int argc, char *argv[])
 {
     py::gil_scoped_acquire acquire;
+
+    /* set no jump, so that we can process recrusive buffer freeups.. */
+    G_libatmisrv_flags|=ATMI_SRVLIB_NOLONGJUMP;
+
     if (hasattr(server, __func__))
     {
         std::vector<std::string> args;
@@ -347,16 +353,6 @@ void PY(TPSVCINFO *svcinfo)
         NDRX_LOG(log_error, "Got exception at tpreturn: %s", e.what());
         userlog(const_cast<char *>("%s"), e.what());
         tpreturn(TPEXIT, 0, nullptr, 0, 0);
-    }
-
-    if (tsvcresult.forward)
-    {
-        tpforward(tsvcresult.name, tsvcresult.odata, tsvcresult.olen, 0);
-    }
-    else
-    {
-        tpreturn(tsvcresult.rval, tsvcresult.rcode, tsvcresult.odata,
-                 tsvcresult.olen, 0);
     }
 }
 

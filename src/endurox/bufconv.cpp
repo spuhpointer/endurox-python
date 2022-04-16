@@ -85,8 +85,8 @@ expublic py::object ndrx_to_py(xatmibuf buf, bool is_master)
         throw std::invalid_argument("Invalid buffer type");
     }
 
-    NDRX_LOG(log_debug, "Into ndrx_to_py() type=[%s] subtype=[%s] size=%ld", 
-        type, subtype, size);
+    NDRX_LOG(log_debug, "Into ndrx_to_py() type=[%s] subtype=[%s] size=%ld pp=%p", 
+        type, subtype, size, *buf.pp);
 
     //Return buffer sub-type
     result["buftype"] = type;
@@ -295,7 +295,6 @@ expublic xatmibuf ndrx_from_py(py::object obj)
                 "expected UBF buftype, got: "+buftype);
         }
         buf = xatmibuf("UBF", 1024);
-        NDRX_LOG(log_error, "YOPT FREE %p %d", buf.p, buf.do_free_ptrs);
         ndrxpy_from_py_ubf(static_cast<py::dict>(data), buf);
     }
     else

@@ -110,15 +110,11 @@ void xatmibuf::reinit(const char *type, const char *subtype, long len_)
         }
 
         //Never free?
-        NDRX_LOG(log_error, "YOPTEL [%s]", type);
         if (0==strcmp(type, "UBF") &&
             NDRXPY_DO_DFLT==do_free_ptrs)
         {
-            NDRX_LOG(log_error, "YOPTEL2 [%s]", type);
             do_free_ptrs=NDRXPY_DO_FREE;
         }
-
-        NDRX_LOG(log_error, "YOPTEL3 [%s] %d", type, do_free_ptrs);
     }
     else
     {
@@ -150,9 +146,8 @@ extern "C" {
  * @brief Free up UBF buffer
  * this requires list to be setup, as several ptrs might point to the same buffer
  * @param p_fb UBF buffer to process
- * @param freelist list of ptrs to free
  */
-void free_up(UBFH *p_fb, std::vector<char *> &freelist)
+void free_up(UBFH *p_fb, std::map<char *, char *> &freelist)
 {
     Bnext_state_t state;
     BFLDID bfldid=BBADFLDOCC;
@@ -163,8 +158,6 @@ void free_up(UBFH *p_fb, std::vector<char *> &freelist)
     char **lptr;
 
     NDRX_LOG(log_debug, "Free up buffer %p", p_fb);
-
-    tplogprintubf(log_error, "Free up UFB", p_fb);
 
     ndrx_mbuf_Bnext_ptr_first(p_fb, &state);
 
@@ -183,7 +176,10 @@ void free_up(UBFH *p_fb, std::vector<char *> &freelist)
             // step-in
             free_up(reinterpret_cast<UBFH*>(*lptr), freelist);
 
-            freelist.push_back(*lptr);
+            if (nullptr!=*lptr)
+            {
+                freelist[*lptr]=*lptr;
+            }
 
         }
         else if (BFLD_UBF==ftyp)
@@ -207,31 +203,63 @@ void free_up(UBFH *p_fb, std::vector<char *> &freelist)
     }
 }
 
+/**
+ * @brief recursive buffer free-up (in case if using BFLD_PTR or BFLD_UBF)
+ * 
+ */
+void xatmibuf::recurs_free_fetch()
+{
+    //In case of UBF do recrsive free
+    NDRX_LOG(log_debug, "Free ptrs: %d", do_free_ptrs);
+    if (NDRXPY_DO_FREE==do_free_ptrs)
+    {
+        free_up(*fbfr(), freelist);
+    }
+}
+
+/**
+ * @brief Do actual free
+ * but if ptr of this buffer is  
+ */
+void xatmibuf::recurs_free()
+{
+   for (auto const& x : freelist)
+   {
+       /* if ptr does not point to current buffer -> we can free it up... */
+       if (p!=x.second)
+       {
+            tpfree(x.second);
+       }
+   }
+}
+
+/**
+ * @brief Standard destructor
+ * 
+ */
 xatmibuf::~xatmibuf()
 {
     if (p != nullptr)
     {
-        //In case of UBF do recrsive free
-        NDRX_LOG(log_debug, "Free ptrs: %d", do_free_ptrs);
-        if (NDRXPY_DO_FREE==do_free_ptrs)
-        {
-            std::vector<char *> freelist;
-
-            free_up(*fbfr(), freelist);
-
-            for(char * ptr : freelist) 
-            {
-                tpfree(ptr);
-            }
-        }
-
+        recurs_free_fetch();
+        recurs_free();
         tpfree(p);
     }
 }
 
+/**
+ * @release the buffer (do not destruct, as XATMI already freed)
+ * 
+ * @return char* 
+ */
 char *xatmibuf::release()
 {
     char *ret = p;
+
+    //Free up the embedded BFLD_PTRs buffers
+    recurs_free();
+
+    //Disable destructor
     p = nullptr;
     return ret;
 }
@@ -267,6 +295,12 @@ void xatmibuf::swap(xatmibuf &other) noexcept
     std::swap(p, other.p);
     std::swap(len, other.len);
     std::swap(do_free_ptrs, other.do_free_ptrs);
+
+    //In case if using differt pp
+    if (&other.p!=other.pp)
+    {
+        std::swap(pp, other.pp);
+    }
 }
 
 /* vim: set ts=4 sw=4 et smartindent: */

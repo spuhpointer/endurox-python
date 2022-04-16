@@ -86,7 +86,11 @@ public:
     char **pp;
 
     int do_free_ptrs;
-    
+    //Recurs free list
+    std::map<char *, char *> freelist;
+    void recurs_free_fetch();
+    void recurs_free();
+
     /**
      * @brief This is used to release the buffer
      *  in case if processing embedded views, this is set nullptr,

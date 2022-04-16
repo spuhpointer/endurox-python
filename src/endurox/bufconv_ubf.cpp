@@ -90,7 +90,7 @@ expublic py::object ndrxpy_to_py_ubf(UBFH *fbfr, BFLDLEN buflen = 0)
     }
     /*std::unique_ptr<char[]> value(new char[buflen]); */
 
-    Bprint(fbfr);
+    //Bprint(fbfr);
 
     for (;;)
     {
@@ -189,7 +189,9 @@ expublic py::object ndrxpy_to_py_ubf(UBFH *fbfr, BFLDLEN buflen = 0)
         case BFLD_PTR:
         {
             xatmibuf ptrbuf;
-            ptrbuf.pp=reinterpret_cast<char **>(d_ptr);
+            ptrbuf.p = nullptr;
+            ptrbuf.pp = reinterpret_cast<char **>(d_ptr);
+
             /* process stuff recursively + free up leave buffers,
              * as we are not using them any more
              */
@@ -357,9 +359,13 @@ static void from_py1_ubf(xatmibuf &buf, BFLDID fieldid, BFLDOCC oc,
             xatmibuf tmp = ndrx_from_py(obj.cast<py::object>());
 
             //Master buffer will perform 
-            tmp.do_free_ptrs=false;
+            tmp.do_free_ptrs=NDRXPY_DO_NEVERFREE;
+            
             buf.mutate([&](UBFH *fbfr)
                     { return Bchg(fbfr, fieldid, oc, reinterpret_cast<char *>(tmp.pp), 0); });
+
+            //Do not remove this buffer... as needed by mbuf
+            tmp.p = nullptr;
 
         }
     }
@@ -412,7 +418,7 @@ expublic void ndrxpy_from_py_ubf(py::dict obj, xatmibuf &b)
         }
     }
 
-    Bprint(*b.fbfr());
+    //Bprint(*b.fbfr());
 }
 
 
