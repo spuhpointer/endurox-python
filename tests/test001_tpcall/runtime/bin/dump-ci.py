@@ -8,7 +8,8 @@ import json
 # PTR leak? On receiving rsp same buffer?
 # When parsed rsp in -> free all ptr. Also free all ptr original buffers.
 #
-tperrno, tpurcode, retbuf = e.tpcall("ECHO", { "data":{
+while 1==1:
+    tperrno, tpurcode, retbuf = e.tpcall("ECHO", { "data":{
     "T_CHAR_2_FLD": ["X", "Y"],
     "T_CHAR_FLD": [0],
     "T_SHORT_FLD": 1,

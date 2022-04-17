@@ -133,12 +133,14 @@ expublic py::object ndrx_to_py(xatmibuf &buf, bool is_master)
     xatmibuf cibuf;
     if (strcmp(type, "NULL") != 0)
     {
-        if (EXSUCCEED==tpgetcallinfo(*buf.pp, reinterpret_cast<UBFH **>(cibuf.pp), 0))
+        ret = tpgetcallinfo(*buf.pp, reinterpret_cast<UBFH **>(cibuf.pp), TPCI_NOEOFERR);
+        
+        if (EXTRUE==ret)
         {
             // setup callinfo block
             result[NDRXPY_DATA_CALLINFO]=ndrxpy_to_py_ubf(*cibuf.fbfr(), 0);
         }
-        else if (TPESYSTEM!=tperrno)
+        else if (EXFAIL==ret)
         {
             NDRX_LOG(log_debug, "Error checking tpgetcallinfo()");
             throw xatmi_exception(tperrno);
