@@ -5,9 +5,9 @@ import subprocess
 
 class MainTest(unittest.TestCase):
 
-    def test001_tpcall(self):
+    def test001_buffers(self):
 
-        testdir=os.path.join(os.path.dirname(os.path.abspath(__file__)), 'test001_tpcall');
+        testdir=os.path.join(os.path.dirname(os.path.abspath(__file__)), 'test001_buffers');
         subprocess.check_call(os.path.join(testdir, 'run.sh'), cwd=testdir)
 
 if __name__ == '__main__':
