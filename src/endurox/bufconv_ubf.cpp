@@ -331,7 +331,6 @@ static void from_py1_ubf(xatmibuf &buf, BFLDID fieldid, BFLDOCC oc,
             {
                 auto vnamed = view_d["vname"];
                 auto vdata = view_d["data"];
-                
                 std::string vname = py::str(vnamed);
 
                 NDRX_STRCPY_SAFE(vf.vname, vname.c_str());
@@ -340,11 +339,12 @@ static void from_py1_ubf(xatmibuf &buf, BFLDID fieldid, BFLDOCC oc,
                 vf.data = *vbuf.pp;
                 vf.vflags=0;
 
+                NDRX_LOG(log_error, "YOPT tshort1");
                 ndrxpy_from_py_view(vdata.cast<py::dict>(), vbuf, vf.vname);
-            }
 
-            buf.mutate([&](UBFH *fbfr)
+                buf.mutate([&](UBFH *fbfr)
                     { return Bchg(fbfr, fieldid, oc, reinterpret_cast<char *>(&vf), 0); });
+            }
         }
         else if (BFLD_PTR==Bfldtype(fieldid))
         {
@@ -373,6 +373,8 @@ static void from_py1_ubf(xatmibuf &buf, BFLDID fieldid, BFLDOCC oc,
     {
         throw std::invalid_argument("Unsupported type");
     }
+
+    tplogprintubf(log_error, "YOPT", *buf.fbfr());
 }
 
 /**

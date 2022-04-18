@@ -33,7 +33,7 @@ class Server:
     def ECHO(self, args):
         #json_object = json.dumps(args.data, indent = 4) 
         #e.userlog(json_object+"")
-        #print(args.data)
+        print(args.data)
         return e.tpreturn(e.TPSUCCESS, 0, args.data)
 
 if __name__ == '__main__':

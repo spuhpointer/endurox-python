@@ -46,6 +46,6 @@ char     tchar1     -                   1       -       -       'X'
 float    tfloat1    -                   1       -       -       1.1
 double   tdouble1   -                   1       -       -       0.0
 string   tstring1   -                   1       P       15      'HELLO WORLDB'
-carray   tcarray1   -                   1       -      10      '-'
+carray   tcarray1   -                   2       L       10      '-'
 END
 

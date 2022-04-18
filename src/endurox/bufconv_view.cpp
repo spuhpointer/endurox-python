@@ -204,6 +204,8 @@ out:
 static void from_py1_view(xatmibuf &buf, const char *view, const char *cname, BFLDOCC oc,
                      py::handle obj)
 {
+
+    NDRX_LOG(log_debug, "Processing %s.%s[%d]", view, cname, oc);
     if (obj.is_none())
     {
 
@@ -275,6 +277,7 @@ static void from_py1_view(xatmibuf &buf, const char *view, const char *cname, BF
     {
         long val = obj.cast<py::int_>();
 
+        NDRX_LOG(log_error, "YOPT GOT %ld", val);
         if (EXSUCCEED!=CBvchg(*buf.pp, const_cast<char *>(view), 
                     const_cast<char *>(cname), oc, reinterpret_cast<char *>(&val), 0,
                                   BFLD_LONG))
