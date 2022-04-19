@@ -213,7 +213,7 @@ expublic xatmibuf ndrx_from_py(py::object obj)
     auto dict = static_cast<py::dict>(obj);
 
     //for NULL buffers, we do not contain this...
-    py::dict data;
+    py::object data;
     
     if (dict.contains(NDRXPY_DATA_DATA))
     {

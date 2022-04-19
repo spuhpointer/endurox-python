@@ -48,6 +48,10 @@ cd conf
 
 . settest1
 
+
+# monitor our test instance, 0myWI5nu -> this is const by xadmin provision
+xmemck -v20 -d30 -s60 -t95 -m "0myWI5nu|unittest" 2>./memck.log 1>./memck.out &
+
 # So we are in runtime directory
 cd ../bin
 # Be on safe side...
@@ -70,7 +74,7 @@ function go_out {
 echo "Running UBF test"
 ################################################################################
 
-python3 -m unittest client.py
+python3 -m unittest client.py 0myWI5nu
 
 RET=$?
 

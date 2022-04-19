@@ -3,7 +3,7 @@ import endurox as e
 import exutils as u
 import gc
 
-class TestTpcall(unittest.TestCase):
+class TestUbf(unittest.TestCase):
 
     # TODO: we add some testing here
     # also check that memory leaks are not present.
@@ -23,7 +23,10 @@ class TestTpcall(unittest.TestCase):
                 "T_UBF_FLD": {"T_CHAR_2_FLD":"X"},
                 "T_VIEW_FLD": [ {}, {"vname":"UBTESTVIEW2", "data":{
                     "tshort1":5
-                    ,"tcarray1":[b'\x00\x00', b'\x01\x01'] } }]
+                    ,"tcarray1":[b'\x00\x00', b'\x01\x01'] } }],
+                "T_PTR_FLD":{"data":{"T_CHAR_FLD":"X"}},
+                "T_PTR_FLD":{"data":"HELLO WORLD"},
+    #            "T_PTR_2_FLD":[{"data":"HELLO WORLD"}, {"data":{"T_STRING_FLD":"HELLO WORLD"}}, {"buftype":"VIEW", "subtype":"UBTESTVIEW2", "data":{"tshort1":99}}],
                 }},);
             self.assertEqual(tperrno, 0)
             self.assertEqual(tpurcode, 0)
