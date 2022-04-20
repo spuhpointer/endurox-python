@@ -22,3 +22,14 @@ class NdrxStopwatch(object):
     #
     def reset(self):
         self.w = time.time()
+
+#
+# Get test settings
+#
+#class TestSettings(object):
+
+    #
+    # Return current test settings
+    #
+#    def test_duratation(self):
+#        os.getenv('NDRXPY_TEST_SEC')

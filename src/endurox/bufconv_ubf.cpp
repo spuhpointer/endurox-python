@@ -339,7 +339,6 @@ static void from_py1_ubf(xatmibuf &buf, BFLDID fieldid, BFLDOCC oc,
                 vf.data = *vbuf.pp;
                 vf.vflags=0;
 
-                NDRX_LOG(log_error, "YOPT tshort1");
                 ndrxpy_from_py_view(vdata.cast<py::dict>(), vbuf, vf.vname);
 
                 buf.mutate([&](UBFH *fbfr)
@@ -373,8 +372,6 @@ static void from_py1_ubf(xatmibuf &buf, BFLDID fieldid, BFLDOCC oc,
     {
         throw std::invalid_argument("Unsupported type");
     }
-
-    tplogprintubf(log_error, "YOPT", *buf.fbfr());
 }
 
 /**

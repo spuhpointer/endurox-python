@@ -98,7 +98,7 @@ expublic py::object ndrx_to_py(xatmibuf &buf, bool is_master)
 
     NDRX_LOG(log_debug, "Converting buffer type [%s]", type);
 
-    if (strcmp(type, "STRING") == 0)
+    if (strcmp(type, "STRING") == 0 || strcmp(type, "JSON") == 0)
     {
         result["data"]=py::cast(*buf.pp);
     }
@@ -235,7 +235,7 @@ expublic xatmibuf ndrx_from_py(py::object obj)
     /* process JSON data... as string */
     if (buftype=="JSON")
     {
-        if (py::isinstance<py::str>(data))
+        if (!py::isinstance<py::str>(data))
         {
             throw std::invalid_argument("String expected for JSON buftype, got: "+buftype);
         } 

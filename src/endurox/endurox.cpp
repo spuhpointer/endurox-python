@@ -976,8 +976,8 @@ PYBIND11_MODULE(endurox, m)
         "Bboolev",
         [](py::object fbfr, const char *expression)
         {
-            std::unique_ptr<char, decltype(&free)> guard(
-                Bboolco(const_cast<char *>(expression)), &free);
+            std::unique_ptr<char, decltype(&Btreefree)> guard(
+                Bboolco(const_cast<char *>(expression)), &Btreefree);
             if (guard.get() == nullptr)
             {
                 throw ubf_exception(Berror);
@@ -997,8 +997,8 @@ PYBIND11_MODULE(endurox, m)
         "Bfloatev",
         [](py::object fbfr, const char *expression)
         {
-            std::unique_ptr<char, decltype(&free)> guard(
-                Bboolco(const_cast<char *>(expression)), &free);
+            std::unique_ptr<char, decltype(&Btreefree)> guard(
+                Bboolco(const_cast<char *>(expression)), &Btreefree);
             if (guard.get() == nullptr)
             {
                 throw ubf_exception(Berror);
@@ -1182,18 +1182,55 @@ encode different type of data. Enduro/X supports following data buffer types:
   | *BFLD_STRING* (C zero terminated string type), *BFLD_CARRAY* (byte array), *BFLD_VIEW*
   | (C structure record), *BFLD_UBF* (recursive buffer) and *BFLD_PTR* (pointer to another
   | XATMI buffer).
-- | STRING this is plain C string buffer. When using with Python, data is converted \
+- | **STRING** this is plain C string buffer. When using with Python, data is converted
   | from to/from *UTF-8* format.
+- | **NULL** this is empty buffer without any data and type. This buffer cannot be associated
+  | with call-info buffer.
+- | **JSON** this basically is C string buffer, but with indication that it contains JSON
+  | formatted data. These buffer may be automatically converted to UBF and vice versa
+  | for certain XATMI server configurations.
+- | **VIEW* this buffer basically may hold a C structure record.
 
+Following chapters lists XATMI data encoding principles.
 
 UBF Data encoding
 =================
 
-.. code-block:: python
-   :caption: this.py
-   :name: this-py
+When building XATMI buffer from Python dictionary, endurox-python library accepts
+values to be present as list of values, in such case values are loaded into UBF occurrences
+accordingly. value may be presented directly without the list, in such case the value
+is loaded into UBF field occurrence **0**.
 
-   print 'Explicit is better than implicit.'
+When XATMI UBF buffer dictionary is received from Enduro/X, all values are loaded into lists,
+regardless of did field had several occurrences or just one. To unify the programming interface
+it is recommended to keep the from/to buffers in the format that each key is the list of
+values.
+
+
+
+.. code-block:: python
+   :caption: UBF buffer encoding call
+   :name: ubf-call
+
+   tperrno, tpurcode, retbuf = e.tpcall("ECHO", { "data":{
+        "T_CHAR_2_FLD": ["X", "Y"],
+        "T_CHAR_FLD": [0],
+        "T_SHORT_FLD": 1,
+        "T_LONG_FLD": 5,
+        "T_FLOAT_FLD": 1000.99,
+        "T_STRING_FLD": "HELLO INPUT",
+        "T_STRING_2_FLD": "HELLO INPUT 2ĀČ",
+        "T_UBF_FLD": {"T_SHORT_FLD":99, "T_UBF_FLD":{"T_LONG_2_FLD":1000091}},
+        }})
+    print retbuf
+
+
+.. code-block:: python
+   :caption: UBF buffer encoding output
+   :name: ubf-call-output
+   
+   {'buftype': 'UBF', 'data': {'T_SHORT_FLD': [1], 'T_LONG_FLD': [5], 'T_CHAR_FLD': [b'\x00'], 'T_CHAR_2_FLD': ['X', 'Y'], 'T_FLOAT_FLD': [1000.989990234375], 'T_STRING_FLD': ['HELLO INPUT'], 'T_STRING_2_FLD': ['HELLO INPUT 2ĀČ'], 'T_UBF_FLD': [{'T_SHORT_FLD': [99], 'T_UBF_FLD': [{'T_LONG_2_FLD': [1000091]}]}]}}
+    
 
 All XATMI buffer data in Python3 Enduro/X binding is encoded with dictionary. With
 following examples.

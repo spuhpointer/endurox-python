@@ -4,6 +4,9 @@
 # @(#) Test 001 - Python tpcall tests
 #
 
+export XMEMCK_LOG=`pwd`/xmemck.log
+export XMEMCK_OUT=`pwd`/xmemck.out
+export TEST_OUT=`pwd`/test.out
 (
 #
 # Load system settings...
@@ -50,7 +53,9 @@ cd conf
 
 
 # monitor our test instance, 0myWI5nu -> this is const by xadmin provision
-xmemck -v20 -d30 -s60 -t95 -m "0myWI5nu|unittest" 2>./memck.log 1>./memck.out &
+xmemck -m "0myWI5nu|unittest" 2>$XMEMCK_LOG 1>$XMEMCK_OUT &
+MEMCK_PID=$!
+echo "Memck pid = $MEMCK_PID"
 
 # So we are in runtime directory
 cd ../bin
@@ -65,22 +70,162 @@ function go_out {
     echo "Test exiting with: $1"
     xadmin stop -y
     xadmin down -y
+    kill -9 $MEMCK_PID
 
     popd 2>/dev/null
     exit $1
 }
 
 ################################################################################
-echo "Running UBF test"
+echo "Running UBF buffer test"
 ################################################################################
 
-python3 -m unittest client.py 0myWI5nu
+python3 -m unittest client-ubf-buffer.py
 
 RET=$?
 
-if [[ $RET != 0 ]]; then
-    echo "testcl $COMMAND: failed"
+if [ $RET != 0 ]; then
+    echo "client-ubf-buffer.py failed"
     go_out -1
+fi
+
+################################################################################
+echo "Running UBF callinfo test"
+################################################################################
+
+python3 -m unittest client-ubf-callinfo.py
+
+RET=$?
+
+if [ $RET != 0 ]; then
+    echo "client-ubf-callinfo.py failed"
+    go_out -1
+fi
+
+################################################################################
+echo "Running UBF boolev test"
+################################################################################
+
+python3 -m unittest client-ubf-boolev.py 
+
+RET=$?
+
+if [ $RET != 0 ]; then
+    echo "client-ubf-boolev.py failed"
+    go_out -1
+fi
+
+################################################################################
+echo "Running UBF floatev test"
+################################################################################
+
+python3 -m unittest client-ubf-floatev.py 
+
+RET=$?
+
+if [ $RET != 0 ]; then
+    echo "client-ubf-floatev.py failed"
+    go_out -1
+fi
+
+################################################################################
+echo "Running NULL test"
+################################################################################
+
+python3 -m unittest client-null-buffer.py 
+
+RET=$?
+
+if [ $RET != 0 ]; then
+    echo "client-null-buffer.py failed"
+    go_out -1
+fi
+
+################################################################################
+echo "Running callinfo test"
+################################################################################
+
+# prints error...
+python3 -m unittest client-null-callinfo.py 2>/dev/null
+
+RET=$?
+
+if [ $RET != 0 ]; then
+    echo "client-null-callinfo.py failed"
+    go_out -1
+fi
+
+################################################################################
+echo "Running JSON test"
+################################################################################
+
+# prints error...
+python3 -m unittest client-json-buffer.py
+
+RET=$?
+
+if [ $RET != 0 ]; then
+    echo "client-json-buffer.py failed"
+    go_out -1
+fi
+
+################################################################################
+echo "Running VIEW test"
+################################################################################
+
+# prints error...
+python3 -m unittest client-view-buffer.py
+
+RET=$?
+
+if [ $RET != 0 ]; then
+    echo "client-view-buffer.py failed"
+    go_out -1
+fi
+
+################################################################################
+echo "Running VIEW bad len"
+################################################################################
+
+# prints error...
+python3 -m unittest client-view-badbuf.py 2>/dev/null
+
+RET=$?
+
+if [ $RET != 0 ]; then
+    echo "client-view-badbuf.py failed"
+    go_out -1
+fi
+
+################################################################################
+echo "Running VIEW bad occ"
+################################################################################
+
+# prints error...
+python3 -m unittest client-view-badocc.py 2>/dev/null
+
+RET=$?
+
+if [ $RET != 0 ]; then
+    echo "client-view-badocc.py failed"
+    go_out -1
+fi
+
+###############################################################################
+echo "Check leaks"
+###############################################################################
+
+echo "---- Leak info ----" >> $TEST_OUT
+cat $XMEMCK_OUT >> $TEST_OUT
+echo "-------------------" >> $TEST_OUT
+if [ "X`xadmin pmode | grep '#define NDRX_SANITIZE'`" != "X" ]; then
+    echo "Sanitizer mode, ignore memck output"
+else
+    echo "Catch memory leaks..."
+    if [ "X`grep '>>> LEAK' $XMEMCK_OUT`" != "X" ]; then
+        echo "Memory leak detected!"
+        RET=-2
+    fi
 fi
 
 ###############################################################################
@@ -89,5 +234,5 @@ echo "Done"
 
 go_out 0
 
-) > test.out 2>&1
+) > $TEST_OUT 2>&1
 
