@@ -10,7 +10,7 @@ class TestUbf(unittest.TestCase):
     #
     def test_ubf_Bfloatev(self):
         w = u.NdrxStopwatch()
-        while w.get_delta_sec() < 30:
+        while w.get_delta_sec() < u.test_duratation():
             self.assertAlmostEqual(e.Bfloatev({"data":{ "T_LONG_FLD":["10", "7"]}}, "T_LONG_FLD[0]-T_LONG_FLD[1]"), 3, places=3, msg=None, delta=None)
 
 if __name__ == '__main__':

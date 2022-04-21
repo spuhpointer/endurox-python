@@ -536,18 +536,18 @@ static void register_exceptions(py::module &m)
         m.add_object("QmException", py::handle(QmException));
     }
 
-    static PyObject *ubfException =
-        PyErr_NewException(MODULE ".ubfException", nullptr, nullptr);
-    if (ubfException)
+    static PyObject *UbfException =
+        PyErr_NewException(MODULE ".UbfException", nullptr, nullptr);
+    if (UbfException)
     {
-        PyTypeObject *as_type = reinterpret_cast<PyTypeObject *>(ubfException);
+        PyTypeObject *as_type = reinterpret_cast<PyTypeObject *>(UbfException);
         as_type->tp_str = EnduroxException_tp_str;
         PyObject *descr = PyDescr_NewGetSet(as_type, EnduroxException_getsetters);
         auto dict = py::reinterpret_borrow<py::dict>(as_type->tp_dict);
         dict[py::handle(((PyDescrObject *)(descr))->d_name)] = py::handle(descr);
 
-        Py_XINCREF(ubfException);
-        m.add_object("ubfException", py::handle(ubfException));
+        Py_XINCREF(UbfException);
+        m.add_object("UbfException", py::handle(UbfException));
     }
 
     py::register_exception_translator([](std::exception_ptr p)
@@ -570,7 +570,7 @@ static void register_exceptions(py::module &m)
       py::tuple args(2);
       args[0] = e.what();
       args[1] = e.code();
-      PyErr_SetObject(ubfException, args.ptr());
+      PyErr_SetObject(UbfException, args.ptr());
     } });
 }
 
@@ -1064,7 +1064,8 @@ PYBIND11_MODULE(endurox, m)
     m.attr("TPFAIL") = py::int_(TPFAIL);
     m.attr("TPSUCCESS") = py::int_(TPSUCCESS);
     m.attr("TPEXIT") = py::int_(TPEXIT);
-
+    
+    //XATMI errors:
     m.attr("TPEABORT") = py::int_(TPEABORT);
     m.attr("TPEBADDESC") = py::int_(TPEBADDESC);
     m.attr("TPEBLOCK") = py::int_(TPEBLOCK);
@@ -1090,7 +1091,33 @@ PYBIND11_MODULE(endurox, m)
     m.attr("TPEMATCH") = py::int_(TPEMATCH);
     m.attr("TPEDIAGNOSTIC") = py::int_(TPEDIAGNOSTIC);
     m.attr("TPEMIB") = py::int_(TPEMIB);
+    
+    //UBF errors:
+    
+    m.attr("BERFU0") = py::int_(BERFU0);
+    m.attr("BALIGNERR") = py::int_(BALIGNERR);
+    m.attr("BNOTFLD") = py::int_(BNOTFLD);
+    m.attr("BNOSPACE") = py::int_(BNOSPACE);
+    m.attr("BNOTPRES") = py::int_(BNOTPRES);
+    m.attr("BBADFLD") = py::int_(BBADFLD);
+    m.attr("BTYPERR") = py::int_(BTYPERR);
+    m.attr("BEUNIX") = py::int_(BEUNIX);
+    m.attr("BBADNAME") = py::int_(BBADNAME);
+    m.attr("BMALLOC") = py::int_(BMALLOC);
+    m.attr("BSYNTAX") = py::int_(BSYNTAX);
+    m.attr("BFTOPEN") = py::int_(BFTOPEN);
+    m.attr("BFTSYNTAX") = py::int_(BFTSYNTAX);
+    m.attr("BEINVAL") = py::int_(BEINVAL);
+    m.attr("BERFU1") = py::int_(BERFU1);
+    m.attr("BBADTBL") = py::int_(BBADTBL);
+    m.attr("BBADVIEW") = py::int_(BBADVIEW);
+    m.attr("BVFSYNTAX") = py::int_(BVFSYNTAX);
+    m.attr("BVFOPEN") = py::int_(BVFOPEN);
+    m.attr("BBADACM") = py::int_(BBADACM);
+    m.attr("BNOCNAME") = py::int_(BNOCNAME);
+    m.attr("BEBADOP") = py::int_(BEBADOP);
 
+    //Queue errors:
     m.attr("QMEINVAL") = py::int_(QMEINVAL);
     m.attr("QMEBADRMID") = py::int_(QMEBADRMID);
     m.attr("QMENOTOPEN") = py::int_(QMENOTOPEN);
@@ -1184,12 +1211,13 @@ encode different type of data. Enduro/X supports following data buffer types:
   | XATMI buffer).
 - | **STRING** this is plain C string buffer. When using with Python, data is converted
   | from to/from *UTF-8* format.
+- | **CARRAY** byte array buffer.
 - | **NULL** this is empty buffer without any data and type. This buffer cannot be associated
   | with call-info buffer.
 - | **JSON** this basically is C string buffer, but with indication that it contains JSON
   | formatted data. These buffer may be automatically converted to UBF and vice versa
   | for certain XATMI server configurations.
-- | **VIEW* this buffer basically may hold a C structure record.
+- | **VIEW** this buffer basically may hold a C structure record.
 
 Following chapters lists XATMI data encoding principles.
 
@@ -1202,40 +1230,96 @@ accordingly. value may be presented directly without the list, in such case the 
 is loaded into UBF field occurrence **0**.
 
 When XATMI UBF buffer dictionary is received from Enduro/X, all values are loaded into lists,
-regardless of did field had several occurrences or just one. To unify the programming interface
-it is recommended to keep the from/to buffers in the format that each key is the list of
-values.
+regardless of did field had several occurrences or just one.
 
+UBF buffer type is selected by following rules:
 
+- **data** key is dictionary and **buftype** key is not present.
+
+- **data** key is dictionary and **buftype** key is set to **UBF**.
+
+Example call to echo service:
 
 .. code-block:: python
    :caption: UBF buffer encoding call
    :name: ubf-call
 
-   tperrno, tpurcode, retbuf = e.tpcall("ECHO", { "data":{
-        "T_CHAR_2_FLD": ["X", "Y"],
-        "T_CHAR_FLD": [0],
-        "T_SHORT_FLD": 1,
-        "T_LONG_FLD": 5,
-        "T_FLOAT_FLD": 1000.99,
-        "T_STRING_FLD": "HELLO INPUT",
-        "T_STRING_2_FLD": "HELLO INPUT 2ĀČ",
-        "T_UBF_FLD": {"T_SHORT_FLD":99, "T_UBF_FLD":{"T_LONG_2_FLD":1000091}},
-        }})
-    print retbuf
+    import endurox as e
+    import json
+
+    tperrno, tpurcode, retbuf = e.tpcall("ECHO", { "data":{
+        # 3x occs:
+        "T_CHAR_FLD": ["X", "Y", 0]
+        , "T_SHORT_FLD": 3200
+        , "T_LONG_FLD": 99999111
+        , "T_FLOAT_FLD": 1000.99
+        , "T_DOUBLE_FLD": 1000111.99
+        , "T_STRING_FLD": "HELLO INPUT"
+        # contains sub-ubf buffer, which againt contains sub-buffer
+        , "T_UBF_FLD": {"T_SHORT_FLD":99, "T_UBF_FLD":{"T_LONG_2_FLD":1000091}}
+        # at occ 0 EMPTY view is used
+        , "T_VIEW_FLD": [ {}, {"vname":"UBTESTVIEW2", "data":{
+                        "tshort1":5
+                        , "tlong1":100000
+                        , "tchar1":"J"
+                        , "tfloat1":9999.9
+                        , "tdouble1":11119999.9
+                        , "tstring1":"HELLO VIEW"
+                        , "tcarray1":[b'\x00\x00', b'\x01\x01'] 
+                        }}]
+        # contains pointer to STRING buffer:
+        , "T_PTR_FLD":{"data":"HELLO WORLD"}
+    }})
+
+    print(retbuf)
 
 
 .. code-block:: python
-   :caption: UBF buffer encoding output
+   :caption: UBF buffer encoding output (line wrapped)
    :name: ubf-call-output
    
-   {'buftype': 'UBF', 'data': {'T_SHORT_FLD': [1], 'T_LONG_FLD': [5], 'T_CHAR_FLD': [b'\x00'], 'T_CHAR_2_FLD': ['X', 'Y'], 'T_FLOAT_FLD': [1000.989990234375], 'T_STRING_FLD': ['HELLO INPUT'], 'T_STRING_2_FLD': ['HELLO INPUT 2ĀČ'], 'T_UBF_FLD': [{'T_SHORT_FLD': [99], 'T_UBF_FLD': [{'T_LONG_2_FLD': [1000091]}]}]}}
-    
+    {
+        'buftype': 'UBF', 'data':
+        {
+            'T_SHORT_FLD': [3200]
+            , 'T_LONG_FLD': [99999111]
+            , 'T_CHAR_FLD': ['X', 'Y', b'\x00']
+            , 'T_FLOAT_FLD': [1000.989990234375]
+            , 'T_DOUBLE_FLD': [1000111.99]
+            , 'T_STRING_FLD': ['HELLO INPUT']
+            , 'T_PTR_FLD': [{'buftype': 'STRING', 'data': 'HELLO WORLD'}]
+            , 'T_UBF_FLD': [{'T_SHORT_FLD': [99], 'T_UBF_FLD': [{'T_LONG_2_FLD': [1000091]}]}]
+            , 'T_VIEW_FLD': [{}, {'vname': 'UBTESTVIEW2', 'data': {
+                    'tshort1': [5]
+                    , 'tlong1': [100000]
+                    , 'tchar1': ['J']
+                    , 'tfloat1': [9999.900390625]
+                    , 'tdouble1': [11119999.9]
+                    , 'tstring1': ['HELLO VIEW']
+                    , 'tcarray1': [b'\x00\x00', b'\x01\x01']
+            }}]
+        }
+    }
 
-All XATMI buffer data in Python3 Enduro/X binding is encoded with dictionary. With
-following examples.
+Following **exceptions** may be throw, when XATMI buffer is instantiated:
 
-Flags to service routines:
+- | XatmiException with code: **TPENOENT** - view name in vname is not found. 
+- | UbfException with code: **BEINVAL** - invalid view field occurrance.
+  | **BNOSPACE** - no space in view field.
+
+STRING Data encoding
+====================
+
+STRING data buffer may contain arbitrary UTF-8 string.
+
+STRING buffer type is selected by following rules:
+
+- **data** key value is string (does not contain 0x00 byte) and **buftype** key is not present.
+
+- **buftype** key is set and contains **STRING** keyword
+
+Flags to service routines
+**************************
 
 - TPNOBLOCK - non-blocking send/rcv
 - TPSIGRSTRT - restart rcv on interrupt
@@ -1251,19 +1335,22 @@ Flags to service routines:
 - TPSENDONLY - send-only mode
 - TPRECVONLY - recv-only mode
 
-Flags to tpreturn:
+Flags to tpreturn
+*****************
 
 - TPFAIL - service FAILURE for tpreturn
 - TPEXIT - service FAILURE with server exit
 - TPSUCCESS - service SUCCESS for tpreturn
 
-Flags to tpsblktime/tpgblktime:
+Flags to tpsblktime/tpgblktime
+******************************
 
 - TPBLK_SECOND - This flag sets the blocktime value, in seconds. This is default behavior.
 - TPBLK_NEXT - This flag sets the blocktime value for the next potential blocking API.
 - TPBLK_ALL - This flag sets the blocktime value for the all subsequent potential blocking APIs.
 
-Flags to tpenqueue/tpdequeue:
+Flags to tpenqueue/tpdequeue
+****************************
 
 - TPQCORRID - set/get correlation id
 - TPQFAILUREQ - set/get failure queue

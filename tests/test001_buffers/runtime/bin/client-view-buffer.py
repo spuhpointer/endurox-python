@@ -9,7 +9,7 @@ class TestView(unittest.TestCase):
     # Normal view call
     def test_view_tpcall(self):
         w = u.NdrxStopwatch()
-        while w.get_delta_sec() < 30:
+        while w.get_delta_sec() < u.test_duratation():
             tperrno, tpurcode, retbuf = e.tpcall("ECHO", { "buftype":"VIEW", "subtype":"UBTESTVIEW2", "data":{
                 "tshort1": 100
                 , "tlong1": 200000

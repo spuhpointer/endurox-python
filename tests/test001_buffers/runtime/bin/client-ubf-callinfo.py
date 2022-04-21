@@ -10,7 +10,7 @@ class TestUbf(unittest.TestCase):
     # 
     def test_ubf_callinfo(self):
         w = u.NdrxStopwatch()
-        while w.get_delta_sec() < 30:
+        while w.get_delta_sec() < u.test_duratation():
             tperrno, tpurcode, retbuf = e.tpcall("ECHO", { "data":{}, "callinfo":{
                 "T_CHAR_FLD": ["X", "Y"]
                 }})

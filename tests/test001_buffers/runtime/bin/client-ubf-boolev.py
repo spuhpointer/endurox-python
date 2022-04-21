@@ -10,7 +10,7 @@ class TestUbf(unittest.TestCase):
     #
     def test_ubf_Bboolev(self):
         w = u.NdrxStopwatch()
-        while w.get_delta_sec() < 30:
+        while w.get_delta_sec() < u.test_duratation():
             self.assertEqual(e.Bboolev({"data":{ "T_STRING_FLD":["ABC", "CCC"]}}, "T_STRING_FLD[0]=='ABC' && T_STRING_FLD[1]=='CCC'"), True)
             self.assertEqual(e.Bboolev({"data":{ "T_STRING_FLD":["ABC", "CCC"]}}, "!T_STRING_FLD"), False)
 

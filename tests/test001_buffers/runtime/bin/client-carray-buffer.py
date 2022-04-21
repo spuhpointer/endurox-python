@@ -10,7 +10,7 @@ class TestNull(unittest.TestCase):
     #
     def test_carray_tpcall(self):
         w = u.NdrxStopwatch()
-        while w.get_delta_sec() < 30:
+        while w.get_delta_sec() < u.test_duratation():
             tperrno, tpurcode, retbuf = e.tpcall("ECHO", {"data":b'\x00\x00\x05\x07\x00'});
             self.assertEqual(tperrno, 0)
             self.assertEqual(tpurcode, 0)
@@ -22,7 +22,7 @@ class TestNull(unittest.TestCase):
     #
     def test_carray_tpcall2(self):
         w = u.NdrxStopwatch()
-        while w.get_delta_sec() < 30:
+        while w.get_delta_sec() < u.test_duratation():
             tperrno, tpurcode, retbuf = e.tpcall("ECHO", {"buftype":"CARRAY", "data":"HELLO WORLD"});
             self.assertEqual(tperrno, 0)
             self.assertEqual(tpurcode, 0)

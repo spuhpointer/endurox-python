@@ -5,8 +5,8 @@ import json
 #
 # VIEW echo test
 #
-tperrno, tpurcode, retbuf = e.tpcall("ECHO", { "buftype":"VIEW", "subtype":"UBTESTVIEW5", "data":{
-    "tshort1":5
+tperrno, tpurcode, retbuf = e.tpcall("ECHO", { "buftype":"VIEW", "subtype":"UBTESTVIEW2", "data":{
+    "tshort1":[1,1,2,5]
     ,"tchar1":[0]
 }})
 

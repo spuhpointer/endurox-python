@@ -1,27 +1,29 @@
-
 import endurox as e
 import json
 
-#
-# Support for VIEWS
-# Support for PTR, when sending out -> allocate bunch of PTR buffers
-# PTR leak? On receiving rsp same buffer?
-# When parsed rsp in -> free all ptr. Also free all ptr original buffers.
-#
 tperrno, tpurcode, retbuf = e.tpcall("ECHO", { "data":{
-    "T_CHAR_2_FLD": ["X", "Y"],
-    "T_CHAR_FLD": [0],
-    "T_SHORT_FLD": 1,
-    "T_LONG_FLD": 5,
-    "T_FLOAT_FLD": 1000.99,
-    "T_STRING_FLD": "HELLO INPUT",
-    "T_STRING_2_FLD": "HELLO INPUT 2ĀČ",
-    "T_UBF_FLD": {"T_SHORT_FLD":99, "T_UBF_FLD":{"T_LONG_2_FLD":1000091}},
-#    "T_VIEW_FLD": {"T_SHORT_FLD":99, "T_UBF_FLD":{"T_LONG_2_FLD":1000091}},
-#    "T_PTR_FLD": {"buftype":"UBF", "data":{}}
+    # 3x occs:
+    "T_CHAR_FLD": ["X", "Y", 0]
+    , "T_SHORT_FLD": 3200
+    , "T_LONG_FLD": 99999111
+    , "T_FLOAT_FLD": 1000.99
+    , "T_DOUBLE_FLD": 1000111.99
+    , "T_STRING_FLD": "HELLO INPUT"
+    # contains sub-ubf buffer, which againt contains sub-buffer
+    , "T_UBF_FLD": {"T_SHORT_FLD":99, "T_UBF_FLD":{"T_LONG_2_FLD":1000091}}
+    # at occ 0 EMPTY view is used
+    , "T_VIEW_FLD": [ {}, {"vname":"UBTESTVIEW2", "data":{
+                    "tshort1":5
+                    , "tlong1":100000
+                    , "tchar1":"J"
+                    , "tfloat1":9999.9
+                    , "tdouble1":11119999.9
+                    , "tstring1":"HELLO VIEW"
+                    , "tcarray1":[b'\x00\x00', b'\x01\x01'] 
+                    }}]
+    # contains pointer to STRING buffer:
+    , "T_PTR_FLD":{"data":"HELLO WORLD"}
 }})
 
-#tperrno, tpurcode, retbuf = e.tpcall("ECHO", { "buftype":"CARRAY", "data":"HELLO WORLD"})
-#tperrno, tpurcode, retbuf = e.tpcall("ECHO", { "data":{}})
 print(retbuf)
 

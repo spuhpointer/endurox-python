@@ -146,7 +146,7 @@ echo "Running callinfo test"
 ################################################################################
 
 # prints error...
-python3 -m unittest client-null-callinfo.py 2>/dev/null
+NDRX_CCTAG=low python3 -m unittest client-null-callinfo.py
 
 RET=$?
 
@@ -188,7 +188,7 @@ echo "Running VIEW bad len"
 ################################################################################
 
 # prints error...
-python3 -m unittest client-view-badbuf.py 2>/dev/null
+NDRX_CCTAG=low python3 -m unittest client-view-badbuf.py
 
 RET=$?
 
@@ -202,7 +202,7 @@ echo "Running VIEW bad occ"
 ################################################################################
 
 # prints error...
-python3 -m unittest client-view-badocc.py 2>/dev/null
+NDRX_CCTAG=low python3 -m unittest client-view-badocc.py 
 
 RET=$?
 

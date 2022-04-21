@@ -11,7 +11,7 @@ class TestUbf(unittest.TestCase):
     # TODO: Test all data types.
     def test_ubf_tpcall(self):
         w = u.NdrxStopwatch()
-        while w.get_delta_sec() < 30:
+        while w.get_delta_sec() < u.test_duratation():
             tperrno, tpurcode, retbuf = e.tpcall("ECHO", { "data":{
                 "T_CHAR_FLD": ["X", "Y"],
                 "T_SHORT_FLD": 32000,

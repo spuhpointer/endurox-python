@@ -10,7 +10,7 @@ class TestNull(unittest.TestCase):
     #
     def test_null_callinfo(self):
         w = u.NdrxStopwatch()
-        while w.get_delta_sec() < 30:
+        while w.get_delta_sec() < u.test_duratation():
             try:
                 tperrno, tpurcode, retbuf = e.tpcall("ECHO", {"callinfo":{"T_STRING_FLD":"HELLO CALL INFO"}});
             except ValueError as ex:

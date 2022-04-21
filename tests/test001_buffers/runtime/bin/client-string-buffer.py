@@ -10,7 +10,7 @@ class TestNull(unittest.TestCase):
     #
     def test_string_tpcall(self):
         w = u.NdrxStopwatch()
-        while w.get_delta_sec() < 30:
+        while w.get_delta_sec() < u.test_duratation():
             tperrno, tpurcode, retbuf = e.tpcall("ECHO", {"data":"THIS IS STRING BUFFERT TEST"});
             self.assertEqual(tperrno, 0)
             self.assertEqual(tpurcode, 0)
