@@ -7,6 +7,9 @@ SET(CMAKE_BUILD_TYPE Debug)
 #        SET(CMAKE_CXX_FLAGS "-fsanitize=address -fno-omit-frame-pointer -O0 -ggdb ${CMAKE_CXX_FLAGS}")
 #ENDIF()
 
+find_package(PkgConfig REQUIRED)
+pkg_check_modules(ATMI REQUIRED atmisrvinteg)
+
 SET(CMAKE_CXX_FLAGS "-ggdb ${CMAKE_CXX_FLAGS}")
 set (CMAKE_CXX_STANDARD 14)
 
@@ -35,7 +38,7 @@ add_subdirectory(pybind11)
 add_subdirectory(tests/views)
 
 pybind11_add_module(endurox ${SOURCES})
-target_link_libraries(endurox PRIVATE atmisrvinteg atmi ubf nstd pthread rt)
+target_link_libraries(endurox PRIVATE ${ATMI_LIBRARIES})
 
 # needed for testing
 add_dependencies (endurox ubftestvhdrs)
