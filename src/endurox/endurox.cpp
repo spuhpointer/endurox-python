@@ -957,8 +957,8 @@ PYBIND11_MODULE(endurox, m)
         "Bboolpr",
         [](const char *expression, py::object iop)
         {
-            std::unique_ptr<char, decltype(&free)> guard(
-                Bboolco(const_cast<char *>(expression)), &free);
+            std::unique_ptr<char, decltype(&Btreefree)> guard(
+                Bboolco(const_cast<char *>(expression)), &Btreefree);
             if (guard.get() == nullptr)
             {
                 throw ubf_exception(Berror);
@@ -1045,6 +1045,62 @@ PYBIND11_MODULE(endurox, m)
             return ndrx_to_py(obuf, true);
         },
         "Builds fielded buffer from printed format", py::arg("iop"));
+
+    //Logging functions:
+    m.def(
+        "tplog_debug",
+        [](const char *message)
+        {
+            tplog(log_debug, const_cast<char *>(message));
+        },
+        "Print debug log message", py::arg("message"));
+
+    m.def(
+        "tplog_info",
+        [](const char *message)
+        {
+            tplog(log_info, const_cast<char *>(message));
+        },
+        "Print debug log message", py::arg("message"));
+
+    m.def(
+        "tplog_warn",
+        [](const char *message)
+        {
+            tplog(log_error, const_cast<char *>(message));
+        },
+        "Print warning log message", py::arg("message"));
+
+    m.def(
+        "tplog_error",
+        [](const char *message)
+        {
+            tplog(log_error, const_cast<char *>(message));
+        },
+        "Print error log message", py::arg("message"));
+
+    m.def(
+        "tplog_always",
+        [](const char *message)
+        {
+            tplog(log_error, const_cast<char *>(message));
+        },
+        "Print fatal log message", py::arg("message"));
+
+    //TODO: add pure tplog()
+    
+    m.def(
+        "tplogconfig",
+        [](int logger, int lev, const char *debug_string, const char *module, const char *new_file)
+        {
+            if (EXSUCCEED!=tplogconfig(logger, lev, const_cast<char *>(debug_string), 
+                const_cast<char *>(module), const_cast<char *>(new_file)))
+            {
+                throw xatmi_exception(tperrno);   
+            }
+        },
+        "Configure logger", py::arg("logger"), py::arg("lev"), 
+        py::arg("debug_string"), py::arg("module"), py::arg("new_file"));
 
     m.attr("TPNOFLAGS") = py::int_(TPNOFLAGS);
 
@@ -1183,6 +1239,26 @@ PYBIND11_MODULE(endurox, m)
     m.attr("TPQQOSPERSISTENT ") = py::int_(TPQQOSPERSISTENT);
     m.attr("TPQQOSNONPERSISTENT") = py::int_(TPQQOSNONPERSISTENT);
 
+    //Logger topics:
+
+    m.attr("LOG_FACILITY_NDRX") = py::int_(LOG_FACILITY_NDRX);
+    m.attr("LOG_FACILITY_UBF") = py::int_(LOG_FACILITY_UBF);
+    m.attr("LOG_FACILITY_TP") = py::int_(LOG_FACILITY_TP);
+    m.attr("LOG_FACILITY_TP_THREAD") = py::int_(LOG_FACILITY_TP_THREAD);
+    m.attr("LOG_FACILITY_TP_REQUEST") = py::int_(LOG_FACILITY_TP_REQUEST);
+    m.attr("LOG_FACILITY_NDRX_THREAD") = py::int_(LOG_FACILITY_NDRX_THREAD);
+    m.attr("LOG_FACILITY_UBF_THREAD") = py::int_(LOG_FACILITY_UBF_THREAD);
+    m.attr("LOG_FACILITY_NDRX_REQUEST") = py::int_(LOG_FACILITY_NDRX_REQUEST);
+    m.attr("LOG_FACILITY_UBF_REQUEST") = py::int_(LOG_FACILITY_UBF_REQUEST);
+
+    //Log levels:
+    m.attr("log_always") = py::int_(log_always);
+    m.attr("log_error") = py::int_(log_error);
+    m.attr("log_warn") = py::int_(log_warn);
+    m.attr("log_info") = py::int_(log_info);
+    m.attr("log_debug") = py::int_(log_debug);
+    m.attr("log_dump") = py::int_(log_dump);
+
     m.doc() =
         R"pbdoc(
 Python3 bindings for writing Endurox clients and servers
@@ -1245,7 +1321,6 @@ Example call to echo service:
    :name: ubf-call
 
     import endurox as e
-    import json
 
     tperrno, tpurcode, retbuf = e.tpcall("ECHO", { "data":{
         # 3x occs:
@@ -1311,12 +1386,105 @@ STRING Data encoding
 ====================
 
 STRING data buffer may contain arbitrary UTF-8 string.
-
 STRING buffer type is selected by following rules:
 
 - **data** key value is string (does not contain 0x00 byte) and **buftype** key is not present.
 
-- **buftype** key is set and contains **STRING** keyword
+- **buftype** key is set and contains **STRING** keyword.
+
+.. code-block:: python
+   :caption: STRING buffer encoding call
+   :name: string-call
+    import endurox as e
+
+    tperrno, tpurcode, retbuf = e.tpcall("ECHO", { "data":"HELLO WORLD" })
+
+    print(retbuf)
+
+.. code-block:: python
+   :caption: STRING buffer encoding output
+   :name: sring-call-output
+
+    {'buftype': 'STRING', 'data': 'HELLO WORLD'}
+
+
+CARRAY Data encoding
+====================
+
+CARRAY buffer type may transport arbitrary byte array.
+CARRAY buffer type is selected by following rules:
+
+- **data** key value is byte array and **buftype** key is not present.
+- **data** key value is byte array and **buftype** is set to **CARRAY**.
+
+.. code-block:: python
+   :caption: CARRAY buffer encoding call
+   :name: carray-call
+
+    import endurox as e
+
+    tperrno, tpurcode, retbuf = e.tpcall("ECHO", { "data":b'\x00\x00\x01\x02\x04' })
+
+    print(retbuf)
+
+.. code-block:: python
+   :caption: CARRAY buffer encoding output
+   :name: carray-call-output
+
+    {'buftype': 'CARRAY', 'data': b'\x00\x00\x01\x02\x04'}
+
+NULL Data encoding
+==================
+
+NULL buffers are empty dictionaries, selected by following rules:
+
+- **data** key value is empty dictionary and **buftype** key is not present.
+- **data** key value is empty dictionary and **buftype** is set to **NULL**.
+
+.. code-block:: python
+   :caption: NULL buffer encoding call
+   :name: null-call
+
+    import endurox as e
+
+    tperrno, tpurcode, retbuf = e.tpcall("ECHO", {})
+
+    print(retbuf)
+    
+.. code-block:: python
+   :caption: NULL buffer encoding output
+   :name: null-call-output
+
+    {'buftype': 'NULL'}
+
+JSON Data encoding
+==================
+
+JSON buffer type basically is valid UTF-8 string, but with indication that
+it contains json formatted data. JSON buffer is selected by following rules:
+
+- **data** is string value and **buftype** is set to **JSON**.
+
+.. code-block:: python
+   :caption: JSON buffer encoding call
+   :name: json-call
+
+    import endurox as e
+
+    tperrno, tpurcode, retbuf = e.tpcall("ECHO", { "buftype":"JSON", "data":'{"name":"Jim", "age":30, "car":null}'})
+
+    print(retbuf)
+
+.. code-block:: python
+   :caption: JSON buffer encoding output
+   :name: json-call-output
+
+    {'buftype': 'JSON', 'data': '{"name":"Jim", "age":30, "car":null}'}
+
+VIEW Data encoding
+==================
+
+TODO
 
 Flags to service routines
 **************************
