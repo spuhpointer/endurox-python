@@ -10,5 +10,11 @@ class MainTest(unittest.TestCase):
         testdir=os.path.join(os.path.dirname(os.path.abspath(__file__)), 'test001_buffers');
         subprocess.check_call(os.path.join(testdir, 'run.sh'), cwd=testdir)
 
+    def test002_xatmipc(self):
+
+        testdir=os.path.join(os.path.dirname(os.path.abspath(__file__)), 'test002_xatmipc');
+        subprocess.check_call(os.path.join(testdir, 'run.sh'), cwd=testdir)
+
+
 if __name__ == '__main__':
     unittest.main()
