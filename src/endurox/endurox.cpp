@@ -1484,7 +1484,53 @@ it contains json formatted data. JSON buffer is selected by following rules:
 VIEW Data encoding
 ==================
 
-TODO
+VIEW buffer encodes record/structure data. On the Python side data is encoded in dictionary,
+and similary as with UBF, values may be set as direct values for the dictionary keys
+(and are loaded into occurrence 0 of the view field). Or lists may be used to encode
+values, if the view field is array, in such case values are loaded in corresponding
+occurrences.
+
+When Python code receives VIEW buffer, any NULL fields (as set by **NULL_VAL** see **viewfile(5)**)
+are not converted to Python dictionary values, except in case if NULLs proceed valid array values.
+
+For received buffers all values are encapsulated in lists.
+
+VIEW buffer type is selected by following rules:
+
+- **buftype** is set to **VIEW**, **subtype** is set to valid view name and **data** is dictionary.
+
+.. code-block:: python
+   :caption: VIEW buffer encoding call
+   :name: view-call
+
+    import endurox as e
+
+    tperrno, tpurcode, retbuf = e.tpcall("ECHO", { "buftype":"VIEW", "subtype":"UBTESTVIEW2", "data":{
+        "tshort1":5
+        , "tlong1":100000
+        , "tchar1":"J"
+        , "tfloat1":9999.9
+        , "tdouble1":11119999.9
+        , "tstring1":"HELLO VIEW"
+        , "tcarray1":[b'\x00\x00', b'\x01\x01']
+    }})
+
+    print(retbuf)
+
+.. code-block:: python
+   :caption: VIEW buffer encoding output
+   :name: view-call-output
+
+    {'buftype': 'VIEW', 'subtype': 'UBTESTVIEW2', 'data': {
+        'tshort1': [5]
+        , 'tlong1': [100000]
+        , 'tchar1': ['J']
+        , 'tfloat1': [9999.900390625]
+        , 'tdouble1': [11119999.9]
+        , 'tstring1': ['HELLO VIEW']
+        , 'tcarray1': [b'\x00\x00', b'\x01\x01']
+        }
+    }
 
 Flags to service routines
 **************************
