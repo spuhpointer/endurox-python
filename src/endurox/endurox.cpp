@@ -105,24 +105,34 @@ static void pytppost(const std::string eventname, py::object data, long flags)
     }
 }
 
+/**
+ * @brief Syncrhouns service call
+ * 
+ * @param svc service name
+ * @param idata dictionary encoded xatmi buffer
+ * @param flags any flags
+ * @return pytpreply return tuple loaded with tperrno, tpurcode, return buffer
+ */
 static pytpreply pytpcall(const char *svc, py::object idata, long flags)
 {
 
     auto in = ndrx_from_py(idata);
+    int tperrno_saved=0;
     xatmibuf out("NULL", (long)0);
     {
         py::gil_scoped_release release;
         int rc = tpcall(const_cast<char *>(svc), *in.pp, in.len, out.pp, &out.len,
                         flags);
+        tperrno_saved=tperrno;
         if (rc == -1)
         {
-            if (tperrno != TPESVCFAIL)
+            if (tperrno_saved != TPESVCFAIL)
             {
-                throw xatmi_exception(tperrno);
+                throw xatmi_exception(tperrno_saved);
             }
         }
     }
-    return pytpreply(tperrno, tpurcode, ndrx_to_py(out, true));
+    return pytpreply(tperrno_saved, tpurcode, ndrx_to_py(out, true));
 }
 
 static TPQCTL pytpenqueue(const char *qspace, const char *qname, TPQCTL *ctl,
@@ -182,20 +192,22 @@ static int pytpacall(const char *svc, py::object idata, long flags)
 
 static pytpreply pytpgetrply(int cd, long flags)
 {
-
+    int tperrno_saved=0;
     xatmibuf out("UBF", 1024);
     {
         py::gil_scoped_release release;
         int rc = tpgetrply(&cd, out.pp, &out.len, flags);
+
+        tperrno_saved = tperrno;
         if (rc == -1)
         {
-            if (tperrno != TPESVCFAIL)
+            if (tperrno_saved != TPESVCFAIL)
             {
-                throw xatmi_exception(tperrno);
+                throw xatmi_exception(tperrno_saved);
             }
         }
     }
-    return pytpreply(tperrno, tpurcode, ndrx_to_py(out, true), cd);
+    return pytpreply(tperrno_saved, tpurcode, ndrx_to_py(out, true), cd);
 }
 
 #define MODULE "endurox"
@@ -247,19 +259,21 @@ static void pytpforward(const std::string &svc, py::object data, long flags)
 static pytpreply pytpadmcall(py::object idata, long flags)
 {
     auto in = ndrx_from_py(idata);
+    int tperrno_saved=0;
     xatmibuf out("UBF", 1024);
     {
         py::gil_scoped_release release;
         int rc = tpadmcall(*in.fbfr(), out.fbfr(), flags);
+        tperrno_saved=tperrno;
         if (rc == -1)
         {
-            if (tperrno != TPESVCFAIL)
+            if (tperrno_saved != TPESVCFAIL)
             {
-                throw xatmi_exception(tperrno);
+                throw xatmi_exception(tperrno_saved);
             }
         }
     }
-    return pytpreply(tperrno, 0, ndrx_to_py(out, true));
+    return pytpreply(tperrno_saved, 0, ndrx_to_py(out, true));
 }
 
 extern "C" long G_libatmisrv_flags;
