@@ -576,6 +576,11 @@ PYBIND11_MODULE(endurox, m)
         { pytpadvertise(svcname, funcname, func); },
         "Routine for advertising a service name", py::arg("svcname"), py::arg("funcname"), py::arg("func"));
 
+    m.def(
+        "tpunadvertise", [](const char *svcname)
+        { ndrxpy_pytpunadvertise(svcname); },
+        "Unadvertise service", py::arg("tpunadvertise"));
+
     m.def("run", &ndrxpy_pyrun, "Run Endurox server", py::arg("server"), py::arg("args"),
           py::arg("rmname") = "NONE");
 

@@ -197,6 +197,27 @@ expublic void pytpadvertise(std::string svcname, std::string funcname, const py:
 
 }
 
+/**
+ * Unadvertise service
+ * @param [in] svcname service name to unadvertise
+ */
+expublic void ndrxpy_pytpunadvertise(const char *svcname)
+{
+    if (EXFAIL==tpunadvertise(const_cast<char *>(svcname)))
+    {
+        throw xatmi_exception(tperrno);
+    }
+
+    auto it = M_dispmap.find(svcname);
+    if (it != M_dispmap.end()) {
+        M_dispmap.erase(it);
+    }
+
+}
+
+//TODO: How about unadvertise?
+//However unadvertise is not supported for MT server, thus
+
 extern "C"
 {
     extern struct xa_switch_t tmnull_switch;

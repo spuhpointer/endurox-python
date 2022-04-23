@@ -173,6 +173,8 @@ extern void ndrxpy_pyrun(py::object svr, std::vector<std::string> args, const ch
 extern void ndrxpy_pytpreturn(int rval, long rcode, py::object data, long flags);
 extern void ndrxpy_pytpforward(const std::string &svc, py::object data, long flags);
 
+extern void ndrxpy_pytpunadvertise(const char * svcname);
+
 #endif /* NDRX_PYMOD.H */
 
 /* vim: set ts=4 sw=4 et smartindent: */
