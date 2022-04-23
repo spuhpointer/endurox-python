@@ -664,8 +664,29 @@ PYBIND11_MODULE(endurox, m)
         "Configure logger", py::arg("logger"), py::arg("lev"), 
         py::arg("debug_string"), py::arg("module"), py::arg("new_file"));
 
-    m.attr("TPNOFLAGS") = py::int_(TPNOFLAGS);
+    m.def(
+        "tplogqinfo",
+        [](int lev, long flags)
+        {
+            long ret=tplogqinfo(lev,flags);
+            if (EXFAIL==ret)
+            {
+                throw xatmi_exception(tperrno);   
+            }
 
+            return ret;
+        },
+        "Get logger info", py::arg("lev"), py::arg("flags"));
+
+    //tplogqinfo flags:
+    m.attr("TPLOGQI_GET_NDRX") = py::int_(TPLOGQI_GET_NDRX);
+    m.attr("TPLOGQI_GET_UBF") = py::int_(TPLOGQI_GET_UBF);
+    m.attr("TPLOGQI_GET_TP") = py::int_(TPLOGQI_GET_TP);
+    m.attr("TPLOGQI_EVAL_RETURN") = py::int_(TPLOGQI_EVAL_RETURN);
+    m.attr("TPLOGQI_RET_HAVDETAILED") = py::int_(TPLOGQI_RET_HAVDETAILED);
+
+    //XATMI IPC flags:
+    m.attr("TPNOFLAGS") = py::int_(TPNOFLAGS);
     m.attr("TPNOBLOCK") = py::int_(TPNOBLOCK);
     m.attr("TPSIGRSTRT") = py::int_(TPSIGRSTRT);
     m.attr("TPNOREPLY") = py::int_(TPNOREPLY);
