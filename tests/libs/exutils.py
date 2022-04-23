@@ -8,9 +8,9 @@ import os
 #
 # Stopwatch used by tests
 #
-class NdrxStopwatch(object):
+class NdrxStopwatch:
 
-    w = time.time()
+    w = 0
     
     #
     # get time spent
@@ -22,6 +22,12 @@ class NdrxStopwatch(object):
     # reset time
     #
     def reset(self):
+        self.w = time.time()
+
+    #
+    # Constructor
+    #
+    def __init__(self):
         self.w = time.time()
 
 #
