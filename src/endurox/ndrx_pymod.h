@@ -151,6 +151,18 @@ public:
 
 typedef void *(xao_svc_ctx)(void *);
 
+struct pytpreply
+{
+    int rval;
+    long rcode;
+    py::object data;
+    int cd;
+
+    pytpreply(int rval, long rcode, py::object data, int cd = -1)
+        : rval(rval), rcode(rcode), data(data), cd(cd) {}
+};
+
+
 /*---------------------------Globals------------------------------------*/
 /*---------------------------Statics------------------------------------*/
 /*---------------------------Prototypes---------------------------------*/
@@ -174,6 +186,21 @@ extern void ndrxpy_pytpreturn(int rval, long rcode, py::object data, long flags)
 extern void ndrxpy_pytpforward(const std::string &svc, py::object data, long flags);
 
 extern void ndrxpy_pytpunadvertise(const char * svcname);
+extern pytpreply ndrxpy_pytpadmcall(py::object idata, long flags);
+extern TPQCTL ndrxpy_pytpenqueue(const char *qspace, const char *qname, TPQCTL *ctl,
+                          py::object data, long flags);
+extern std::pair<TPQCTL, py::object> ndrx_pytpdequeue(const char *qspace,
+                                                 const char *qname, TPQCTL *ctl,
+                                                 long flags);
+extern pytpreply ndrxpy_pytpcall(const char *svc, py::object idata, long flags);
+extern int ndrxpy_pytpacall(const char *svc, py::object idata, long flags);
+
+extern py::object ndrxpy_pytpexport(py::object idata, long flags);
+extern py::object ndrxpy_pytpimport(const std::string istr, long flags);
+
+extern pytpreply ndrxpy_pytpgetrply(int cd, long flags);
+extern void ndrxpy_pytppost(const std::string eventname, py::object data, long flags);
+
 
 #endif /* NDRX_PYMOD.H */
 

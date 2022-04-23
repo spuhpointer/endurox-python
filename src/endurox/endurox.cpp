@@ -22,193 +22,6 @@
 
 namespace py = pybind11;
 
-struct pytpreply
-{
-    int rval;
-    long rcode;
-    py::object data;
-    int cd;
-
-    pytpreply(int rval, long rcode, py::object data, int cd = -1)
-        : rval(rval), rcode(rcode), data(data), cd(cd) {}
-};
-
-static py::object pytpexport(py::object idata, long flags)
-{
-    auto in = ndrx_from_py(idata);
-    std::vector<char> ostr;
-    ostr.resize(512 + in.len * 2);
-
-    long olen = ostr.capacity();
-    int rc = tpexport(in.p, in.len, &ostr[0], &olen, flags);
-    if (rc == -1)
-    {
-        throw xatmi_exception(tperrno);
-    }
-
-    if (flags == 0)
-    {
-        return py::bytes(&ostr[0], olen);
-    }
-    return py::str(&ostr[0]);
-}
-
-static py::object pytpimport(const std::string istr, long flags)
-{
-    xatmibuf obuf("UBF", istr.size());
-
-    long olen = 0;
-    int rc = tpimport(const_cast<char *>(istr.c_str()), istr.size(), obuf.pp,
-                      &olen, flags);
-    if (rc == -1)
-    {
-        throw xatmi_exception(tperrno);
-    }
-
-    return ndrx_to_py(obuf, true);
-}
-
-static void pytppost(const std::string eventname, py::object data, long flags)
-{
-    auto in = ndrx_from_py(data);
-
-    {
-        py::gil_scoped_release release;
-        int rc =
-            tppost(const_cast<char *>(eventname.c_str()), *in.pp, in.len, flags);
-        if (rc == -1)
-        {
-            throw xatmi_exception(tperrno);
-        }
-    }
-}
-
-/**
- * @brief Synchronous service call
- * 
- * @param svc service name
- * @param idata dictionary encoded xatmi buffer
- * @param flags any flags
- * @return pytpreply return tuple loaded with tperrno, tpurcode, return buffer
- */
-static pytpreply pytpcall(const char *svc, py::object idata, long flags)
-{
-
-    auto in = ndrx_from_py(idata);
-    int tperrno_saved=0;
-    xatmibuf out("NULL", (long)0);
-    {
-        py::gil_scoped_release release;
-        int rc = tpcall(const_cast<char *>(svc), *in.pp, in.len, out.pp, &out.len,
-                        flags);
-        tperrno_saved=tperrno;
-        if (rc == -1)
-        {
-            if (tperrno_saved != TPESVCFAIL)
-            {
-                throw xatmi_exception(tperrno_saved);
-            }
-        }
-    }
-    return pytpreply(tperrno_saved, tpurcode, ndrx_to_py(out, true));
-}
-
-static TPQCTL pytpenqueue(const char *qspace, const char *qname, TPQCTL *ctl,
-                          py::object data, long flags)
-{
-    auto in = ndrx_from_py(data);
-    {
-        py::gil_scoped_release release;
-        int rc = tpenqueue(const_cast<char *>(qspace), const_cast<char *>(qname),
-                           ctl, *in.pp, in.len, flags);
-        if (rc == -1)
-        {
-            if (tperrno == TPEDIAGNOSTIC)
-            {
-                throw qm_exception(ctl->diagnostic);
-            }
-            throw xatmi_exception(tperrno);
-        }
-    }
-    return *ctl;
-}
-
-static std::pair<TPQCTL, py::object> pytpdequeue(const char *qspace,
-                                                 const char *qname, TPQCTL *ctl,
-                                                 long flags)
-{
-    xatmibuf out("UBF", 1024);
-    {
-        py::gil_scoped_release release;
-        int rc = tpdequeue(const_cast<char *>(qspace), const_cast<char *>(qname),
-                           ctl, out.pp, &out.len, flags);
-        if (rc == -1)
-        {
-            if (tperrno == TPEDIAGNOSTIC)
-            {
-                throw qm_exception(ctl->diagnostic);
-            }
-            throw xatmi_exception(tperrno);
-        }
-    }
-    return std::make_pair(*ctl, ndrx_to_py(out, true));
-}
-
-static pytpreply pytpadmcall(py::object idata, long flags)
-{
-    auto in = ndrx_from_py(idata);
-    int tperrno_saved=0;
-    xatmibuf out("UBF", 1024);
-    {
-        py::gil_scoped_release release;
-        int rc = tpadmcall(*in.fbfr(), out.fbfr(), flags);
-        tperrno_saved=tperrno;
-        if (rc == -1)
-        {
-            if (tperrno_saved != TPESVCFAIL)
-            {
-                throw xatmi_exception(tperrno_saved);
-            }
-        }
-   }
-    return pytpreply(tperrno_saved, 0, ndrx_to_py(out, true));
-}
-
-
-static int pytpacall(const char *svc, py::object idata, long flags)
-{
-
-    auto in = ndrx_from_py(idata);
-
-    py::gil_scoped_release release;
-    int rc = tpacall(const_cast<char *>(svc), *in.pp, in.len, flags);
-    if (rc == -1)
-    {
-        throw xatmi_exception(tperrno);
-    }
-    return rc;
-}
-
-static pytpreply pytpgetrply(int cd, long flags)
-{
-    int tperrno_saved=0;
-    xatmibuf out("UBF", 1024);
-    {
-        py::gil_scoped_release release;
-        int rc = tpgetrply(&cd, out.pp, &out.len, flags);
-
-        tperrno_saved = tperrno;
-        if (rc == -1)
-        {
-            if (tperrno_saved != TPESVCFAIL)
-            {
-                throw xatmi_exception(tperrno_saved);
-            }
-        }
-    }
-    return pytpreply(tperrno_saved, tpurcode, ndrx_to_py(out, true), cd);
-}
-
 static PyObject *EnduroxException_code(PyObject *selfPtr, void *closure)
 {
     try
@@ -584,7 +397,7 @@ PYBIND11_MODULE(endurox, m)
     m.def("run", &ndrxpy_pyrun, "Run Endurox server", py::arg("server"), py::arg("args"),
           py::arg("rmname") = "NONE");
 
-    m.def("tpadmcall", &pytpadmcall, "Administers unbooted application",
+    m.def("tpadmcall", &ndrxpy_pytpadmcall, "Administers unbooted application",
           py::arg("idata"), py::arg("flags") = 0);
 
     m.def("tpreturn", &ndrxpy_pytpreturn, "Routine for returning from a service routine",
@@ -607,34 +420,34 @@ PYBIND11_MODULE(endurox, m)
         },
         "Returns the OCI service handle for a given XA connection");
 
-    m.def("tpenqueue", &pytpenqueue, "Routine to enqueue a message.",
+    m.def("tpenqueue", &ndrxpy_pytpenqueue, "Routine to enqueue a message.",
           py::arg("qspace"), py::arg("qname"), py::arg("ctl"), py::arg("data"),
           py::arg("flags") = 0);
 
-    m.def("tpdequeue", &pytpdequeue, "Routine to dequeue a message from a queue.",
+    m.def("tpdequeue", &ndrx_pytpdequeue, "Routine to dequeue a message from a queue.",
           py::arg("qspace"), py::arg("qname"), py::arg("ctl"),
           py::arg("flags") = 0);
 
-    m.def("tpcall", &pytpcall,
+    m.def("tpcall", &ndrxpy_pytpcall,
           "Routine for sending service request and awaiting its reply",
           py::arg("svc"), py::arg("idata"), py::arg("flags") = 0);
 
-    m.def("tpacall", &pytpacall, "Routine for sending a service request",
+    m.def("tpacall", &ndrxpy_pytpacall, "Routine for sending a service request",
           py::arg("svc"), py::arg("idata"), py::arg("flags") = 0);
-    m.def("tpgetrply", &pytpgetrply,
+    m.def("tpgetrply", &ndrxpy_pytpgetrply,
           "Routine for getting a reply from a previous request", py::arg("cd"),
           py::arg("flags") = 0);
 
-    m.def("tpexport", &pytpexport,
+    m.def("tpexport", &ndrxpy_pytpexport,
           "Converts a typed message buffer into an exportable, "
           "machine-independent string representation, that includes digital "
           "signatures and encryption seals",
           py::arg("ibuf"), py::arg("flags") = 0);
-    m.def("tpimport", &pytpimport,
+    m.def("tpimport", &ndrxpy_pytpimport,
           "Converts an exported representation back into a typed message buffer",
           py::arg("istr"), py::arg("flags") = 0);
 
-    m.def("tppost", &pytppost, "Posts an event", py::arg("eventname"),
+    m.def("tppost", &ndrxpy_pytppost, "Posts an event", py::arg("eventname"),
           py::arg("data"), py::arg("flags") = 0);
 
     m.def(
