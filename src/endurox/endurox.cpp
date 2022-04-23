@@ -106,7 +106,7 @@ static void pytppost(const std::string eventname, py::object data, long flags)
 }
 
 /**
- * @brief Syncrhouns service call
+ * @brief Synchronous service call
  * 
  * @param svc service name
  * @param idata dictionary encoded xatmi buffer

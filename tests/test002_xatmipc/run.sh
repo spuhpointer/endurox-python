@@ -77,10 +77,10 @@ function go_out {
 }
 
 ################################################################################
-echo "Running UBF buffer test"
+echo "Running tpcall buffer test"
 ################################################################################
 
-python3 -m unittest client-ubf-buffer.py
+python3 -m unittest tpcall.py
 
 RET=$?
 
