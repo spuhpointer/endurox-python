@@ -18,6 +18,7 @@ SET(SOURCE_DIR "src/endurox")
 include_directories(${SOURCE_DIR})
 SET(SOURCES 
 	"${SOURCE_DIR}/endurox.cpp"
+	"${SOURCE_DIR}/endurox_srv.cpp"
 	"${SOURCE_DIR}/xatmibuf.cpp"
 	"${SOURCE_DIR}/bufconv.cpp"
 	"${SOURCE_DIR}/bufconv_view.cpp"

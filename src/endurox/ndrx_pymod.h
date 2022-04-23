@@ -63,6 +63,25 @@
 /*---------------------------Typedefs-----------------------------------*/
 
 /**
+ * @brief Extend the XATMI C struct with python specific fields
+ */
+struct pytpsvcinfo: TPSVCINFO
+{
+    pytpsvcinfo(TPSVCINFO *inf)
+    {
+        NDRX_STRCPY_SAFE(name, inf->name);
+        NDRX_STRCPY_SAFE(fname, inf->fname);
+        len = inf->len;
+        flags = inf->flags;
+        cd = inf->cd;
+        appkey = inf->appkey;
+        CLIENTID cltid;
+        memcpy(&cltid, &inf->cltid, sizeof(cltid));
+    }
+    py::object data;
+};
+
+/**
  * XATMI buffer handling routines
  */
 class xatmibuf
@@ -129,9 +148,14 @@ public:
     }
 };
 
+
+typedef void *(xao_svc_ctx)(void *);
+
 /*---------------------------Globals------------------------------------*/
 /*---------------------------Statics------------------------------------*/
 /*---------------------------Prototypes---------------------------------*/
+
+extern xao_svc_ctx *xao_svc_ctx_ptr;
 
 extern xatmibuf ndrx_from_py(py::object obj);
 extern py::object ndrx_to_py(xatmibuf &buf, bool is_master);
@@ -142,6 +166,12 @@ extern py::object ndrxpy_to_py_view(char *cstruct, char *vname, long size);
 
 extern py::object ndrxpy_to_py_ubf(UBFH *fbfr, BFLDLEN buflen);
 extern void ndrxpy_from_py_ubf(py::dict obj, xatmibuf &b);
+
+extern void pytpadvertise(std::string svcname, std::string funcname, const py::object &func);
+extern void ndrxpy_pyrun(py::object svr, std::vector<std::string> args, const char *rmname);
+
+extern void ndrxpy_pytpreturn(int rval, long rcode, py::object data, long flags);
+extern void ndrxpy_pytpforward(const std::string &svc, py::object data, long flags);
 
 #endif /* NDRX_PYMOD.H */
 

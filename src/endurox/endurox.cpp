@@ -18,6 +18,8 @@
 #include <functional>
 #include <map>
 
+#define MODULE "endurox"
+
 namespace py = pybind11;
 
 struct pytpreply
@@ -30,30 +32,6 @@ struct pytpreply
     pytpreply(int rval, long rcode, py::object data, int cd = -1)
         : rval(rval), rcode(rcode), data(data), cd(cd) {}
 };
-
-static py::object server;
-
-/**
- * @brief Extend the XATMI C struct with python specific fields
- */
-struct pytpsvcinfo: TPSVCINFO
-{
-    pytpsvcinfo(TPSVCINFO *inf)
-    {
-        NDRX_STRCPY_SAFE(name, inf->name);
-        NDRX_STRCPY_SAFE(fname, inf->fname);
-        len = inf->len;
-        flags = inf->flags;
-        cd = inf->cd;
-        appkey = inf->appkey;
-        CLIENTID cltid;
-        memcpy(&cltid, &inf->cltid, sizeof(cltid));
-    }
-    py::object data;
-};
-
-//Mapping of advertised functions
-std::map<std::string, py::object> M_dispmap {};
 
 static py::object pytpexport(py::object idata, long flags)
 {
@@ -176,6 +154,27 @@ static std::pair<TPQCTL, py::object> pytpdequeue(const char *qspace,
     return std::make_pair(*ctl, ndrx_to_py(out, true));
 }
 
+static pytpreply pytpadmcall(py::object idata, long flags)
+{
+    auto in = ndrx_from_py(idata);
+    int tperrno_saved=0;
+    xatmibuf out("UBF", 1024);
+    {
+        py::gil_scoped_release release;
+        int rc = tpadmcall(*in.fbfr(), out.fbfr(), flags);
+        tperrno_saved=tperrno;
+        if (rc == -1)
+        {
+            if (tperrno_saved != TPESVCFAIL)
+            {
+                throw xatmi_exception(tperrno_saved);
+            }
+        }
+   }
+    return pytpreply(tperrno_saved, 0, ndrx_to_py(out, true));
+}
+
+
 static int pytpacall(const char *svc, py::object idata, long flags)
 {
 
@@ -208,275 +207,6 @@ static pytpreply pytpgetrply(int cd, long flags)
         }
     }
     return pytpreply(tperrno_saved, tpurcode, ndrx_to_py(out, true), cd);
-}
-
-#define MODULE "endurox"
-struct svcresult
-{
-    int rval;
-    long rcode;
-    char *odata;
-    long olen;
-    char name[XATMI_SERVICE_NAME_LENGTH];
-    bool forward;
-    bool clean;
-};
-static thread_local svcresult tsvcresult;
-
-static void pytpreturn(int rval, long rcode, py::object data, long flags)
-{
-    if (!tsvcresult.clean)
-    {
-        throw std::runtime_error("tpreturn already called");
-    }
-    tsvcresult.clean = false;
-    tsvcresult.rval = rval;
-    tsvcresult.rcode = rcode;
-    auto &&odata = ndrx_from_py(data);
-    odata.recurs_free_fetch();
-    tpreturn(tsvcresult.rval, tsvcresult.rcode, odata.p, odata.len, 0);
-    odata.release();
-    //Normal destructors apply... as running in nojump mode
-
-}
-static void pytpforward(const std::string &svc, py::object data, long flags)
-{
-    if (!tsvcresult.clean)
-    {
-        throw std::runtime_error("tpreturn already called");
-    }
-    tsvcresult.clean = false;
-    strncpy(tsvcresult.name, svc.c_str(), sizeof(tsvcresult.name));
-    auto &&odata = ndrx_from_py(data);
-    //Read list of ptrs...
-    odata.recurs_free_fetch();
-    tpforward(tsvcresult.name, odata.p, odata.len, 0);
-    odata.release();
-
-    //Normal destructors apply... as running in nojump mode.
-}
-
-static pytpreply pytpadmcall(py::object idata, long flags)
-{
-    auto in = ndrx_from_py(idata);
-    int tperrno_saved=0;
-    xatmibuf out("UBF", 1024);
-    {
-        py::gil_scoped_release release;
-        int rc = tpadmcall(*in.fbfr(), out.fbfr(), flags);
-        tperrno_saved=tperrno;
-        if (rc == -1)
-        {
-            if (tperrno_saved != TPESVCFAIL)
-            {
-                throw xatmi_exception(tperrno_saved);
-            }
-        }
-    }
-    return pytpreply(tperrno_saved, 0, ndrx_to_py(out, true));
-}
-
-extern "C" long G_libatmisrv_flags;
-
-int tpsvrinit(int argc, char *argv[])
-{
-    py::gil_scoped_acquire acquire;
-
-    /* set no jump, so that we can process recrusive buffer freeups.. */
-    G_libatmisrv_flags|=ATMI_SRVLIB_NOLONGJUMP;
-
-    if (hasattr(server, __func__))
-    {
-        std::vector<std::string> args;
-        for (int i = 0; i < argc; i++)
-        {
-            args.push_back(argv[i]);
-        }
-        return server.attr(__func__)(args).cast<int>();
-    }
-    return 0;
-}
-void tpsvrdone()
-{
-    py::gil_scoped_acquire acquire;
-    if (hasattr(server, __func__))
-    {
-        server.attr(__func__)();
-    }
-    M_dispmap.clear();
-}
-int tpsvrthrinit(int argc, char *argv[])
-{
-
-    // Create a new Python thread
-    // otherwise pybind11 creates and deletes one
-    // and messes up threading.local
-    auto const &internals = pybind11::detail::get_internals();
-    PyThreadState_New(internals.istate);
-
-    py::gil_scoped_acquire acquire;
-    if (hasattr(server, __func__))
-    {
-        std::vector<std::string> args;
-        for (int i = 0; i < argc; i++)
-        {
-            args.push_back(argv[i]);
-        }
-        return server.attr(__func__)(args).cast<int>();
-    }
-    return 0;
-}
-void tpsvrthrdone()
-{
-    py::gil_scoped_acquire acquire;
-    if (hasattr(server, __func__))
-    {
-        server.attr(__func__)();
-    }
-}
-/**
- * @brief Server dispatch function
- * 
- * @param svcinfo standard XATMI call descriptor
- */
-void PY(TPSVCINFO *svcinfo)
-{
-    tsvcresult.clean = true;
-
-    try
-    {
-        py::gil_scoped_acquire acquire;
-        auto ibuf=xatmibuf(svcinfo);
-        auto idata = ndrx_to_py(ibuf, true);
-
-        pytpsvcinfo info(svcinfo);
-
-        info.data = idata;
-
-        auto && func = M_dispmap[svcinfo->fname];
-
-        //fetch
-        ibuf.recurs_free_fetch();
-        func(&info);
-
-        //fetch & release...
-        //As this it is auto-buf, it will be freed up...
-        ibuf.release();
-
-        if (tsvcresult.clean)
-        {
-            userlog(const_cast<char *>("tpreturn() not called"));
-            tpreturn(TPEXIT, 0, nullptr, 0, 0);
-        }
-    }
-    catch (const std::exception &e)
-    {
-        NDRX_LOG(log_error, "Got exception at tpreturn: %s", e.what());
-        userlog(const_cast<char *>("%s"), e.what());
-        tpreturn(TPEXIT, 0, nullptr, 0, 0);
-    }
-}
-
-/**
- * Standard tpadvertise()
- * @param [in] svcname service name
- * @param [in] funcname function name
- * @param [in] func python function pointer
- */
-static void pytpadvertise(std::string svcname, std::string funcname, const py::object &func)
-{
-    if (tpadvertise_full(const_cast<char *>(svcname.c_str()), PY, 
-        const_cast<char *>(funcname.c_str())) == -1)
-    {
-        throw xatmi_exception(tperrno);
-    }
-
-    //Add name mapping to hashmap
-    //TODO: might want to check for duplicate advertises, so that function pointers are the same?
-    if (M_dispmap.end() == M_dispmap.find(funcname))
-    {
-        M_dispmap[funcname] = func;
-    }
-
-}
-
-extern "C"
-{
-    extern struct xa_switch_t tmnull_switch;
-    extern int _tmbuilt_with_thread_option;
-}
-
-static struct tmdsptchtbl_t _tmdsptchtbl[] = {
-    {(char *)"", (char *)"PY", PY, 0, 0}, {nullptr, nullptr, nullptr, 0, 0}};
-
-static struct tmsvrargs_t tmsvrargs = {
-    nullptr, &_tmdsptchtbl[0], 0, tpsvrinit, tpsvrdone,
-    nullptr, nullptr, nullptr, nullptr, nullptr,
-    tpsvrthrinit, tpsvrthrdone};
-
-typedef void *(xao_svc_ctx)(void *);
-static xao_svc_ctx *xao_svc_ctx_ptr;
-struct tmsvrargs_t *_tmgetsvrargs(const char *rmname)
-{
-    tmsvrargs.reserved1 = nullptr;
-    tmsvrargs.reserved2 = nullptr;
-    if (strcasecmp(rmname, "NONE") == 0)
-    {
-        tmsvrargs.xa_switch = &tmnull_switch;
-    }
-    else if (strcasecmp(rmname, "Oracle_XA") == 0)
-    {
-        const char *orahome = getenv("ORACLE_HOME");
-        auto lib =
-            std::string((orahome == nullptr ? "" : orahome)) + "/lib/libclntsh.so";
-        void *handle = dlopen(lib.c_str(), RTLD_NOW);
-        if (!handle)
-        {
-            throw std::runtime_error(
-                std::string("Failed loading $ORACLE_HOME/lib/libclntsh.so ") +
-                dlerror());
-        }
-        tmsvrargs.xa_switch =
-            reinterpret_cast<xa_switch_t *>(dlsym(handle, "xaosw"));
-        if (tmsvrargs.xa_switch == nullptr)
-        {
-            throw std::runtime_error("xa_switch_t named xaosw not found");
-        }
-        xao_svc_ctx_ptr =
-            reinterpret_cast<xao_svc_ctx *>(dlsym(handle, "xaoSvcCtx"));
-        if (xao_svc_ctx_ptr == nullptr)
-        {
-            throw std::runtime_error("xa_switch_t named xaosw not found");
-        }
-    }
-    else
-    {
-        throw std::invalid_argument("Unsupported Resource Manager");
-    }
-    return &tmsvrargs;
-}
-
-static void pyrun(py::object svr, std::vector<std::string> args,
-                  const char *rmname)
-{
-    server = svr;
-    try
-    {
-        py::gil_scoped_release release;
-        _tmbuilt_with_thread_option = 1;
-        std::vector<char *> argv(args.size());
-        for (size_t i = 0; i < args.size(); i++)
-        {
-            argv[i] = const_cast<char *>(args[i].c_str());
-        }
-        (void)_tmstartserver(args.size(), &argv[0], _tmgetsvrargs(rmname));
-        server = py::none();
-    }
-    catch (...)
-    {
-        server = py::none();
-        throw;
-    }
 }
 
 static PyObject *EnduroxException_code(PyObject *selfPtr, void *closure)
@@ -846,16 +576,16 @@ PYBIND11_MODULE(endurox, m)
         { pytpadvertise(svcname, funcname, func); },
         "Routine for advertising a service name", py::arg("svcname"), py::arg("funcname"), py::arg("func"));
 
-    m.def("run", &pyrun, "Run Endurox server", py::arg("server"), py::arg("args"),
+    m.def("run", &ndrxpy_pyrun, "Run Endurox server", py::arg("server"), py::arg("args"),
           py::arg("rmname") = "NONE");
 
     m.def("tpadmcall", &pytpadmcall, "Administers unbooted application",
           py::arg("idata"), py::arg("flags") = 0);
 
-    m.def("tpreturn", &pytpreturn, "Routine for returning from a service routine",
+    m.def("tpreturn", &ndrxpy_pytpreturn, "Routine for returning from a service routine",
           py::arg("rval"), py::arg("rcode"), py::arg("data"),
           py::arg("flags") = 0);
-    m.def("tpforward", &pytpforward,
+    m.def("tpforward", &ndrxpy_pytpforward,
           "Routine for forwarding a service request to another service routine",
           py::arg("svc"), py::arg("data"), py::arg("flags") = 0);
 
