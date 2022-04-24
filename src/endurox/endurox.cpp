@@ -400,7 +400,29 @@ PYBIND11_MODULE(endurox, m)
     m.def("tpadmcall", &ndrxpy_pytpadmcall, "Administers unbooted application",
           py::arg("idata"), py::arg("flags") = 0);
 
-    m.def("tpreturn", &ndrxpy_pytpreturn, "Routine for returning from a service routine",
+    m.def("tpreturn", &ndrxpy_pytpreturn, 
+            R"pbdoc(
+        Return from XATMI service call. Any XATMI processing after this call
+        shall not be performed, i.e. shall last operation in the XATMI service
+        processing.
+
+        This function applies to XATMI servers only.
+        
+        For more deatils see C call *tpreturn(3)*.
+
+        Parameters
+        ----------
+        rval : int
+            Return value **TPSUCCESS** for success, **TPFAIL** for returning error
+            **TPEXIT** for returning error and restarting the XATMI server process.
+        rcode : int
+            User return code. If not used, use value **0**.
+        data : dict
+            XATMI buffer returned from the service
+        flags : int
+            Or'd flags **TPSOFTTIMEOUT** for simulating **TPETIME** error to caller.
+            **TPSOFTERR** return any XATMI call error, which is set in *rval* param.
+        )pbdoc",
           py::arg("rval"), py::arg("rcode"), py::arg("data"),
           py::arg("flags") = 0);
     m.def("tpforward", &ndrxpy_pytpforward,
@@ -894,6 +916,7 @@ Python3 bindings for writing Endurox clients and servers
 
         tpterm
         tpcall
+        tpreturn
 
 XATMI buffer formats
 ********************
