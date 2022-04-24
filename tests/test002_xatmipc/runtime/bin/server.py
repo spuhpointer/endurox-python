@@ -10,6 +10,12 @@ class Server:
         e.userlog('Server startup')
         e.tpadvertise('FAILSVC', 'FAILSVC', self.FAILSVC)
         e.tpadvertise('OKSVC', 'OKSVC', self.OKSVC)
+        e.tpadvertise('FWDSVC', 'FWDSVC', self.FWDSVC)
+        e.tpadvertise('EVSVC', 'EVSVC', self.EVSVC)
+
+        # subscribe to TESTEV event.
+        e.tplog_info("ev subs %d" % e.tpsubscribe('TESTEV', None, e.TPEVCTL(name1="EVSVC", flags=e.TPEVSERVICE)))
+        
         return 0
 
     def tpsvrdone(self):
@@ -33,12 +39,19 @@ class Server:
         return e.tpreturn(e.TPSUCCESS, 5, args.data)
 
     #
-    # TODO: Check service failure
+    # Forwarding service
     #
+    def FWDSVC(self, args):
+        # alter some data, in case if buffer type if UBF
+        if args.data["buftype"]=="UBF":
+            args.data["data"]["T_STRING_3_FLD"]=args.data["data"]["T_STRING_FLD"][0]
+        return e.tpforward("OKSVC", args.data, 0)
 
     #
-    # TODO: Check events...
+    # Just consume event, return NULL buffer.
     #
+    def EVSVC(self, args):
+        return e.tpreturn(e.TPSUCCESS, 0, {})
 
     #
     # TODO: run conversational data

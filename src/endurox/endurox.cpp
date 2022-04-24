@@ -215,6 +215,31 @@ PYBIND11_MODULE(endurox, m)
         .def_readonly("delivery_qos", &TPQCTL::delivery_qos)
         .def_readonly("reply_qos", &TPQCTL::reply_qos);
 
+    //TPEVCTL mapping
+    py::class_<TPEVCTL>(m, "TPEVCTL")
+        .def(py::init([](long flags, const char *name1, const char *name2)
+            {
+             auto p = std::make_unique<TPEVCTL>();
+             memset(p.get(), 0, sizeof(TPEVCTL));
+             p->flags = flags;
+
+             if (name1 != nullptr) {
+               NDRX_STRCPY_SAFE(p->name1, name1);
+             }
+
+             if (name2 != nullptr) {
+               NDRX_STRCPY_SAFE(p->name2, name2);
+             }
+
+             return p; }),
+
+             py::arg("flags") = 0, py::arg("name1") = nullptr,
+             py::arg("name2") = nullptr)
+
+        .def_readonly("flags", &TPEVCTL::flags)
+        .def_readonly("name1", &TPEVCTL::name1)
+        .def_readonly("name2", &TPEVCTL::name2);
+
     m.def(
         "tpinit",
         [](const char *usrname, const char *cltname, const char *passwd,
@@ -422,6 +447,7 @@ PYBIND11_MODULE(endurox, m)
         flags : int
             Or'd flags **TPSOFTTIMEOUT** for simulating **TPETIME** error to caller.
             **TPSOFTERR** return any XATMI call error, which is set in *rval* param.
+	    Default value is **0**.
         )pbdoc",
           py::arg("rval"), py::arg("rcode"), py::arg("data"),
           py::arg("flags") = 0);
@@ -508,6 +534,10 @@ PYBIND11_MODULE(endurox, m)
     m.def("tpimport", &ndrxpy_pytpimport,
           "Converts an exported representation back into a typed message buffer",
           py::arg("istr"), py::arg("flags") = 0);
+
+
+    m.def("tpsubscribe", &ndrxpy_pytpsubscribe, "Subscribe to event (by server)",
+          py::arg("eventexpr"), py::arg("filter"), py::arg("ctl"), py::arg("flags") = 0);
 
     m.def("tppost", &ndrxpy_pytppost, "Posts an event", py::arg("eventname"),
           py::arg("data"), py::arg("flags") = 0);
@@ -739,6 +769,12 @@ PYBIND11_MODULE(endurox, m)
             return ret;
         },
         "Get logger info", py::arg("lev"), py::arg("flags"));
+
+    //Event subscribtions
+    m.attr("TPEVSERVICE") = py::int_(TPEVSERVICE);
+    m.attr("TPEVQUEUE") = py::int_(TPEVQUEUE);//RFU
+    m.attr("TPEVTRAN") = py::int_(TPEVTRAN);//RFU
+    m.attr("TPEVPERSIST") = py::int_(TPEVPERSIST);//RFU
 
     //tplogqinfo flags:
     m.attr("TPLOGQI_GET_NDRX") = py::int_(TPLOGQI_GET_NDRX);

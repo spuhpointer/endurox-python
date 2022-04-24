@@ -199,8 +199,8 @@ extern py::object ndrxpy_pytpexport(py::object idata, long flags);
 extern py::object ndrxpy_pytpimport(const std::string istr, long flags);
 
 extern pytpreply ndrxpy_pytpgetrply(int cd, long flags);
-extern void ndrxpy_pytppost(const std::string eventname, py::object data, long flags);
-
+extern int ndrxpy_pytppost(const std::string eventname, py::object data, long flags);
+extern long ndrxpy_pytpsubscribe(char *eventexpr, char *filter, TPEVCTL *ctl, long flags);
 
 #endif /* NDRX_PYMOD.H */
 

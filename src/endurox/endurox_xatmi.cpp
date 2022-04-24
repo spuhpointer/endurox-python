@@ -72,20 +72,23 @@ expublic py::object ndrxpy_pytpimport(const std::string istr, long flags)
  * @param [in] eventname name of the event
  * @param [in] data XATMI data to post
  * @param [in] flags
+ * @return number of postings 
  */
-expublic void ndrxpy_pytppost(const std::string eventname, py::object data, long flags)
+expublic int ndrxpy_pytppost(const std::string eventname, py::object data, long flags)
 {
+    int rc=0;
+    
     auto in = ndrx_from_py(data);
-
     {
         py::gil_scoped_release release;
-        int rc =
-            tppost(const_cast<char *>(eventname.c_str()), *in.pp, in.len, flags);
+        rc = tppost(const_cast<char *>(eventname.c_str()), *in.pp, in.len, flags);
         if (rc == -1)
         {
             throw xatmi_exception(tperrno);
         }
     }
+
+    return rc;
 }
 
 /**

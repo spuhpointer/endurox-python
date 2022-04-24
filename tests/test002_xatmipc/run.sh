@@ -77,7 +77,7 @@ function go_out {
 }
 
 ################################################################################
-echo "Running tpcall buffer test"
+echo "Running tpcall test"
 ################################################################################
 
 python3 -m unittest tpcall.py
@@ -85,7 +85,34 @@ python3 -m unittest tpcall.py
 RET=$?
 
 if [ $RET != 0 ]; then
-    echo "client-ubf-buffer.py failed"
+    echo "tpcall.py failed"
+    go_out -1
+fi
+
+################################################################################
+echo "Running tpforward test"
+################################################################################
+
+python3 -m unittest tpforward.py
+
+RET=$?
+
+if [ $RET != 0 ]; then
+    echo "tpforward.py failed"
+    go_out -1
+fi
+
+
+################################################################################
+echo "Running tppost test"
+################################################################################
+
+python3 -m unittest tppost.py
+
+RET=$?
+
+if [ $RET != 0 ]; then
+    echo "tppost.py failed"
     go_out -1
 fi
 

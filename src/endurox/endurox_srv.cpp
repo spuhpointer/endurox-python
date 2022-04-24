@@ -215,6 +215,27 @@ expublic void ndrxpy_pytpunadvertise(const char *svcname)
 
 }
 
+/**
+ * @brief Subscribe to event
+ * 
+ * @param eventexpr event name
+ * @param filter regexp filter
+ * @param ctl control struct
+ * @param flags any flags
+ * @return subscribtion id
+ */
+expublic long ndrxpy_pytpsubscribe(char *eventexpr, char *filter, TPEVCTL *ctl, long flags)
+{
+    py::gil_scoped_release release;
+    
+    long rc = tpsubscribe (eventexpr, filter, ctl, flags);
+    if (rc == -1)
+    {
+        throw xatmi_exception(tperrno);
+    }
+    return rc;
+}
+
 //TODO: How about unadvertise?
 //However unadvertise is not supported for MT server, thus
 
