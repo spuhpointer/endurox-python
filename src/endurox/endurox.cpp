@@ -429,7 +429,47 @@ PYBIND11_MODULE(endurox, m)
           py::arg("flags") = 0);
 
     m.def("tpcall", &ndrxpy_pytpcall,
-          "Routine for sending service request and awaiting its reply",
+          R"pbdoc(
+        Synchronous service call. In case if service returns **TPFAIL** or **TPEXIT**,
+        exception is not thrown, instead first return argument shall be tested for
+        the tperrno for 0 (to check success case).
+        
+        For more deatils see **tpcall(3)**.
+
+        :raise XatmiException: 
+            | Following error codes may be present:
+            | **TPEINVAL** - Invalid arguments to function.
+            | **TPEOTYPE** - Output type not allowed.
+            | **TPENOENT** - Service not advertised.
+            | **TPETIME** - Service timeout.
+            | **TPESVCFAIL** - Service returned **TPFAIL** or **TPEXIT** (not thrown).
+            | **TPESVCERR** - Service failure during processing.
+            | **TPESYSTEM** - System error.
+            | **TPEOS** - System error.
+            | **TPEBLOCK** - Blocking condition found and **TPNOBLOCK** flag was specified
+            | **TPETRAN** - Target service is transactional, but failed to start the transaction.
+            | **TPEITYPE** - Service error during input buffer handling.
+
+        Parameters
+        ----------
+        svc : str
+            Service name to call
+        idata : dict
+            Input XATMI data buffer
+        flags : int
+            Or'd bit flags: **TPNOTRAN**, **TPSIGRSTRT**, **TPNOTIME**, 
+            **TPNOCHANGE**, **TPTRANSUSPEND**, **TPNOBLOCK**, **TPNOABORT**.
+
+        Returns
+        -------
+        int
+            tperrno code
+        int
+            tpurcode - code passed to **tpreturn(3)** by the server
+        dict
+            XATMI buffer returned from the server.
+
+     )pbdoc",
           py::arg("svc"), py::arg("idata"), py::arg("flags") = 0);
 
     m.def("tpacall", &ndrxpy_pytpacall, "Routine for sending a service request",
@@ -853,6 +893,7 @@ Python3 bindings for writing Endurox clients and servers
         :toctree: _generate
 
         tpterm
+        tpcall
 
 XATMI buffer formats
 ********************
