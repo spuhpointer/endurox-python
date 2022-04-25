@@ -242,19 +242,37 @@ PYBIND11_MODULE(endurox, m)
 
     m.def(
         "tpinit",
-        [](const char *usrname, const char *cltname, const char *passwd,
-           const char *grpname, long flags)
+        [](long flags)
         {
             py::gil_scoped_release release;
 
-            if (tpinit(NULL) == -1)
+            TPINIT init;
+            memset(&init, 0, sizeof(init));
+
+            init.flags = flags;
+
+            if (tpinit(&init) == -1)
             {
                 throw xatmi_exception(tperrno);
             }
         },
-        "Joins an application", py::arg("usrname") = nullptr,
-        py::arg("cltname") = nullptr, py::arg("passwd") = nullptr,
-        py::arg("grpname") = nullptr, py::arg("flags") = 0);
+        R"pbdoc(
+        Joins thread to application
+        
+        For more deatils see C call *tpinit(3)*.
+
+        :raise XatmiException: 
+            | Following error codes may be present:
+            | *TPEINVAL* - Unconfigured application,
+            | *TPESYSTEM* - Enduro/X System error occurred,
+            | *TPEOS* - Operating system error occurred.
+
+        Parameters
+        ----------
+        rval : int
+            | Or'd flags, default is 0: 
+            | **TPU_IGN** - ignore incoming unsolicited messages.
+     )pbdoc", py::arg("flags") = 0);
 
     m.def(
         "tpterm",
@@ -277,18 +295,6 @@ PYBIND11_MODULE(endurox, m)
             | *TPEPROTO* - Called from XATMI server (main thread),
             | *TPESYSTEM* - Enduro/X System error occurred,
             | *TPEOS* - Operating system error occurred.
-
-        Parameters
-        ----------
-        arg1 : int
-            Description of arg1
-        arg2 : str
-            Description of arg2
-
-        Returns
-        -------
-        int
-            Description of return value
 
      )pbdoc");
 
@@ -511,7 +517,7 @@ PYBIND11_MODULE(endurox, m)
         Returns
         -------
         int
-            tperrno code
+            tperrno - error code
         int
             tpurcode - code passed to **tpreturn(3)** by the server
         dict
@@ -950,9 +956,11 @@ Python3 bindings for writing Endurox clients and servers
     .. autosummary::
         :toctree: _generate
 
+        tpinit
         tpterm
         tpcall
         tpreturn
+        tpadvertise
 
 XATMI buffer formats
 ********************
