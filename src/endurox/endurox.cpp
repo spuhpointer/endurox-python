@@ -147,293 +147,6 @@ PYBIND11_MODULE(endurox, m)
             return py::bytes(reinterpret_cast<char *>(&inf.cltid), sizeof(inf.cltid)); })
         .def_readonly("data", &pytpsvcinfo::data);
 
-    // Poor man's namedtuple
-    py::class_<pytpreply>(m, "TpReply")
-        .def_readonly("rval", &pytpreply::rval)
-        .def_readonly("rcode", &pytpreply::rcode)
-        .def_readonly("data", &pytpreply::data)
-        .def_readonly("cd", &pytpreply::cd)
-        .def("__getitem__", [](const pytpreply &s, size_t i) -> py::object
-             {
-        if (i == 0) {
-          return py::int_(s.rval);
-        } else if (i == 1) {
-          return py::int_(s.rcode);
-        } else if (i == 2) {
-          return s.data;
-        } else {
-          throw py::index_error();
-        } });
-
-    //For tpgetrply, include cd
-    py::class_<pytpreplycd>(m, "TpReplyCd")
-        .def_readonly("rval", &pytpreply::rval)
-        .def_readonly("rcode", &pytpreply::rcode)
-        .def_readonly("data", &pytpreply::data)
-        .def_readonly("cd", &pytpreply::cd)
-        .def("__getitem__", [](const pytpreplycd &s, size_t i) -> py::object
-             {
-        if (i == 0) {
-          return py::int_(s.rval);
-        } else if (i == 1) {
-          return py::int_(s.rcode);
-        } else if (i == 2) {
-          return s.data;
-        } else if (i == 3) {
-          return py::int_(s.cd);
-        } else {
-          throw py::index_error();
-        } });
-
-    py::class_<TPQCTL>(m, "TPQCTL")
-        .def(py::init([](long flags, long deq_time, long priority, long exp_time,
-                         long urcode, long delivery_qos, long reply_qos,
-                         const char *msgid, const char *corrid,
-                         const char *replyqueue, const char *failurequeue)
-                      {
-             auto p = std::make_unique<TPQCTL>();
-             memset(p.get(), 0, sizeof(TPQCTL));
-             p->flags = flags;
-             p->deq_time = deq_time;
-             p->exp_time = exp_time;
-             p->priority = priority;
-             p->urcode = urcode;
-             p->delivery_qos = delivery_qos;
-             p->reply_qos = reply_qos;
-             if (msgid != nullptr) {
-               // Size limit and zero termination
-               snprintf(p->msgid, sizeof(p->msgid), "%s", msgid);
-             }
-             if (corrid != nullptr) {
-               snprintf(p->corrid, sizeof(p->corrid), "%s", corrid);
-             }
-             if (replyqueue != nullptr) {
-               snprintf(p->replyqueue, sizeof(p->replyqueue), "%s", replyqueue);
-             }
-             if (failurequeue != nullptr) {
-               snprintf(p->failurequeue, sizeof(p->failurequeue), "%s",
-                        failurequeue);
-             }
-             return p; }),
-
-             py::arg("flags") = 0, py::arg("deq_time") = 0,
-             py::arg("priority") = 0, py::arg("exp_time") = 0,
-             py::arg("urcode") = 0, py::arg("delivery_qos") = 0,
-             py::arg("reply_qos") = 0, py::arg("msgid") = nullptr,
-             py::arg("corrid") = nullptr, py::arg("replyqueue") = nullptr,
-             py::arg("failurequeue") = nullptr)
-
-        .def_readonly("flags", &TPQCTL::flags)
-        .def_readonly("msgid", &TPQCTL::msgid)
-        .def_readonly("diagnostic", &TPQCTL::diagnostic)
-        .def_readonly("priority", &TPQCTL::priority)
-        .def_readonly("corrid", &TPQCTL::corrid)
-        .def_readonly("urcode", &TPQCTL::urcode)
-        .def_readonly("replyqueue", &TPQCTL::replyqueue)
-        .def_readonly("failurequeue", &TPQCTL::failurequeue)
-        .def_readonly("delivery_qos", &TPQCTL::delivery_qos)
-        .def_readonly("reply_qos", &TPQCTL::reply_qos);
-
-    //TPEVCTL mapping
-    py::class_<TPEVCTL>(m, "TPEVCTL")
-        .def(py::init([](long flags, const char *name1, const char *name2)
-            {
-             auto p = std::make_unique<TPEVCTL>();
-             memset(p.get(), 0, sizeof(TPEVCTL));
-             p->flags = flags;
-
-             if (name1 != nullptr) {
-               NDRX_STRCPY_SAFE(p->name1, name1);
-             }
-
-             if (name2 != nullptr) {
-               NDRX_STRCPY_SAFE(p->name2, name2);
-             }
-
-             return p; }),
-
-             py::arg("flags") = 0, py::arg("name1") = nullptr,
-             py::arg("name2") = nullptr)
-
-        .def_readonly("flags", &TPEVCTL::flags)
-        .def_readonly("name1", &TPEVCTL::name1)
-        .def_readonly("name2", &TPEVCTL::name2);
-
-    m.def(
-        "tpinit",
-        [](long flags)
-        {
-            py::gil_scoped_release release;
-
-            TPINIT init;
-            memset(&init, 0, sizeof(init));
-
-            init.flags = flags;
-
-            if (tpinit(&init) == -1)
-            {
-                throw xatmi_exception(tperrno);
-            }
-        },
-        R"pbdoc(
-        Joins thread to application
-        
-        For more deatils see C call *tpinit(3)*.
-
-        :raise XatmiException: 
-            | Following error codes may be present:
-            | *TPEINVAL* - Unconfigured application,
-            | *TPESYSTEM* - Enduro/X System error occurred,
-            | *TPEOS* - Operating system error occurred.
-
-        Parameters
-        ----------
-        rval : int
-            | Or'd flags, default is 0: 
-            | **TPU_IGN** - ignore incoming unsolicited messages.
-     )pbdoc", py::arg("flags") = 0);
-
-    m.def(
-        "tpterm",
-        []()
-        {
-            py::gil_scoped_release release;
-
-            if (tpterm() == -1)
-            {
-                throw xatmi_exception(tperrno);
-            }
-        },
-        R"pbdoc(
-        Leaves application, closes XATMI session.
-        
-        For more deatils see C call *tpterm(3)*.
-
-        :raise XatmiException: 
-            | Following error codes may be present:
-            | *TPEPROTO* - Called from XATMI server (main thread),
-            | *TPESYSTEM* - Enduro/X System error occurred,
-            | *TPEOS* - Operating system error occurred.
-
-     )pbdoc");
-
-    m.def(
-        "tpbegin",
-        [](unsigned long timeout, long flags)
-        {
-            py::gil_scoped_release release;
-            if (tpbegin(timeout, flags) == -1)
-            {
-                throw xatmi_exception(tperrno);
-            }
-        },
-        "Routine for beginning a transaction", py::arg("timeout"),
-        py::arg("flags") = 0);
-
-    m.def(
-        "tpsuspend",
-        [](long flags)
-        {
-            TPTRANID tranid;
-            py::gil_scoped_release release;
-            if (tpsuspend(&tranid, flags) == -1)
-            {
-                throw xatmi_exception(tperrno);
-            }
-            return py::bytes(reinterpret_cast<char *>(&tranid), sizeof(tranid));
-        },
-        "Suspend a global transaction", py::arg("flags") = 0);
-
-    m.def(
-        "tpresume",
-        [](py::bytes tranid, long flags)
-        {
-            py::gil_scoped_release release;
-            if (tpresume(reinterpret_cast<TPTRANID *>(
-#if PY_MAJOR_VERSION >= 3
-                             PyBytes_AsString(tranid.ptr())
-#else
-                             PyString_AsString(tranid.ptr())
-#endif
-                                 ),
-                         flags) == -1)
-            {
-                throw xatmi_exception(tperrno);
-            }
-        },
-        "Resume a global transaction", py::arg("tranid"), py::arg("flags") = 0);
-
-    m.def(
-        "tpcommit",
-        [](long flags)
-        {
-            py::gil_scoped_release release;
-            if (tpcommit(flags) == -1)
-            {
-                throw xatmi_exception(tperrno);
-            }
-        },
-        "Routine for committing current transaction", py::arg("flags") = 0);
-
-    m.def(
-        "tpabort",
-        [](long flags)
-        {
-            py::gil_scoped_release release;
-            if (tpabort(flags) == -1)
-            {
-                throw xatmi_exception(tperrno);
-            }
-        },
-        "Routine for aborting current transaction", py::arg("flags") = 0);
-
-    m.def(
-        "tpgetlev",
-        []()
-        {
-            int rc;
-            if ((rc = tpgetlev()) == -1)
-            {
-                throw xatmi_exception(tperrno);
-            }
-            return py::bool_(rc);
-        },
-        "Routine for checking if a transaction is in progress");
-
-    m.def(
-        "tpopen",
-        []()
-        {
-            int rc;
-            if ((rc = tpopen()) == -1)
-            {
-                throw xatmi_exception(tperrno);
-            }
-            return py::bool_(rc);
-        },
-        "Open XA Sub-system");
-    m.def(
-        "tpclose",
-        []()
-        {
-            int rc;
-            if ((rc = tpclose()) == -1)
-            {
-                throw xatmi_exception(tperrno);
-            }
-            return py::bool_(rc);
-        },
-        "Close XA Sub-system");
-    m.def(
-        "userlog",
-        [](const char *message)
-        {
-            py::gil_scoped_release release;
-            userlog(const_cast<char *>("%s"), message);
-        },
-        "Writes a message to the Endurox ATMI system central event log",
-        py::arg("message"));
-
     m.def(
         "tpadvertise", [](const char *svcname, const char *funcname, const py::object &func)
         { pytpadvertise(svcname, funcname, func); },
@@ -446,9 +159,6 @@ PYBIND11_MODULE(endurox, m)
 
     m.def("run", &ndrxpy_pyrun, "Run Endurox server", py::arg("server"), py::arg("args"),
           py::arg("rmname") = "NONE");
-
-    m.def("tpadmcall", &ndrxpy_pytpadmcall, "Administers unbooted application",
-          py::arg("idata"), py::arg("flags") = 0);
 
     m.def("tpreturn", &ndrxpy_pytpreturn, 
             R"pbdoc(
@@ -509,107 +219,11 @@ PYBIND11_MODULE(endurox, m)
         },
         "Returns the OCI service handle for a given XA connection");
 
-    m.def("tpenqueue", &ndrxpy_pytpenqueue, "Routine to enqueue a message.",
-          py::arg("qspace"), py::arg("qname"), py::arg("ctl"), py::arg("data"),
-          py::arg("flags") = 0);
-
-    m.def("tpdequeue", &ndrx_pytpdequeue, "Routine to dequeue a message from a queue.",
-          py::arg("qspace"), py::arg("qname"), py::arg("ctl"),
-          py::arg("flags") = 0);
-
-    m.def("tpcall", &ndrxpy_pytpcall,
-          R"pbdoc(
-        Synchronous service call. In case if service returns **TPFAIL** or **TPEXIT**,
-        exception is not thrown, instead first return argument shall be tested for
-        the tperrno for 0 (to check success case).
-        
-        For more deatils see **tpcall(3)**.
-
-        :raise XatmiException: 
-            | Following error codes may be present:
-            | **TPEINVAL** - Invalid arguments to function.
-            | **TPEOTYPE** - Output type not allowed.
-            | **TPENOENT** - Service not advertised.
-            | **TPETIME** - Service timeout.
-            | **TPESVCFAIL** - Service returned **TPFAIL** or **TPEXIT** (not thrown).
-            | **TPESVCERR** - Service failure during processing.
-            | **TPESYSTEM** - System error.
-            | **TPEOS** - System error.
-            | **TPEBLOCK** - Blocking condition found and **TPNOBLOCK** flag was specified
-            | **TPETRAN** - Target service is transactional, but failed to start the transaction.
-            | **TPEITYPE** - Service error during input buffer handling.
-
-        Parameters
-        ----------
-        svc : str
-            Service name to call
-        idata : dict
-            Input XATMI data buffer
-        flags : int
-            Or'd bit flags: **TPNOTRAN**, **TPSIGRSTRT**, **TPNOTIME**, 
-            **TPNOCHANGE**, **TPTRANSUSPEND**, **TPNOBLOCK**, **TPNOABORT**.
-
-        Returns
-        -------
-        int
-            tperrno - error code
-        int
-            tpurcode - code passed to **tpreturn(3)** by the server
-        dict
-            XATMI buffer returned from the server.
-
-     )pbdoc",
-          py::arg("svc"), py::arg("idata"), py::arg("flags") = 0);
-
-    m.def("tpacall", &ndrxpy_pytpacall, "Routine for sending a service request",
-          py::arg("svc"), py::arg("idata"), py::arg("flags") = 0);
-
-    m.def("tpgetrply", &ndrxpy_pytpgetrply,
-          "Routine for getting a reply from a previous request", py::arg("cd"),
-          py::arg("flags") = 0);
-
-    m.def("tpexport", &ndrxpy_pytpexport,
-          "Converts a typed message buffer into an exportable, "
-          "machine-independent string representation, that includes digital "
-          "signatures and encryption seals",
-          py::arg("ibuf"), py::arg("flags") = 0);
-    m.def("tpimport", &ndrxpy_pytpimport,
-          "Converts an exported representation back into a typed message buffer",
-          py::arg("istr"), py::arg("flags") = 0);
-
-
     m.def("tpsubscribe", &ndrxpy_pytpsubscribe, "Subscribe to event (by server)",
           py::arg("eventexpr"), py::arg("filter"), py::arg("ctl"), py::arg("flags") = 0);
 
-    m.def("tppost", &ndrxpy_pytppost, "Posts an event", py::arg("eventname"),
-          py::arg("data"), py::arg("flags") = 0);
 
-    m.def(
-        "tpgblktime",
-        [](long flags)
-        {
-            int rc = tpgblktime(flags);
-            if (rc == -1)
-            {
-                throw xatmi_exception(tperrno);
-            }
-            return rc;
-        },
-        "Retrieves a previously set, per second or millisecond, blocktime value",
-        py::arg("flags"));
-
-    m.def(
-        "tpsblktime",
-        [](int blktime, long flags)
-        {
-            if (tpsblktime(blktime, flags) == -1)
-            {
-                throw xatmi_exception(tperrno);
-            }
-        },
-        "Routine for setting blocktime in seconds or milliseconds for the next "
-        "service call or for all service calls",
-        py::arg("blktime"), py::arg("flags"));
+    ndrxpy_register_xatmi(m);
 
     m.def(
         "Bfldtype", [](BFLDID fieldid)
@@ -812,6 +426,37 @@ PYBIND11_MODULE(endurox, m)
         },
         "Get logger info", py::arg("lev"), py::arg("flags"));
 
+        //Conversational APIs
+        m.def(
+        "tpdiscon",
+        [](int cd)
+        {
+            py::gil_scoped_release release;
+
+            if (tpdiscon(cd) == EXFAIL)
+            {
+                throw xatmi_exception(tperrno);
+            }
+        },
+        "Forced disconnect from conversation", py::arg("cd") = 0);
+#if 0
+//? return revent, 
+        m.def(
+        "tpsend",
+        [](int cd, py::object idata, long flags=0)
+        {
+            long revent;
+            auto buf = ndrx_from_py(idata);
+
+            py::gil_scoped_release release;
+
+            if (tpsend(cd, *buf.pp, buf.len, flags, &revent) == EXFAIL)
+            {
+                throw xatmi_exception(tperrno);
+            }
+        },
+        "Forced disconnect from conversation", py::arg("cd") = 0);
+#endif
     //Event subscribtions
     m.attr("TPEVSERVICE") = py::int_(TPEVSERVICE);
     m.attr("TPEVQUEUE") = py::int_(TPEVQUEUE);//RFU

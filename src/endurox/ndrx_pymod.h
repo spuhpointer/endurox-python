@@ -212,6 +212,8 @@ extern pytpreplycd ndrxpy_pytpgetrply(int cd, long flags);
 extern int ndrxpy_pytppost(const std::string eventname, py::object data, long flags);
 extern long ndrxpy_pytpsubscribe(char *eventexpr, char *filter, TPEVCTL *ctl, long flags);
 
+extern void ndrxpy_register_xatmi(py::module &m);
+
 #endif /* NDRX_PYMOD.H */
 
 /* vim: set ts=4 sw=4 et smartindent: */
