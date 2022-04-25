@@ -420,5 +420,144 @@ expublic void ndrxpy_from_py_ubf(py::dict obj, xatmibuf &b)
     //Bprint(*b.fbfr());
 }
 
+/**
+ * @brief Register UBF specific functions
+ * 
+ * @param m Pybind11 module handle
+ */
+expublic void ndrxpy_register_ubf(py::module &m)
+{
+    m.def(
+        "Bfldtype", [](BFLDID fieldid)
+        { return Bfldtype(fieldid); },
+        "Maps field identifier to field type", py::arg("fieldid"));
+    m.def(
+        "Bfldno", [](BFLDID fieldid)
+        { return Bfldno(fieldid); },
+        "Maps field identifier to field number", py::arg("fieldid"));
+    m.def(
+        "Bmkfldid", [](int type, BFLDID num)
+        { return Bmkfldid(type, num); },
+        "Makes a field identifier", py::arg("type"), py::arg("num"));
+
+    m.def(
+        "Bfname",
+        [](BFLDID fieldid)
+        {
+            auto *name = Bfname(fieldid);
+            if (name == nullptr)
+            {
+                throw ubf_exception(Berror);
+            }
+            return name;
+        },
+        "Maps field identifier to field name", py::arg("fieldid"));
+    m.def(
+        "BFLDID",
+        [](const char *name)
+        {
+            auto id = Bfldid(const_cast<char *>(name));
+            if (id == BBADFLDID)
+            {
+                throw ubf_exception(Berror);
+            }
+            return id;
+        },
+        "Maps field name to field identifier", py::arg("name"));
+
+    m.def(
+        "Bboolpr",
+        [](const char *expression, py::object iop)
+        {
+            std::unique_ptr<char, decltype(&Btreefree)> guard(
+                Bboolco(const_cast<char *>(expression)), &Btreefree);
+            if (guard.get() == nullptr)
+            {
+                throw ubf_exception(Berror);
+            }
+
+            int fd = iop.attr("fileno")().cast<py::int_>();
+            std::unique_ptr<FILE, decltype(&fclose)> fiop(fdopen(dup(fd), "w"),
+                                                          &fclose);
+            Bboolpr(guard.get(), fiop.get());
+        },
+        "Print Boolean expression as parsed", py::arg("expression"),
+        py::arg("iop"));
+
+    m.def(
+        "Bboolev",
+        [](py::object fbfr, const char *expression)
+        {
+            std::unique_ptr<char, decltype(&Btreefree)> guard(
+                Bboolco(const_cast<char *>(expression)), &Btreefree);
+            if (guard.get() == nullptr)
+            {
+                throw ubf_exception(Berror);
+            }
+            auto buf = ndrx_from_py(fbfr);
+            auto rc = Bboolev(*buf.fbfr(), guard.get());
+            if (rc == -1)
+            {
+                throw ubf_exception(Berror);
+            }
+            return rc == 1;
+        },
+        "Evaluates buffer against expression", py::arg("fbfr"),
+        py::arg("expression"));
+
+    m.def(
+        "Bfloatev",
+        [](py::object fbfr, const char *expression)
+        {
+            std::unique_ptr<char, decltype(&Btreefree)> guard(
+                Bboolco(const_cast<char *>(expression)), &Btreefree);
+            if (guard.get() == nullptr)
+            {
+                throw ubf_exception(Berror);
+            }
+            auto buf = ndrx_from_py(fbfr);
+            auto rc = Bfloatev(*buf.fbfr(), guard.get());
+            if (rc == -1)
+            {
+                throw ubf_exception(Berror);
+            }
+            return rc;
+        },
+        "Returns value of expression as a double", py::arg("fbfr"),
+        py::arg("expression"));
+
+    m.def(
+        "Bfprint",
+        [](py::object fbfr, py::object iop)
+        {
+            auto buf = ndrx_from_py(fbfr);
+            int fd = iop.attr("fileno")().cast<py::int_>();
+            std::unique_ptr<FILE, decltype(&fclose)> fiop(fdopen(dup(fd), "w"),
+                                                          &fclose);
+            auto rc = Bfprint(*buf.fbfr(), fiop.get());
+            if (rc == -1)
+            {
+                throw ubf_exception(Berror);
+            }
+        },
+        "Prints fielded buffer to specified stream", py::arg("fbfr"),
+        py::arg("iop"));
+
+    m.def(
+        "Bextread",
+        [](py::object iop)
+        {
+            xatmibuf obuf("UBF", 1024);
+            int fd = iop.attr("fileno")().cast<py::int_>();
+            std::unique_ptr<FILE, decltype(&fclose)> fiop(fdopen(dup(fd), "r"),
+                                                          &fclose);
+
+            obuf.mutate([&](UBFH *fbfr)
+                        { return Bextread(fbfr, fiop.get()); });
+            return ndrx_to_py(obuf, true);
+        },
+        "Builds fielded buffer from printed format", py::arg("iop"));
+
+}
 
 /* vim: set ts=4 sw=4 et smartindent: */

@@ -340,6 +340,9 @@ expublic void ndrxpy_register_srv(py::module &m)
         { pytpadvertise(svcname, funcname, func); },
         "Routine for advertising a service name", py::arg("svcname"), py::arg("funcname"), py::arg("func"));
 
+    m.def("tpsubscribe", &ndrxpy_pytpsubscribe, "Subscribe to event (by server)",
+          py::arg("eventexpr"), py::arg("filter"), py::arg("ctl"), py::arg("flags") = 0);
+
     m.def(
         "tpunadvertise", [](const char *svcname)
         { ndrxpy_pytpunadvertise(svcname); },

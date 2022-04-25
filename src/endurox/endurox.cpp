@@ -133,7 +133,6 @@ static void register_exceptions(py::module &m)
 
 PYBIND11_MODULE(endurox, m)
 {
-
     register_exceptions(m);
 
     //TODO: Implement oracle xadrv struct and use tpgetconn() to get handle:
@@ -150,142 +149,9 @@ PYBIND11_MODULE(endurox, m)
         },
         "Returns the OCI service handle for a given XA connection");
 
-    m.def("tpsubscribe", &ndrxpy_pytpsubscribe, "Subscribe to event (by server)",
-          py::arg("eventexpr"), py::arg("filter"), py::arg("ctl"), py::arg("flags") = 0);
-
-
+    ndrxpy_register_ubf(m);
     ndrxpy_register_xatmi(m);
-
-    m.def(
-        "Bfldtype", [](BFLDID fieldid)
-        { return Bfldtype(fieldid); },
-        "Maps field identifier to field type", py::arg("fieldid"));
-    m.def(
-        "Bfldno", [](BFLDID fieldid)
-        { return Bfldno(fieldid); },
-        "Maps field identifier to field number", py::arg("fieldid"));
-    m.def(
-        "Bmkfldid", [](int type, BFLDID num)
-        { return Bmkfldid(type, num); },
-        "Makes a field identifier", py::arg("type"), py::arg("num"));
-
-    m.def(
-        "Bfname",
-        [](BFLDID fieldid)
-        {
-            auto *name = Bfname(fieldid);
-            if (name == nullptr)
-            {
-                throw ubf_exception(Berror);
-            }
-            return name;
-        },
-        "Maps field identifier to field name", py::arg("fieldid"));
-    m.def(
-        "BFLDID",
-        [](const char *name)
-        {
-            auto id = Bfldid(const_cast<char *>(name));
-            if (id == BBADFLDID)
-            {
-                throw ubf_exception(Berror);
-            }
-            return id;
-        },
-        "Maps field name to field identifier", py::arg("name"));
-
-    m.def(
-        "Bboolpr",
-        [](const char *expression, py::object iop)
-        {
-            std::unique_ptr<char, decltype(&Btreefree)> guard(
-                Bboolco(const_cast<char *>(expression)), &Btreefree);
-            if (guard.get() == nullptr)
-            {
-                throw ubf_exception(Berror);
-            }
-
-            int fd = iop.attr("fileno")().cast<py::int_>();
-            std::unique_ptr<FILE, decltype(&fclose)> fiop(fdopen(dup(fd), "w"),
-                                                          &fclose);
-            Bboolpr(guard.get(), fiop.get());
-        },
-        "Print Boolean expression as parsed", py::arg("expression"),
-        py::arg("iop"));
-
-    m.def(
-        "Bboolev",
-        [](py::object fbfr, const char *expression)
-        {
-            std::unique_ptr<char, decltype(&Btreefree)> guard(
-                Bboolco(const_cast<char *>(expression)), &Btreefree);
-            if (guard.get() == nullptr)
-            {
-                throw ubf_exception(Berror);
-            }
-            auto buf = ndrx_from_py(fbfr);
-            auto rc = Bboolev(*buf.fbfr(), guard.get());
-            if (rc == -1)
-            {
-                throw ubf_exception(Berror);
-            }
-            return rc == 1;
-        },
-        "Evaluates buffer against expression", py::arg("fbfr"),
-        py::arg("expression"));
-
-    m.def(
-        "Bfloatev",
-        [](py::object fbfr, const char *expression)
-        {
-            std::unique_ptr<char, decltype(&Btreefree)> guard(
-                Bboolco(const_cast<char *>(expression)), &Btreefree);
-            if (guard.get() == nullptr)
-            {
-                throw ubf_exception(Berror);
-            }
-            auto buf = ndrx_from_py(fbfr);
-            auto rc = Bfloatev(*buf.fbfr(), guard.get());
-            if (rc == -1)
-            {
-                throw ubf_exception(Berror);
-            }
-            return rc;
-        },
-        "Returns value of expression as a double", py::arg("fbfr"),
-        py::arg("expression"));
-
-    m.def(
-        "Bfprint",
-        [](py::object fbfr, py::object iop)
-        {
-            auto buf = ndrx_from_py(fbfr);
-            int fd = iop.attr("fileno")().cast<py::int_>();
-            std::unique_ptr<FILE, decltype(&fclose)> fiop(fdopen(dup(fd), "w"),
-                                                          &fclose);
-            auto rc = Bfprint(*buf.fbfr(), fiop.get());
-            if (rc == -1)
-            {
-                throw ubf_exception(Berror);
-            }
-        },
-        "Prints fielded buffer to specified stream", py::arg("fbfr"),
-        py::arg("iop"));
-
-    m.def(
-        "Bextread",
-        [](py::object iop)
-        {
-            xatmibuf obuf("UBF", 1024);
-            int fd = iop.attr("fileno")().cast<py::int_>();
-            std::unique_ptr<FILE, decltype(&fclose)> fiop(fdopen(dup(fd), "r"),
-                                                          &fclose);
-
-            obuf.mutate([&](UBFH *fbfr)
-                        { return Bextread(fbfr, fiop.get()); });
-            return ndrx_to_py(obuf, true);
-        },
-        "Builds fielded buffer from printed format", py::arg("iop"));
+    ndrxpy_register_srv(m);
 
     //Logging functions:
     m.def(
@@ -356,20 +222,6 @@ PYBIND11_MODULE(endurox, m)
             return ret;
         },
         "Get logger info", py::arg("lev"), py::arg("flags"));
-
-        //Conversational APIs
-        m.def(
-        "tpdiscon",
-        [](int cd)
-        {
-            py::gil_scoped_release release;
-
-            if (tpdiscon(cd) == EXFAIL)
-            {
-                throw xatmi_exception(tperrno);
-            }
-        },
-        "Forced disconnect from conversation", py::arg("cd") = 0);
 #if 0
 //? return revent, 
         m.def(
@@ -388,6 +240,16 @@ PYBIND11_MODULE(endurox, m)
         },
         "Forced disconnect from conversation", py::arg("cd") = 0);
 #endif
+
+    //Conversational
+
+    m.attr("TPEV_DISCONIMM") = py::int_(TPEV_DISCONIMM);
+    m.attr("TPEV_SVCERR") = py::int_(TPEV_SVCERR);
+    m.attr("TPEV_SVCFAIL") = py::int_(TPEV_SVCFAIL);
+    m.attr("TPEV_SVCSUCC") = py::int_(TPEV_SVCSUCC);
+    m.attr("TPEV_SENDONLY") = py::int_(TPEV_SENDONLY);
+
+
     //Event subscribtions
     m.attr("TPEVSERVICE") = py::int_(TPEVSERVICE);
     m.attr("TPEVQUEUE") = py::int_(TPEVQUEUE);//RFU

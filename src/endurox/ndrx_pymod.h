@@ -173,6 +173,31 @@ struct pytpreplycd:pytpreply
     using pytpreply::pytpreply;
 };
 
+/**
+ * @brief tpsend() return value
+ */
+struct pytpsendret
+{
+    int rval;   /**< tperrno curren (if not thrown) */
+    long revent;    /**< any event published        */
+
+    pytpsendret(int rval, long revent)
+        : rval(rval), revent(revent) {}
+
+};
+
+/**
+ * @brief tprecv() return value
+ */
+struct pytprecvret:pytpsendret
+{
+    long rcode;     /**< tpurcode if any                */
+    py::object data; /**< receive data                  */
+
+    pytprecvret(int rval, long revent, long rcode, py::object data)
+        : pytpsendret(rval, revent), rcode(rcode), data(data) {}
+};
+
 /*---------------------------Globals------------------------------------*/
 /*---------------------------Statics------------------------------------*/
 /*---------------------------Prototypes---------------------------------*/
@@ -213,6 +238,8 @@ extern int ndrxpy_pytppost(const std::string eventname, py::object data, long fl
 extern long ndrxpy_pytpsubscribe(char *eventexpr, char *filter, TPEVCTL *ctl, long flags);
 
 extern void ndrxpy_register_xatmi(py::module &m);
+extern void ndrxpy_register_ubf(py::module &m);
+extern void ndrxpy_register_srv(py::module &m);
 
 #endif /* NDRX_PYMOD.H */
 

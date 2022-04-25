@@ -224,6 +224,67 @@ static int ndrxpy_pytpconnect(const char *svc, py::object idata, long flags)
 }
 
 /**
+ * @brief Send data to conversational end-point
+ * 
+ * @param cd call descriptor
+ * @param idata data to send
+ * @param flags  flags
+ * @return tperrno, revent 
+ */
+expublic pytpsendret ndrxpy_pytpsend(int cd, py::object idata, long flags)
+{
+    auto in = ndrx_from_py(idata);
+    long revent;
+
+    int tperrno_saved;
+    {
+        py::gil_scoped_release release;
+        int rc = tpsend(cd, *in.pp, in.len, flags, &revent);
+        tperrno_saved = tperrno;
+
+        if (rc == -1)
+        {
+            if (TPEEVENT!=tperrno_saved)
+            {
+                throw xatmi_exception(tperrno_saved);
+            }
+        }
+    }
+
+    return pytpsendret(tperrno_saved, revent);
+}
+
+/**
+ * @brief Receive message from conversational end-point
+ * 
+ * @param cd call descriptor
+ * @param flags flags
+ * @return tperrno, revent, tpurcode, XATMI buffer
+ */
+expublic pytprecvret ndrxpy_pytprecv(int cd, long flags)
+{
+    long revent;
+    int tperrno_saved;
+
+    xatmibuf out("NULL", 0L);
+    {
+        py::gil_scoped_release release;
+        int rc = tprecv(cd, out.pp, &out.len, flags, &revent);
+        tperrno_saved = tperrno;
+
+        if (rc == -1)
+        {
+            if (TPEEVENT!=tperrno_saved)
+            {
+                throw xatmi_exception(tperrno_saved);
+            }
+        }
+    }
+
+    return pytprecvret(tperrno_saved, revent, tpurcode, ndrx_to_py(out, true));
+}
+
+/**
  * @brief get reply from async call
  * @param [in] cd (optional)
  * @param [in] flags flags
@@ -318,6 +379,40 @@ expublic void ndrxpy_register_xatmi(py::module &m)
           return s.data;
         } else if (i == 3) {
           return py::int_(s.cd);
+        } else {
+          throw py::index_error();
+        } });
+
+    //Return value for tpsend
+    py::class_<pytpsendret>(m, "TpSendRet")
+        .def_readonly("rval", &pytpsendret::rval)
+        .def_readonly("revent", &pytpsendret::revent)
+        .def("__getitem__", [](const pytpsendret &s, size_t i) -> py::object
+             {
+        if (i == 0) {
+          return py::int_(s.rval);
+        } else if (i == 1) {
+          return py::int_(s.revent);
+        } else {
+          throw py::index_error();
+        } });
+
+    //Return value for tprecv()
+    py::class_<pytprecvret>(m, "TpRecvRet")
+        .def_readonly("rval", &pytprecvret::rval)
+        .def_readonly("revent", &pytprecvret::revent)
+        .def_readonly("rcode", &pytprecvret::rcode)
+        .def_readonly("data", &pytprecvret::data)
+        .def("__getitem__", [](const pytprecvret &s, size_t i) -> py::object
+             {
+        if (i == 0) {
+          return py::int_(s.rval);
+        } else if (i == 1) {
+          return py::int_(s.revent);
+        } else if (i == 2) {
+            return py::int_(s.rcode);
+        } else if (i == 3) {
+          return s.data;
         } else {
           throw py::index_error();
         } });
@@ -458,6 +553,27 @@ expublic void ndrxpy_register_xatmi(py::module &m)
 
     m.def("tpconnect", &ndrxpy_pytpconnect, "Connect to service (conversational)",
           py::arg("svc"), py::arg("idata"), py::arg("flags") = 0);
+
+    //Conversational APIs
+    m.def("tpsend", &ndrxpy_pytpsend, "Send conversational data",
+          py::arg("cd"), py::arg("idata"), py::arg("flags") = 0);
+
+    m.def("tprecv", &ndrxpy_pytprecv, "Receive conversational data",
+          py::arg("cd"), py::arg("flags") = 0);
+
+    m.def(
+    "tpdiscon",
+    [](int cd)
+    {
+        py::gil_scoped_release release;
+
+        if (tpdiscon(cd) == EXFAIL)
+        {
+            throw xatmi_exception(tperrno);
+        }
+    },
+    "Forced disconnect from conversation", py::arg("cd") = 0);
+    
 
     m.def("tpexport", &ndrxpy_pytpexport,
           "Converts a typed message buffer into an exportable, "

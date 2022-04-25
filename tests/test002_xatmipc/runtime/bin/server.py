@@ -6,12 +6,15 @@ import endurox as e
 
 class Server:
 
+    # TODO - check current server object?
+
     def tpsvrinit(self, args):
         e.userlog('Server startup')
         e.tpadvertise('FAILSVC', 'FAILSVC', self.FAILSVC)
         e.tpadvertise('OKSVC', 'OKSVC', self.OKSVC)
         e.tpadvertise('FWDSVC', 'FWDSVC', self.FWDSVC)
         e.tpadvertise('EVSVC', 'EVSVC', self.EVSVC)
+        e.tpadvertise('CONVSVC', 'CONVSVC', self.CONVSVC)
 
         # subscribe to TESTEV event.
         e.tplog_info("ev subs %d" % e.tpsubscribe('TESTEV', None, e.TPEVCTL(name1="EVSVC", flags=e.TPEVSERVICE)))
@@ -54,8 +57,24 @@ class Server:
         return e.tpreturn(e.TPSUCCESS, 0, {})
 
     #
-    # TODO: run conversational data
+    # Run conversational data
     #
+    def CONVSVC(self, args):
+
+        # receive something
+        rc, ev, urcode, data = e.tprecv(args.cd)
+
+        assert (rc == e.TPEEVENT)
+        assert (ev == e.TPEV_SENDONLY)
+        assert (urcode == 0)
+        assert (data["data"]["T_STRING_FLD"][0] == "From client")
+
+        # send something
+        rc, ev = e.tpsend(args.cd, {"data":{"T_STRING_FLD":"From server"}})
+        assert (rc == 0)
+        assert (ev == 0)
+
+        return e.tpreturn(e.TPSUCCESS, 6, {"data":{"T_STRING_FLD":"From server 2"}})
 
 if __name__ == '__main__':
     e.run(Server(), sys.argv)
