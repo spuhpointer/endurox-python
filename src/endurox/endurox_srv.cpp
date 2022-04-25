@@ -317,6 +317,83 @@ expublic void ndrxpy_pyrun(py::object svr, std::vector<std::string> args,
         throw;
     }
 }
+/**
+ * @brief Register XATMI server specific functions
+ * 
+ * @param m Pybind11 module handle
+ */
+expublic void ndrxpy_register_srv(py::module &m)
+{
+    // Service call info object
+    py::class_<pytpsvcinfo>(m, "pytpsvcinfo")
+        .def_readonly("name", &pytpsvcinfo::name)
+        .def_readonly("fname", &pytpsvcinfo::fname)
+        .def_readonly("flags", &pytpsvcinfo::flags)
+        .def_readonly("appkey", &pytpsvcinfo::appkey)
+        .def_readonly("cd", &pytpsvcinfo::cd)
+        .def("cltid", [](pytpsvcinfo &inf) { 
+            return py::bytes(reinterpret_cast<char *>(&inf.cltid), sizeof(inf.cltid)); })
+        .def_readonly("data", &pytpsvcinfo::data);
+
+    m.def(
+        "tpadvertise", [](const char *svcname, const char *funcname, const py::object &func)
+        { pytpadvertise(svcname, funcname, func); },
+        "Routine for advertising a service name", py::arg("svcname"), py::arg("funcname"), py::arg("func"));
+
+    m.def(
+        "tpunadvertise", [](const char *svcname)
+        { ndrxpy_pytpunadvertise(svcname); },
+        "Unadvertise service", py::arg("tpunadvertise"));
+
+    m.def("run", &ndrxpy_pyrun, "Run Endurox server", py::arg("server"), py::arg("args"),
+          py::arg("rmname") = "NONE");
+
+    m.def("tpreturn", &ndrxpy_pytpreturn, 
+            R"pbdoc(
+        Return from XATMI service call. Any XATMI processing after this call
+        shall not be performed, i.e. shall last operation in the XATMI service
+        processing.
+
+        This function applies to XATMI servers only.
+        
+        For more deatils see C call *tpreturn(3)*.
+
+        Parameters
+        ----------
+        rval : int
+            Return value **TPSUCCESS** for success, **TPFAIL** for returning error
+            **TPEXIT** for returning error and restarting the XATMI server process.
+        rcode : int
+            User return code. If not used, use value **0**.
+        data : dict
+            XATMI buffer returned from the service
+        flags : int
+            Or'd flags **TPSOFTTIMEOUT** for simulating **TPETIME** error to caller.
+            **TPSOFTERR** return any XATMI call error, which is set in *rval* param.
+	    Default value is **0**.
+        )pbdoc",
+          py::arg("rval"), py::arg("rcode"), py::arg("data"),
+          py::arg("flags") = 0);
+    m.def("tpforward", &ndrxpy_pytpforward,
+          R"pbdoc(
+        Forward control to other service. This shall be last XATMI call
+        for the service routine.
+
+        This function applies to XATMI servers only.
+        
+        For more details see C call *tpforward(3)*.
+
+        Parameters
+        ----------
+        svc : str
+            Name of the target service.
+        data : dict
+            XATMI buffer returned from the service
+        flags : int
+            RFU, shall be set to **0**.
+        )pbdoc",
+          py::arg("svc"), py::arg("data"), py::arg("flags") = 0);    
+}
 
 
 /* vim: set ts=4 sw=4 et smartindent: */
