@@ -152,8 +152,7 @@ PYBIND11_MODULE(endurox, m)
         .def_readonly("rval", &pytpreply::rval)
         .def_readonly("rcode", &pytpreply::rcode)
         .def_readonly("data", &pytpreply::data)
-        .def_readonly("cd", &pytpreply::cd) // Does not unpack as the use is
-                                            // rare case of tpgetrply(TPGETANY)
+        .def_readonly("cd", &pytpreply::cd)
         .def("__getitem__", [](const pytpreply &s, size_t i) -> py::object
              {
         if (i == 0) {
@@ -162,6 +161,26 @@ PYBIND11_MODULE(endurox, m)
           return py::int_(s.rcode);
         } else if (i == 2) {
           return s.data;
+        } else {
+          throw py::index_error();
+        } });
+
+    //For tpgetrply, include cd
+    py::class_<pytpreplycd>(m, "TpReplyCd")
+        .def_readonly("rval", &pytpreply::rval)
+        .def_readonly("rcode", &pytpreply::rcode)
+        .def_readonly("data", &pytpreply::data)
+        .def_readonly("cd", &pytpreply::cd)
+        .def("__getitem__", [](const pytpreplycd &s, size_t i) -> py::object
+             {
+        if (i == 0) {
+          return py::int_(s.rval);
+        } else if (i == 1) {
+          return py::int_(s.rcode);
+        } else if (i == 2) {
+          return s.data;
+        } else if (i == 3) {
+          return py::int_(s.cd);
         } else {
           throw py::index_error();
         } });
@@ -458,7 +477,23 @@ PYBIND11_MODULE(endurox, m)
           py::arg("rval"), py::arg("rcode"), py::arg("data"),
           py::arg("flags") = 0);
     m.def("tpforward", &ndrxpy_pytpforward,
-          "Routine for forwarding a service request to another service routine",
+          R"pbdoc(
+        Forward control to other service. This shall be last XATMI call
+        for the service routine.
+
+        This function applies to XATMI servers only.
+        
+        For more details see C call *tpforward(3)*.
+
+        Parameters
+        ----------
+        svc : str
+            Name of the target service.
+        data : dict
+            XATMI buffer returned from the service
+        flags : int
+            RFU, shall be set to **0**.
+        )pbdoc",
           py::arg("svc"), py::arg("data"), py::arg("flags") = 0);
 
     m.def(
@@ -528,6 +563,7 @@ PYBIND11_MODULE(endurox, m)
 
     m.def("tpacall", &ndrxpy_pytpacall, "Routine for sending a service request",
           py::arg("svc"), py::arg("idata"), py::arg("flags") = 0);
+
     m.def("tpgetrply", &ndrxpy_pytpgetrply,
           "Routine for getting a reply from a previous request", py::arg("cd"),
           py::arg("flags") = 0);
@@ -960,6 +996,7 @@ Python3 bindings for writing Endurox clients and servers
         tpterm
         tpcall
         tpreturn
+        tpforward
         tpadvertise
 
 XATMI buffer formats
@@ -1222,6 +1259,15 @@ VIEW buffer type is selected by following rules:
         , 'tcarray1': [b'\x00\x00', b'\x01\x01']
         }
     }
+
+CALL-INFO XATMI buffer association
+==================================
+Call-info block is additional UBF buffer that may be linked with Any XATMI buffer 
+(except NULL buffer). The concept behind with call-info block is similar like
+HTTP headers information, i.e. additional data linked to the message body.
+
+TODO:
+
 
 Flags to service routines
 **************************

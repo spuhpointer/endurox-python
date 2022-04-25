@@ -151,6 +151,9 @@ public:
 
 typedef void *(xao_svc_ctx)(void *);
 
+/**
+ * Reply structore 
+ */
 struct pytpreply
 {
     int rval;
@@ -162,6 +165,13 @@ struct pytpreply
         : rval(rval), rcode(rcode), data(data), cd(cd) {}
 };
 
+/**
+ * Reply structure with call descriptor
+ */
+struct pytpreplycd:pytpreply
+{
+    using pytpreply::pytpreply;
+};
 
 /*---------------------------Globals------------------------------------*/
 /*---------------------------Statics------------------------------------*/
@@ -198,7 +208,7 @@ extern int ndrxpy_pytpacall(const char *svc, py::object idata, long flags);
 extern py::object ndrxpy_pytpexport(py::object idata, long flags);
 extern py::object ndrxpy_pytpimport(const std::string istr, long flags);
 
-extern pytpreply ndrxpy_pytpgetrply(int cd, long flags);
+extern pytpreplycd ndrxpy_pytpgetrply(int cd, long flags);
 extern int ndrxpy_pytppost(const std::string eventname, py::object data, long flags);
 extern long ndrxpy_pytpsubscribe(char *eventexpr, char *filter, TPEVCTL *ctl, long flags);
 

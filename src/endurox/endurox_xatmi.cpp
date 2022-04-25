@@ -208,7 +208,7 @@ expublic int ndrxpy_pytpacall(const char *svc, py::object idata, long flags)
  * @param [in] flags flags
  * @return call reply
  */
-expublic pytpreply ndrxpy_pytpgetrply(int cd, long flags)
+expublic pytpreplycd ndrxpy_pytpgetrply(int cd, long flags)
 {
     int tperrno_saved=0;
     xatmibuf out("UBF", 1024);
@@ -225,7 +225,7 @@ expublic pytpreply ndrxpy_pytpgetrply(int cd, long flags)
             }
         }
     }
-    return pytpreply(tperrno_saved, tpurcode, ndrx_to_py(out, true), cd);
+    return pytpreplycd(tperrno_saved, tpurcode, ndrx_to_py(out, true), cd);
 }
 
 
