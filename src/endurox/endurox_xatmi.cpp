@@ -1,3 +1,38 @@
+/**
+ * @brief Enduro/X Python module - xatmi client/server common
+ *
+ * @file endurox_xatmi.cpp
+ */
+/* -----------------------------------------------------------------------------
+ * Enduro/X Middleware Platform for Distributed Transaction Processing
+ * Copyright (C) 2009-2016, ATR Baltic, Ltd. All Rights Reserved.
+ * Copyright (C) 2017-2022, Mavimax, Ltd. All Rights Reserved.
+ * This software is released under MIT license.
+ * 
+ * -----------------------------------------------------------------------------
+ * MIT License
+ * Copyright (C) 2019 Aivars Kalvans <aivars.kalvans@gmail.com> 
+ * Copyright (C) 2022 Mavimax SIA
+ * 
+ * Permission is hereby granted, free of charge, to any person obtaining a copy
+ * of this software and associated documentation files (the "Software"), to deal
+ * in the Software without restriction, including without limitation the rights
+ * to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+ * copies of the Software, and to permit persons to whom the Software is
+ * furnished to do so, subject to the following conditions:
+ * 
+ * The above copyright notice and this permission notice shall be included in all
+ * copies or substantial portions of the Software.
+ * 
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+ * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+ * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+ * AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+ * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+ * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+ * SOFTWARE.
+ * -----------------------------------------------------------------------------
+ */
 
 #include <dlfcn.h>
 
@@ -173,7 +208,7 @@ expublic std::pair<TPQCTL, py::object> ndrx_pytpdequeue(const char *qspace,
         {
             if (tperrno == TPEDIAGNOSTIC)
             {
-                throw qm_exception(ctl->diagnostic);
+                throw qm_exception(ctl->diagnostic, ctl->diagmsg);
             }
             throw xatmi_exception(tperrno);
         }

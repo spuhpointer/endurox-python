@@ -33,6 +33,7 @@ struct qm_exception : public xatmi_exception
 {
 public:
     explicit qm_exception(int code) : xatmi_exception(code, qmstrerror(code)) {}
+    explicit qm_exception(int code, char *msg) : xatmi_exception(code, msg) {}
 
     static const char *qmstrerror(int code)
     {
