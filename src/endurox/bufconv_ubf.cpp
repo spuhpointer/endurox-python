@@ -237,7 +237,6 @@ static void from_py1_ubf(xatmibuf &buf, BFLDID fieldid, BFLDOCC oc,
         char *ptr_val =NULL;
         BFLDLEN len;
 
-        std::string yopt;
 #if PY_MAJOR_VERSION >= 3
         py::bytes b = py::reinterpret_steal<py::bytes>(
             PyUnicode_EncodeLocale(obj.ptr(), "surrogateescape"));

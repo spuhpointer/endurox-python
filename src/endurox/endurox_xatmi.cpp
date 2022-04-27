@@ -250,6 +250,62 @@ expublic int ndrxpy_pytpacall(const char *svc, py::object idata, long flags)
     return rc;
 }
 
+
+/**
+ * @brief Send notification to the client process
+ * 
+ * @param clientid client id as received by service in cltid argument
+ * @param idata data to send to the client
+ * @param flags 
+ */
+exprivate void ndrxpy_pytpnotify(py::bytes clientid, py::object idata, long flags)
+{
+    auto in = ndrx_from_py(idata);
+    int size = PyBytes_Size(clientid.ptr());
+
+    //Check the size
+    if (sizeof(CLIENTID)!=size)
+    {
+        NDRX_LOG(log_error, "Invalid `clientid': CLIENTID size is %d bytes, got %d bytes",
+            sizeof(clientid), size);
+        throw std::invalid_argument("INvalid `clientid' size");
+    }
+
+    CLIENTID *cltid = reinterpret_cast<CLIENTID*>(PyBytes_AsString(clientid.ptr()));
+
+    py::gil_scoped_release release;
+    int rc = tpnotify(cltid, *in.pp, in.len, flags);
+    
+    if (rc == -1)
+    {
+        throw xatmi_exception(tperrno);
+    }
+}
+
+/**
+ * @brief broadcast the message to the nodes
+ * 
+ * @param lmid Machine Ids to which send msg
+ * @param usrname RFU
+ * @param cltname client exe name to match the msg
+ * @param idata data buffer
+ * @param flags 
+ */
+exprivate void ndrxpy_pytpbroadcast(const char *lmid, const char *usrname, const char *cltname, 
+    py::object idata, long flags)
+{
+    auto in = ndrx_from_py(idata);
+
+    py::gil_scoped_release release;
+    int rc = tpbroadcast(const_cast<char *>(lmid), const_cast<char *>(usrname), 
+        const_cast<char *>(cltname), *in.pp, in.len, flags);
+    
+    if (rc == -1)
+    {
+        throw xatmi_exception(tperrno);
+    }
+}
+
 /**
  * @brief Connect to conversational service
  * @param [in] svc service name
@@ -838,8 +894,13 @@ expublic void ndrxpy_register_xatmi(py::module &m)
         "Writes a message to the Endurox ATMI system central event log",
         py::arg("message"));
 
-}
+    //TODO: notification API.
+    m.def("tpnotify", &ndrxpy_pytpnotify, "Send unsolicited notification to the process",
+          py::arg("clientid"), py::arg("idata"), py::arg("flags") = 0);
 
+    m.def("tpbroadcast", &ndrxpy_pytpbroadcast, "Broadcast unsolicited notifications to the cluster",
+          py::arg("lmid"), py::arg("usrname"), py::arg("cltname"), py::arg("idata"), py::arg("flags") = 0);
+}
 
 /* vim: set ts=4 sw=4 et smartindent: */
 
