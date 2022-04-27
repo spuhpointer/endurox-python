@@ -198,6 +198,77 @@ struct pytprecvret:pytpsendret
         : pytpsendret(rval, revent), rcode(rcode), data(data) {}
 };
 
+/**
+ * @brief extended struct to expose msgid and corrid 
+ *  to Pybind11 as byte arrays (instead of strings).
+ *  and provide interface for converting to the base
+ *  struct.
+ */
+struct ndrxpy_tpqctl_t:tpqctl_t
+{
+    std::string replyqueue; /**< to have setter */
+    std::string failurequeue;   /**< to have setter */
+    py::bytes msgid;    /**< have a byte array for python mapping */
+    py::bytes corrid;   /**< have a byte arrray for python mapping */
+
+    /**
+     * @brief Reset all to zero..
+     */
+    ndrxpy_tpqctl_t(void)
+    {
+        //Reset  base struct
+        tpqctl_t* base = dynamic_cast<tpqctl_t*>(this);
+        memset(base, 0, sizeof(tpqctl_t));
+    }
+
+    /**
+     * @brief Load stuff to base class
+     * 
+     */
+    void convert_to_base(void)
+    {
+        std::string msgid_val(PyBytes_AsString(msgid.ptr()), PyBytes_Size(msgid.ptr()));
+        std::string corrid_val(PyBytes_AsString(corrid.ptr()), PyBytes_Size(corrid.ptr()));
+
+        if (msgid_val.size() >= sizeof(tpqctl_t::msgid))
+        {
+            memcpy(tpqctl_t::msgid, msgid_val.data(), sizeof(tpqctl_t::msgid));
+        }
+        else
+        {
+            memset(tpqctl_t::msgid, 0, sizeof(tpqctl_t::msgid));
+            memcpy(tpqctl_t::msgid, msgid_val.data(), msgid_val.size());
+        }
+
+        if (corrid_val.size() >= sizeof(tpqctl_t::corrid))
+        {
+            memcpy(tpqctl_t::corrid, corrid_val.data(), sizeof(tpqctl_t::corrid));
+        }
+        else
+        {
+            memset(tpqctl_t::corrid, 0, sizeof(tpqctl_t::corrid));
+            memcpy(tpqctl_t::corrid, corrid_val.data(), corrid_val.size());
+        }
+
+        NDRX_STRCPY_SAFE(tpqctl_t::replyqueue, replyqueue.c_str());
+        NDRX_STRCPY_SAFE(tpqctl_t::failurequeue, failurequeue.c_str());
+    }
+    
+    /**
+     * @brief Load stuff from base class to python bytes
+     * 
+     */
+    void convert_from_base(void)
+    {
+        msgid = py::bytes(tpqctl_t::msgid, sizeof(tpqctl_t::msgid));
+        corrid = py::bytes(tpqctl_t::corrid, sizeof(tpqctl_t::corrid));
+        replyqueue = std::string(tpqctl_t::replyqueue);
+        failurequeue = std::string(tpqctl_t::failurequeue);
+    }
+};
+
+typedef struct ndrxpy_tpqctl_t NDRXPY_TPQCTL;
+
 /*---------------------------Globals------------------------------------*/
 /*---------------------------Statics------------------------------------*/
 /*---------------------------Prototypes---------------------------------*/
@@ -222,10 +293,10 @@ extern void ndrxpy_pytpforward(const std::string &svc, py::object data, long fla
 
 extern void ndrxpy_pytpunadvertise(const char * svcname);
 extern pytpreply ndrxpy_pytpadmcall(py::object idata, long flags);
-extern TPQCTL ndrxpy_pytpenqueue(const char *qspace, const char *qname, TPQCTL *ctl,
+extern NDRXPY_TPQCTL ndrxpy_pytpenqueue(const char *qspace, const char *qname, NDRXPY_TPQCTL *ctl,
                           py::object data, long flags);
-extern std::pair<TPQCTL, py::object> ndrx_pytpdequeue(const char *qspace,
-                                                 const char *qname, TPQCTL *ctl,
+extern std::pair<NDRXPY_TPQCTL, py::object> ndrx_pytpdequeue(const char *qspace,
+                                                 const char *qname, NDRXPY_TPQCTL *ctl,
                                                  long flags);
 extern pytpreply ndrxpy_pytpcall(const char *svc, py::object idata, long flags);
 extern int ndrxpy_pytpacall(const char *svc, py::object idata, long flags);

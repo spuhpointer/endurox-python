@@ -166,14 +166,18 @@ expublic pytpreply ndrxpy_pytpcall(const char *svc, py::object idata, long flags
  * @param [in] flags enqueue flags
  * @return queue control struct
  */
-expublic TPQCTL ndrxpy_pytpenqueue(const char *qspace, const char *qname, TPQCTL *ctl,
+expublic NDRXPY_TPQCTL ndrxpy_pytpenqueue(const char *qspace, const char *qname, NDRXPY_TPQCTL *ctl,
                           py::object data, long flags)
 {
     auto in = ndrx_from_py(data);
     {
+        ctl->convert_to_base();
+        TPQCTL *ctl_c = dynamic_cast<TPQCTL*>(ctl);
+
         py::gil_scoped_release release;
+
         int rc = tpenqueue(const_cast<char *>(qspace), const_cast<char *>(qname),
-                           ctl, *in.pp, in.len, flags);
+                           ctl_c, *in.pp, in.len, flags);
         if (rc == -1)
         {
             if (tperrno == TPEDIAGNOSTIC)
@@ -183,6 +187,9 @@ expublic TPQCTL ndrxpy_pytpenqueue(const char *qspace, const char *qname, TPQCTL
             throw xatmi_exception(tperrno);
         }
     }
+
+    ctl->convert_from_base();
+
     return *ctl;
 }
 
@@ -195,15 +202,18 @@ expublic TPQCTL ndrxpy_pytpenqueue(const char *qspace, const char *qname, TPQCTL
  * @param [in] flags flags
  * @return queue control struct, xatmi object
  */
-expublic std::pair<TPQCTL, py::object> ndrx_pytpdequeue(const char *qspace,
-                                                 const char *qname, TPQCTL *ctl,
+expublic std::pair<NDRXPY_TPQCTL, py::object> ndrx_pytpdequeue(const char *qspace,
+                                                 const char *qname, NDRXPY_TPQCTL *ctl,
                                                  long flags)
 {
     xatmibuf out("UBF", 1024);
     {
+        ctl->convert_to_base();
+        TPQCTL *ctl_c = dynamic_cast<TPQCTL*>(ctl);
+
         py::gil_scoped_release release;
         int rc = tpdequeue(const_cast<char *>(qspace), const_cast<char *>(qname),
-                           ctl, out.pp, &out.len, flags);
+                           ctl_c, out.pp, &out.len, flags);
         if (rc == -1)
         {
             if (tperrno == TPEDIAGNOSTIC)
@@ -213,6 +223,9 @@ expublic std::pair<TPQCTL, py::object> ndrx_pytpdequeue(const char *qspace,
             throw xatmi_exception(tperrno);
         }
     }
+
+    ctl->convert_from_base();
+    
     return std::make_pair(*ctl, ndrx_to_py(out, true));
 }
 
@@ -452,14 +465,15 @@ expublic void ndrxpy_register_xatmi(py::module &m)
           throw py::index_error();
         } });
 
-    py::class_<TPQCTL>(m, "TPQCTL")
+    py::class_<NDRXPY_TPQCTL>(m, "TPQCTL")
         .def(py::init([](long flags, long deq_time, long priority, long exp_time,
                          long urcode, long delivery_qos, long reply_qos,
-                         const char *msgid, const char *corrid,
-                         const char *replyqueue, const char *failurequeue)
+                         pybind11::bytes msgid, pybind11::bytes corrid,
+                         std::string & replyqueue, std::string & failurequeue)
                       {
-             auto p = std::make_unique<TPQCTL>();
-             memset(p.get(), 0, sizeof(TPQCTL));
+             auto p = std::make_unique<NDRXPY_TPQCTL>();
+             //Default construction shall have performed memset
+             //memset(p.get(), 0, sizeof(NDRXPY_TPQCTL));
              p->flags = flags;
              p->deq_time = deq_time;
              p->exp_time = exp_time;
@@ -467,39 +481,34 @@ expublic void ndrxpy_register_xatmi(py::module &m)
              p->urcode = urcode;
              p->delivery_qos = delivery_qos;
              p->reply_qos = reply_qos;
-             if (msgid != nullptr) {
-               // Size limit and zero termination
-               snprintf(p->msgid, sizeof(p->msgid), "%s", msgid);
-             }
-             if (corrid != nullptr) {
-               snprintf(p->corrid, sizeof(p->corrid), "%s", corrid);
-             }
-             if (replyqueue != nullptr) {
-               snprintf(p->replyqueue, sizeof(p->replyqueue), "%s", replyqueue);
-             }
-             if (failurequeue != nullptr) {
-               snprintf(p->failurequeue, sizeof(p->failurequeue), "%s",
-                        failurequeue);
-             }
+             
+             p->msgid = msgid;
+             p->corrid = corrid;
+
+             p->replyqueue = replyqueue;
+             p->failurequeue = failurequeue;
+
              return p; }),
 
              py::arg("flags") = 0, py::arg("deq_time") = 0,
              py::arg("priority") = 0, py::arg("exp_time") = 0,
              py::arg("urcode") = 0, py::arg("delivery_qos") = 0,
-             py::arg("reply_qos") = 0, py::arg("msgid") = nullptr,
-             py::arg("corrid") = nullptr, py::arg("replyqueue") = nullptr,
-             py::arg("failurequeue") = nullptr)
+             py::arg("reply_qos") = 0, py::arg("msgid") = pybind11::bytes(),
+             py::arg("corrid") = pybind11::bytes(), py::arg("replyqueue") = std::string(""),
+             py::arg("failurequeue") = std::string(""))
 
-        .def_readonly("flags", &TPQCTL::flags)
-        .def_readonly("msgid", &TPQCTL::msgid)
-        .def_readonly("diagnostic", &TPQCTL::diagnostic)
-        .def_readonly("priority", &TPQCTL::priority)
-        .def_readonly("corrid", &TPQCTL::corrid)
-        .def_readonly("urcode", &TPQCTL::urcode)
-        .def_readonly("replyqueue", &TPQCTL::replyqueue)
-        .def_readonly("failurequeue", &TPQCTL::failurequeue)
-        .def_readonly("delivery_qos", &TPQCTL::delivery_qos)
-        .def_readonly("reply_qos", &TPQCTL::reply_qos);
+        .def_readwrite("flags", &NDRXPY_TPQCTL::flags)
+        .def_readwrite("msgid", &NDRXPY_TPQCTL::msgid)
+        .def_readonly("diagnostic", &NDRXPY_TPQCTL::diagnostic)
+        .def_readonly("diagmsg", &NDRXPY_TPQCTL::diagmsg)
+        .def_readwrite("priority", &NDRXPY_TPQCTL::priority)
+        .def_readwrite("corrid", &NDRXPY_TPQCTL::corrid)
+        .def_readonly("urcode", &NDRXPY_TPQCTL::urcode)
+        .def_readonly("cltid", &NDRXPY_TPQCTL::cltid)
+        .def_readwrite("replyqueue", &NDRXPY_TPQCTL::replyqueue)
+        .def_readwrite("failurequeue", &NDRXPY_TPQCTL::failurequeue)
+        .def_readwrite("delivery_qos", &NDRXPY_TPQCTL::delivery_qos)
+        .def_readwrite("reply_qos", &NDRXPY_TPQCTL::reply_qos);
 
     //TPEVCTL mapping
     py::class_<TPEVCTL>(m, "TPEVCTL")

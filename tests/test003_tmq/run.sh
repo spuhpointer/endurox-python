@@ -16,9 +16,11 @@ export PYTHONPATH=`pwd`/../libs
 
 TIMES=200
 pushd .
-rm -rf runtime/log
-rm -rf runtime/ULOG*
-mkdir runtime/log
+rm -rf runtime/log 2>/dev/null
+rm -rf runtime/ULOG* 2>/dev/null
+rm -rf runtime/qdata 2>/dev/null
+rm -rf runtime/tmlogs 2>/dev/null
+mkdir runtime/log 2>/dev/null
 
 cd runtime
 
