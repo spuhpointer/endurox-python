@@ -256,24 +256,6 @@ PYBIND11_MODULE(endurox, m)
             return ret;
         },
         "Get logger info", py::arg("lev"), py::arg("flags"));
-#if 0
-//? return revent, 
-        m.def(
-        "tpsend",
-        [](int cd, py::object idata, long flags=0)
-        {
-            long revent;
-            auto buf = ndrx_from_py(idata);
-
-            py::gil_scoped_release release;
-
-            if (tpsend(cd, *buf.pp, buf.len, flags, &revent) == EXFAIL)
-            {
-                throw xatmi_exception(tperrno);
-            }
-        },
-        "Forced disconnect from conversation", py::arg("cd") = 0);
-#endif
 
     //Conversational
 

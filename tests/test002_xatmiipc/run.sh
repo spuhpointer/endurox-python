@@ -53,7 +53,7 @@ cd conf
 
 
 # monitor our test instance, 0myWI5nu -> this is const by xadmin provision
-xmemck -m "0myWI5nu|unittest" 2>$XMEMCK_LOG 1>$XMEMCK_OUT &
+xmemck -d5 -m "0myWI5nu|unittest" 2>$XMEMCK_LOG 1>$XMEMCK_OUT &
 MEMCK_PID=$!
 echo "Memck pid = $MEMCK_PID"
 
@@ -154,6 +154,20 @@ if [ $RET != 0 ]; then
     echo "tpnotify.py failed"
     go_out -1
 fi
+
+################################################################################
+echo "Running tpbroadcast test"
+################################################################################
+
+python3 -m unittest tpbroadcast.py
+
+RET=$?
+
+if [ $RET != 0 ]; then
+    echo "tpbroadcast.py failed"
+    go_out -1
+fi
+
 
 ###############################################################################
 echo "Check leaks"

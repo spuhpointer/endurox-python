@@ -358,7 +358,7 @@ exprivate void ndrxpy_pytpsetunsol(const py::object &func)
 
     if (nullptr!=priv->integptr1)
     {
-        delete reinterpret_cast<ndrx_ctx_priv_t*>(priv->integptr1);
+        delete reinterpret_cast<ndrxpy_object_t*>(priv->integptr1);
     }
 
     priv->integptr1 = reinterpret_cast<void*>(obj_ptr);

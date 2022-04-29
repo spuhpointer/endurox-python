@@ -16,6 +16,7 @@ class Server:
         e.tpadvertise('EVSVC', 'EVSVC', self.EVSVC)
         e.tpadvertise('CONVSVC', 'CONVSVC', self.CONVSVC)
         e.tpadvertise('NOTIFSV', 'NOTIFSV', self.NOTIFSV)
+        e.tpadvertise('BCASTSV', 'BCASTSV', self.BCASTSV)
 
         # subscribe to TESTEV event.
         e.tplog_info("ev subs %d" % e.tpsubscribe('TESTEV', None, e.TPEVCTL(name1="EVSVC", flags=e.TPEVSERVICE)))
@@ -81,6 +82,12 @@ class Server:
     def NOTIFSV(self, args):
         e.tpnotify(args.cltid, {"data":"HELLO WORLD"}, 0)
         return e.tpreturn(e.TPSUCCESS, 0, {})
+
+    def BCASTSV(self, args):
+        # may fill all python qs...
+        e.tpbroadcast("", "", "python", {"data":"HELLO WORLD BCAST"}, e.TPREGEXMATCH|e.TPNOBLOCK)
+        return e.tpreturn(e.TPSUCCESS, 0, {})
+
 
 if __name__ == '__main__':
     e.run(Server(), sys.argv)
