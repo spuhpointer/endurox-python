@@ -311,6 +311,7 @@ PYBIND11_MODULE(endurox, m)
     m.attr("TPCONV") = py::int_(TPCONV);
     m.attr("TPSENDONLY") = py::int_(TPSENDONLY);
     m.attr("TPRECVONLY") = py::int_(TPRECVONLY);
+    m.attr("TPREGEXMATCH") = py::int_(TPREGEXMATCH);
 
     m.attr("TPFAIL") = py::int_(TPFAIL);
     m.attr("TPSUCCESS") = py::int_(TPSUCCESS);

@@ -369,8 +369,11 @@ expublic void ndrxpy_register_srv(py::module &m)
         .def_readonly("flags", &pytpsvcinfo::flags)
         .def_readonly("appkey", &pytpsvcinfo::appkey)
         .def_readonly("cd", &pytpsvcinfo::cd)
+        .def_readonly("cltid", &pytpsvcinfo::cltid)
+        /*
         .def("cltid", [](pytpsvcinfo &inf) { 
             return py::bytes(reinterpret_cast<char *>(&inf.cltid), sizeof(inf.cltid)); })
+        */
         .def_readonly("data", &pytpsvcinfo::data);
 
     m.def(

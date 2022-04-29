@@ -15,6 +15,7 @@ class Server:
         e.tpadvertise('FWDSVC', 'FWDSVC', self.FWDSVC)
         e.tpadvertise('EVSVC', 'EVSVC', self.EVSVC)
         e.tpadvertise('CONVSVC', 'CONVSVC', self.CONVSVC)
+        e.tpadvertise('NOTIFSV', 'NOTIFSV', self.NOTIFSV)
 
         # subscribe to TESTEV event.
         e.tplog_info("ev subs %d" % e.tpsubscribe('TESTEV', None, e.TPEVCTL(name1="EVSVC", flags=e.TPEVSERVICE)))
@@ -75,6 +76,11 @@ class Server:
         assert (ev == 0)
 
         return e.tpreturn(e.TPSUCCESS, 6, {"data":{"T_STRING_FLD":"From server 2"}})
+
+    # send notification to the client
+    def NOTIFSV(self, args):
+        e.tpnotify(args.cltid, {"data":"HELLO WORLD"}, 0)
+        return e.tpreturn(e.TPSUCCESS, 0, {})
 
 if __name__ == '__main__':
     e.run(Server(), sys.argv)

@@ -67,6 +67,10 @@
  */
 struct pytpsvcinfo: TPSVCINFO
 {
+
+    //Override clientid as bytes
+    py::bytes cltid;
+
     pytpsvcinfo(TPSVCINFO *inf)
     {
         NDRX_STRCPY_SAFE(name, inf->name);
@@ -75,8 +79,11 @@ struct pytpsvcinfo: TPSVCINFO
         flags = inf->flags;
         cd = inf->cd;
         appkey = inf->appkey;
+        /*
         CLIENTID cltid;
         memcpy(&cltid, &inf->cltid, sizeof(cltid));
+        */
+       cltid = py::bytes(reinterpret_cast<char *>(&inf->cltid), sizeof(inf->cltid));
     }
     py::object data;
 };

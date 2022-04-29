@@ -41,6 +41,7 @@
 #include <userlog.h>
 #include <xa.h>
 #include <ubf.h>
+#include <tmenv.h>
 #undef _
 
 #include "exceptions.h"
@@ -54,6 +55,9 @@
 #include <map>
 
 namespace py = pybind11;
+
+
+//TODO: Keep the Python func in ndrx_ctx_priv_get()
 
 /**
  * @brief export XATMI buffer
@@ -261,6 +265,7 @@ expublic int ndrxpy_pytpacall(const char *svc, py::object idata, long flags)
 exprivate void ndrxpy_pytpnotify(py::bytes clientid, py::object idata, long flags)
 {
     auto in = ndrx_from_py(idata);
+
     int size = PyBytes_Size(clientid.ptr());
 
     //Check the size
@@ -274,6 +279,7 @@ exprivate void ndrxpy_pytpnotify(py::bytes clientid, py::object idata, long flag
     CLIENTID *cltid = reinterpret_cast<CLIENTID*>(PyBytes_AsString(clientid.ptr()));
 
     py::gil_scoped_release release;
+    //int rc = tpnotify(cltid, *in.pp, in.len, flags);
     int rc = tpnotify(cltid, *in.pp, in.len, flags);
     
     if (rc == -1)
@@ -304,6 +310,58 @@ exprivate void ndrxpy_pytpbroadcast(const char *lmid, const char *usrname, const
     {
         throw xatmi_exception(tperrno);
     }
+}
+
+/**
+ * @brief to Have a ptr to object
+ * 
+ */
+typedef struct 
+{
+    py::object obj;
+} ndrxpy_object_t;
+
+/**
+ * @brief Dispatch notification 
+ * 
+ * @param data 
+ * @param len 
+ * @param flags 
+ */
+exprivate void notification_callback (char *data, long len, long flags)
+{
+    xatmibuf b;
+    b.do_free_ptrs=NDRXPY_DO_DFLT;
+    b.len = len;
+    b.p=data;
+    b.pp = &b.p;
+
+    ndrx_ctx_priv_t* priv = ndrx_ctx_priv_get();
+    ndrxpy_object_t *obj_ptr = reinterpret_cast<ndrxpy_object_t *>(priv->integptr1);
+    py::gil_scoped_acquire gil;
+
+    //(*func)(ndrx_to_py(b, true));
+    obj_ptr->obj(ndrx_to_py(b, true));
+}
+
+/**
+ * Set unsol handler
+ */
+exprivate void ndrxpy_pytpsetunsol(const py::object &func)
+{
+    tpsetunsol(notification_callback);
+
+    ndrxpy_object_t *obj_ptr = new ndrxpy_object_t();
+    obj_ptr->obj = func;
+
+    ndrx_ctx_priv_t* priv = ndrx_ctx_priv_get();
+
+    if (nullptr!=priv->integptr1)
+    {
+        delete reinterpret_cast<ndrx_ctx_priv_t*>(priv->integptr1);
+    }
+
+    priv->integptr1 = reinterpret_cast<void*>(obj_ptr);
 }
 
 /**
@@ -675,6 +733,16 @@ expublic void ndrxpy_register_xatmi(py::module &m)
     "Forced disconnect from conversation", py::arg("cd") = 0);
     
 
+    //TODO: notification API.
+    m.def("tpnotify", &ndrxpy_pytpnotify, "Send unsolicited notification to the process",
+          py::arg("clientid"), py::arg("idata"), py::arg("flags") = 0);
+
+    m.def("tpbroadcast", &ndrxpy_pytpbroadcast, "Broadcast unsolicited notifications to the cluster",
+          py::arg("lmid"), py::arg("usrname"), py::arg("cltname"), py::arg("idata"), py::arg("flags") = 0);
+
+    m.def("tpsetunsol", [](const py::object &func) { ndrxpy_pytpsetunsol(func); }, "Set unsolicted message callback",
+          py::arg("func"));
+
     m.def("tpexport", &ndrxpy_pytpexport,
           "Converts a typed message buffer into an exportable, "
           "machine-independent string representation, that includes digital "
@@ -894,13 +962,6 @@ expublic void ndrxpy_register_xatmi(py::module &m)
         "Writes a message to the Endurox ATMI system central event log",
         py::arg("message"));
 
-    //TODO: notification API.
-    m.def("tpnotify", &ndrxpy_pytpnotify, "Send unsolicited notification to the process",
-          py::arg("clientid"), py::arg("idata"), py::arg("flags") = 0);
-
-    m.def("tpbroadcast", &ndrxpy_pytpbroadcast, "Broadcast unsolicited notifications to the cluster",
-          py::arg("lmid"), py::arg("usrname"), py::arg("cltname"), py::arg("idata"), py::arg("flags") = 0);
 }
 
 /* vim: set ts=4 sw=4 et smartindent: */
-
