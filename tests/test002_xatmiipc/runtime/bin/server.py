@@ -85,7 +85,7 @@ class Server:
 
     def BCASTSV(self, args):
         # may fill all python qs...
-        e.tpbroadcast("", "", "python", {"data":"HELLO WORLD BCAST"}, e.TPREGEXMATCH|e.TPNOBLOCK)
+        e.tpbroadcast("", "", "python", {"data":"HELLO WORLD BCAST"}, e.TPREGEXMATCH)
         return e.tpreturn(e.TPSUCCESS, 0, {})
 
 

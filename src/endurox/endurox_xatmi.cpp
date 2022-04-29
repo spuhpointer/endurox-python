@@ -333,8 +333,8 @@ exprivate void notification_callback (char *data, long len, long flags)
     xatmibuf b;
     b.do_free_ptrs=NDRXPY_DO_DFLT;
     b.len = len;
-    b.p=data;
-    b.pp = &b.p;
+    b.p=nullptr;//do not free the master buffer.
+    b.pp = &data;
 
     ndrx_ctx_priv_t* priv = ndrx_ctx_priv_get();
     ndrxpy_object_t *obj_ptr = reinterpret_cast<ndrxpy_object_t *>(priv->integptr1);
@@ -742,6 +742,19 @@ expublic void ndrxpy_register_xatmi(py::module &m)
 
     m.def("tpsetunsol", [](const py::object &func) { ndrxpy_pytpsetunsol(func); }, "Set unsolicted message callback",
           py::arg("func"));
+    m.def(
+        "tpchkunsol",
+        []()
+        {
+            py::gil_scoped_release release;
+
+            int ret = tpchkunsol();
+            if (EXFAIL==ret)
+            {
+                throw xatmi_exception(tperrno);
+            }
+            return ret;
+        }, "Check and process unsolicited notifications");
 
     m.def("tpexport", &ndrxpy_pytpexport,
           "Converts a typed message buffer into an exportable, "
