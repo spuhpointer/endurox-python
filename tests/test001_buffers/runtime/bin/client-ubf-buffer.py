@@ -31,8 +31,12 @@ class TestUbf(unittest.TestCase):
                     , "tcarray1":[b'\x00\x00', b'\x01\x01'] 
                     }}],
                 "T_PTR_FLD":{"data":"HELLO WORLD"},
-                "T_PTR_2_FLD":[{"data":"HELLO WORLD"}, {"data":{"T_STRING_FLD":"HELLO WORLD"}}, {"buftype":"VIEW", "subtype":"UBTESTVIEW2", "data":{"tshort1":99}}],
-                }},);
+                "T_PTR_2_FLD":[{"data":"HELLO WORLD"}
+                    , {"data":{"T_STRING_FLD":"HELLO WORLD"}}
+                    , {"buftype":"VIEW", "subtype":"UBTESTVIEW2", "data":{"tshort1":99}}
+                    , {"data":{"T_PTR_FLD":{"data":{"T_STRING_FLD":"HELLO"}}}}
+                    ]
+                }});
             self.assertEqual(tperrno, 0)
             self.assertEqual(tpurcode, 0)
             self.assertEqual(retbuf["buftype"], "UBF")
@@ -62,6 +66,8 @@ class TestUbf(unittest.TestCase):
             self.assertEqual(retbuf["data"]["T_PTR_2_FLD"][0]["buftype"], "STRING")
             self.assertEqual(retbuf["data"]["T_PTR_2_FLD"][2]["buftype"], "VIEW")
             self.assertEqual(retbuf["data"]["T_PTR_2_FLD"][2]["subtype"], "UBTESTVIEW2")
+            # PTR in PTR
+            self.assertEqual(retbuf["data"]["T_PTR_2_FLD"][3]["data"]["T_PTR_FLD"][0]["data"]["T_STRING_FLD"][0], "HELLO")
     
 if __name__ == '__main__':
     unittest.main()

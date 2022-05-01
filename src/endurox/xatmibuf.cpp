@@ -143,127 +143,6 @@ extern "C" {
 }
 
 /**
- * @brief check is buffer ubf (to do deep scan)
- * 
- * @param ptr 
- * @return true if buffer is ubf 
- */
-exprivate bool is_buffer_ubf(char *ptr)
-{
-    char type[XATMI_TYPE_LEN+1]={EXEOS};
-    char subtype[XATMI_SUBTYPE_LEN+1]={EXEOS};
-
-    if (EXFAIL==tptypes(ptr, type, subtype))
-    {
-        NDRX_LOG(log_error, "Invalid XATMI buffer %p: %s", ptr, tpstrerror(tperrno));
-        throw xatmi_exception(tperrno);
-    }
-
-    if (0==strcmp(type, "UBF"))
-    {
-        return true;
-    }
-
-    return false;
-}
-/**
- * @brief Free up UBF buffer
- * this requires list to be setup, as several ptrs might point to the same buffer
- * @param p_fb UBF buffer to process
- */
-void free_up(UBFH *p_fb, std::map<char *, char *> &freelist)
-{
-    Bnext_state_t state;
-    BFLDID bfldid=BBADFLDOCC;
-    BFLDOCC occ;
-    char *d_ptr;
-    int ret=EXSUCCEED;
-    int ftyp;
-    char **lptr;
-
-    NDRX_LOG(log_debug, "Free up buffer %p", p_fb);
-
-    ndrx_mbuf_Bnext_ptr_first(p_fb, &state);
-
-    while (EXTRUE==(ret=Bnext2(&state, p_fb, &bfldid, &occ, NULL, NULL, &d_ptr)))
-    {
-        ftyp = Bfldtype(bfldid);
-        
-        if (BFLD_PTR==ftyp)
-        {
-
-            /* resolve the VPTR */
-            lptr=(char **)d_ptr;
-            
-            NDRX_LOG(log_debug, "BFLD_PTR: Step into+free ptr=%p fldid=%d", *lptr, bfldid);
-
-            // step-in (only if buffer is UBF!)
-            if (is_buffer_ubf(*lptr))
-            {
-                free_up(reinterpret_cast<UBFH*>(*lptr), freelist);
-            }
-
-            if (nullptr!=*lptr)
-            {
-                freelist[*lptr]=*lptr;
-            }
-
-        }
-        else if (BFLD_UBF==ftyp)
-        {
-            // step-in
-            NDRX_LOG(log_debug, "BFLD_UBF: Step into ptr=%p fldid=%d", d_ptr, bfldid);
-            free_up(reinterpret_cast<UBFH*>(d_ptr), freelist);
-        }
-        else
-        {
-            /* we are done */
-            ret=EXSUCCEED;
-            break;
-        }
-    }
-
-    if (EXFAIL==ret)
-    {
-        NDRX_LOG(log_error, "Failed to Bnext2(): %s", Bstrerror(Berror));
-        throw ubf_exception(Berror);
-    }
-}
-
-/**
- * @brief recursive buffer free-up (in case if using BFLD_PTR or BFLD_UBF)
- * TODO: Only for UBF buffers!
- */
-void xatmibuf::recurs_free_fetch()
-{
-    //In case of UBF do recrsive free
-    NDRX_LOG(log_debug, "Free ptrs: %d", do_free_ptrs);
-    if (NDRXPY_DO_FREE==do_free_ptrs)
-    {
-        if (is_buffer_ubf(*pp))
-        {
-            free_up(*fbfr(), freelist);
-        }
-    }
-}
-
-/**
- * @brief Do actual free
- * but if ptr of this buffer is  
- */
-void xatmibuf::recurs_free()
-{
-   for (auto const& x : freelist)
-   {
-       /* if ptr does not point to current buffer -> we can free it up... */
-       if (p!=x.second)
-       {
-            tpfree(x.second);
-       }
-   }
-}
-
-/**
  * @brief Standard destructor
  * 
  */
@@ -271,8 +150,6 @@ xatmibuf::~xatmibuf()
 {
     if (p != nullptr)
     {
-        recurs_free_fetch();
-        recurs_free();
         tpfree(p);
     }
 }
@@ -285,9 +162,6 @@ xatmibuf::~xatmibuf()
 char *xatmibuf::release()
 {
     char *ret = p;
-
-    //Free up the embedded BFLD_PTRs buffers
-    recurs_free();
 
     //Disable destructor
     p = nullptr;

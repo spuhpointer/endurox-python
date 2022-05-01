@@ -24,6 +24,9 @@ class TestTpchkunsol(unittest.TestCase):
             while e.tpchkunsol() >0:
                 True
             time.sleep(1)
+        # consume any messages left over...
+        while e.tpchkunsol() >0:
+            True
 
     def unsol_handler1(self, data):
         if data["data"] == "HELLO WORLD BCAST":
@@ -35,9 +38,10 @@ class TestTpchkunsol(unittest.TestCase):
     def test_tpnotify(self):
         w = u.NdrxStopwatch()
 
-        e.tplog_error("YOPT");
         x = threading.Thread(target=self.thread_function, args=(1,))
         x.start()
+        # let other thread to init...
+        #time.sleep(5)
 
         while w.get_delta_sec() < u.test_duratation():
             e.tpsetunsol(self.unsol_handler1)

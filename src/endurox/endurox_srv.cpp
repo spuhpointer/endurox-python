@@ -82,9 +82,7 @@ expublic void ndrxpy_pytpreturn(int rval, long rcode, py::object data, long flag
     tsvcresult.rval = rval;
     tsvcresult.rcode = rcode;
     auto &&odata = ndrx_from_py(data);
-    odata.recurs_free_fetch();
     tpreturn(tsvcresult.rval, tsvcresult.rcode, odata.p, odata.len, 0);
-    odata.release();
     //Normal destructors apply... as running in nojump mode
 
 }
@@ -97,10 +95,7 @@ expublic void ndrxpy_pytpforward(const std::string &svc, py::object data, long f
     tsvcresult.clean = false;
     strncpy(tsvcresult.name, svc.c_str(), sizeof(tsvcresult.name));
     auto &&odata = ndrx_from_py(data);
-    //Read list of ptrs...
-    odata.recurs_free_fetch();
     tpforward(tsvcresult.name, odata.p, odata.len, 0);
-    odata.release();
 
     //Normal destructors apply... as running in nojump mode.
 }
@@ -186,13 +181,7 @@ void PY(TPSVCINFO *svcinfo)
 
         auto && func = M_dispmap[svcinfo->fname];
 
-        //fetch
-        ibuf.recurs_free_fetch();
         func(&info);
-
-        //fetch & release...
-        //As this it is auto-buf, it will be freed up...
-        ibuf.release();
 
         if (tsvcresult.clean)
         {
