@@ -709,6 +709,19 @@ expublic void ndrxpy_register_xatmi(py::module &m)
           "Routine for getting a reply from a previous request", py::arg("cd"),
           py::arg("flags") = 0);
 
+    m.def(
+    "tpcancel",
+    [](int cd)
+    {
+        py::gil_scoped_release release;
+
+        if (tpcancel(cd) == EXFAIL)
+        {
+            throw xatmi_exception(tperrno);
+        }
+    },
+    "Cancel call", py::arg("cd") = 0);
+
     m.def("tpconnect", &ndrxpy_pytpconnect, "Connect to service (conversational)",
           py::arg("svc"), py::arg("idata"), py::arg("flags") = 0);
 
