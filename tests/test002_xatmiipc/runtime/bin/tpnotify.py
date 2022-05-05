@@ -19,6 +19,8 @@ class TestTpnotify(unittest.TestCase):
             tperrno, tpurcode, retbuf = e.tpcall("NOTIFSV", { "data":{"T_STRING_FLD":"Hi Jim"}})
             self.assertEqual(tperrno, 0)
             self.assertEqual(cnt_prev+1, TestTpnotify.cnt)
+        # remove queues...
+        e.tpterm()
 
 if __name__ == '__main__':
     unittest.main()
