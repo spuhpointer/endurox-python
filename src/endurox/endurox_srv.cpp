@@ -74,11 +74,13 @@ static thread_local svcresult tsvcresult;
 
 expublic void ndrxpy_pytpreturn(int rval, long rcode, py::object data, long flags)
 {
+    /*
     if (!tsvcresult.clean)
     {
         throw std::runtime_error("tpreturn already called");
     }
     tsvcresult.clean = false;
+    */
     tsvcresult.rval = rval;
     tsvcresult.rcode = rcode;
     auto &&odata = ndrx_from_py(data);
@@ -88,11 +90,13 @@ expublic void ndrxpy_pytpreturn(int rval, long rcode, py::object data, long flag
 }
 expublic void ndrxpy_pytpforward(const std::string &svc, py::object data, long flags)
 {
+    /*
     if (!tsvcresult.clean)
     {
         throw std::runtime_error("tpreturn already called");
     }
     tsvcresult.clean = false;
+    */
     strncpy(tsvcresult.name, svc.c_str(), sizeof(tsvcresult.name));
     auto &&odata = ndrx_from_py(data);
     tpforward(tsvcresult.name, odata.p, odata.len, 0);
@@ -167,7 +171,7 @@ void tpsvrthrdone()
  */
 void PY(TPSVCINFO *svcinfo)
 {
-    tsvcresult.clean = true;
+    //tsvcresult.clean = true;
 
     try
     {
@@ -183,11 +187,13 @@ void PY(TPSVCINFO *svcinfo)
 
         func(&info);
 
+/*
         if (tsvcresult.clean)
         {
             userlog(const_cast<char *>("tpreturn() not called"));
             tpreturn(TPEXIT, 0, nullptr, 0, 0);
         }
+*/
     }
     catch (const std::exception &e)
     {
@@ -234,6 +240,50 @@ expublic void ndrxpy_pytpunadvertise(const char *svcname)
     auto it = M_dispmap.find(svcname);
     if (it != M_dispmap.end()) {
         M_dispmap.erase(it);
+    }
+
+}
+
+/**
+ * @brief Get server contexts data
+ * 
+ * @return byte array block 
+ */
+exprivate py::bytes ndrxpy_tpsrvgetctxdata(void)
+{
+    long len=0;
+    char *buf;
+
+    {
+        py::gil_scoped_release release;
+
+        if (NULL==(buf=tpsrvgetctxdata2(NULL, &len)))
+        {
+            throw xatmi_exception(tperrno);
+        }
+    }
+
+    auto ret = py::bytes(buf, len);
+
+    tpsrvfreectxdata(buf);
+
+    return ret;
+}
+
+/**
+ * @brief Restore context data in the worker thread
+ * 
+ * @param flags flags
+ */
+exprivate void ndrxpy_tpsrvsetctxdata(py::bytes ctxt, long flags)
+{
+    std::string val(PyBytes_AsString(ctxt.ptr()), PyBytes_Size(ctxt.ptr()));
+    
+    py::gil_scoped_release release;
+
+    if (EXSUCCEED!=tpsrvsetctxdata (const_cast<char *>(val.data()), flags))
+    {
+        throw xatmi_exception(tperrno);
     }
 
 }
@@ -372,6 +422,16 @@ expublic void ndrxpy_register_srv(py::module &m)
 
     m.def("tpsubscribe", &ndrxpy_pytpsubscribe, "Subscribe to event (by server)",
           py::arg("eventexpr"), py::arg("filter"), py::arg("ctl"), py::arg("flags") = 0);
+
+    //Server contexting:
+    m.def("tpsrvgetctxdata", &ndrxpy_tpsrvgetctxdata, "Get service call context data");
+    //TODO: TPNOAUTBUF flag is not relevant here, as buffers in py are basically dictionaries
+    //and we do not have direct access to underlaying buffer, thus let it restore in the 
+    //thread context always.
+    m.def("tpsrvsetctxdata", &ndrxpy_tpsrvsetctxdata, "Restore context in the workder thread",
+          py::arg("ctxt"), py::arg("flags") = 0);
+    m.def("tpcontinue", [](void)
+        { tpcontinue(); }, "Let server main thread to proceed without reply");
 
     m.def(
         "tpunadvertise", [](const char *svcname)

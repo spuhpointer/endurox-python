@@ -106,7 +106,13 @@
 			<min>1</min>
 			<max>1</max>
 			<srvid>3000</srvid>
-			<sysopt>-e ${NDRX_ULOG}/server.log -r -- -k3 -i1</sysopt>
+			<sysopt>-e ${NDRX_ULOG}/server.log -r -- </sysopt>
+		</server>
+		<server name="serverctx.py">
+			<min>1</min>
+			<max>1</max>
+			<srvid>3100</srvid>
+			<sysopt>-e ${NDRX_ULOG}/serverctx.log -r --</sysopt>
 		</server>
 	</servers>
 </endurox>
