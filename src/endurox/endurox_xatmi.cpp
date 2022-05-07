@@ -990,9 +990,13 @@ expublic void ndrxpy_register_xatmi(py::module &m)
 
     m.def(
         "tpencrypt",
-        [](py::bytes input)
+        [](py::bytes input, long flags)
         {
-            
+            if (flags & TPEX_STRING)
+            {
+                throw std::invalid_argument("TPEX_STRING flag may not be used in bytes input mode");
+            }
+
             std::string val(PyBytes_AsString(input.ptr()), PyBytes_Size(input.ptr()));
             /* get the twice the output buffer... */
             tempbuf tmp(val.size() + 20 );
@@ -1002,7 +1006,7 @@ expublic void ndrxpy_register_xatmi(py::module &m)
             
             
                 if (EXSUCCEED!=tpencrypt(const_cast<char *>(val.data()),
-                                    val.size(), tmp.buf, &tmp.size, 0))
+                                    val.size(), tmp.buf, &tmp.size, flags))
                 {
                     throw xatmi_exception(tperrno);
                 }
@@ -1011,23 +1015,60 @@ expublic void ndrxpy_register_xatmi(py::module &m)
             return py::bytes(tmp.buf, tmp.size);
         },
         "Encrypt data block",
-        py::arg("input"));
+        py::arg("input"), py::arg("flags")=0);
+
+    m.def(
+        "tpencrypt",
+        [](py::str input, long flags)
+        {
+            py::bytes b = py::reinterpret_steal<py::bytes>(
+                PyUnicode_EncodeLocale(input.ptr(), "surrogateescape"));
+
+            /* get the twice the output buffer... */
+
+            std::string val = "";
+            char *ptr_val =NULL;
+            long len;
+            val.assign(PyBytes_AsString(b.ptr()), PyBytes_Size(b.ptr()));
+            ptr_val = const_cast<char *>(val.data());
+            len = val.size();
+
+            tempbuf tmp(((len + 20 +2)/3)*4 + 1);
+
+            {
+                py::gil_scoped_release release;
+            
+                if (EXSUCCEED!=tpencrypt(ptr_val, len, tmp.buf, &tmp.size, flags|TPEX_STRING))
+                {
+                    throw xatmi_exception(tperrno);
+                }
+            }
+
+            return py::str(tmp.buf);
+        },
+        "Encrypt data block",
+        py::arg("input"), py::arg("flags")=0);
 
     m.def(
         "tpdecrypt",
-        [](py::bytes input)
+        [](py::bytes input, long flags)
         {
+            if (flags & TPEX_STRING)
+            {
+                throw std::invalid_argument("TPEX_STRING flag may not be used in bytes input mode");
+            }
+
             std::string val(PyBytes_AsString(input.ptr()), PyBytes_Size(input.ptr()));
 
             /* get the twice the output buffer... 
              * should be larger than encrypte
              */
-            tempbuf tmp(val.size());
+            tempbuf tmp(val.size()+1);
             {
                 py::gil_scoped_release release;
             
                 if (EXSUCCEED!=tpdecrypt(const_cast<char *>(val.data()),
-                                    val.size(), tmp.buf, &tmp.size, 0))
+                                    val.size(), tmp.buf, &tmp.size, flags))
                 {
                     throw xatmi_exception(tperrno);
                 }
@@ -1035,7 +1076,37 @@ expublic void ndrxpy_register_xatmi(py::module &m)
             return py::bytes(tmp.buf, tmp.size);
         },
         "Encrypt data block",
-        py::arg("input"));
-}
+        py::arg("input"), py::arg("flags")=0);
+
+    m.def(
+        "tpdecrypt",
+        [](py::str input, long flags)
+        {
+            py::bytes b = py::reinterpret_steal<py::bytes>(
+                PyUnicode_EncodeLocale(input.ptr(), "surrogateescape"));
+
+            std::string val = "";
+            char *ptr_val =NULL;
+            long len;
+            val.assign(PyBytes_AsString(b.ptr()), PyBytes_Size(b.ptr()));
+            ptr_val = const_cast<char *>(val.data());
+            len = val.size();
+
+            tempbuf tmp(len+1);
+
+            {
+                py::gil_scoped_release release;
+            
+                if (EXSUCCEED!=tpdecrypt(ptr_val, len, tmp.buf, &tmp.size, flags|TPEX_STRING))
+                {
+                    throw xatmi_exception(tperrno);
+                }
+            }
+
+            return py::str(tmp.buf);
+        },
+        "Decrypt data block",
+        py::arg("input"), py::arg("flags")=0);
+    }
 
 /* vim: set ts=4 sw=4 et smartindent: */
