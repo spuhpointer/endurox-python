@@ -256,6 +256,7 @@ PYBIND11_MODULE(endurox, m)
             return ret;
         },
         "Get logger info", py::arg("lev"), py::arg("flags"));
+    //tpencrypt+tpdecrypt.
 
     //Conversational
 

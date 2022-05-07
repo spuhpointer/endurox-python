@@ -135,9 +135,11 @@ class tempbuf
 public:
 
     char *buf;
+    long size;
     tempbuf(long size)
     {
         buf = reinterpret_cast<char *>(NDRX_FPMALLOC(size, 0));
+        this->size = size;
 
         if (NULL==buf)
         {

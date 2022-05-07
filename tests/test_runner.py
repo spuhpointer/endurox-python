@@ -17,5 +17,9 @@ class MainTest(unittest.TestCase):
         testdir=os.path.join(os.path.dirname(os.path.abspath(__file__)), 'test003_tmq');
         subprocess.check_call(os.path.join(testdir, 'run.sh'), cwd=testdir)
 
+    def test004_util(self):
+        testdir=os.path.join(os.path.dirname(os.path.abspath(__file__)), 'test004_util');
+        subprocess.check_call(os.path.join(testdir, 'run.sh'), cwd=testdir)
+
 if __name__ == '__main__':
     unittest.main()

@@ -988,6 +988,54 @@ expublic void ndrxpy_register_xatmi(py::module &m)
         "Writes a message to the Endurox ATMI system central event log",
         py::arg("message"));
 
+    m.def(
+        "tpencrypt",
+        [](py::bytes input)
+        {
+            
+            std::string val(PyBytes_AsString(input.ptr()), PyBytes_Size(input.ptr()));
+            /* get the twice the output buffer... */
+            tempbuf tmp(val.size() + 20 );
+
+            {
+                py::gil_scoped_release release;
+            
+            
+                if (EXSUCCEED!=tpencrypt(const_cast<char *>(val.data()),
+                                    val.size(), tmp.buf, &tmp.size, 0))
+                {
+                    throw xatmi_exception(tperrno);
+                }
+            }
+
+            return py::bytes(tmp.buf, tmp.size);
+        },
+        "Encrypt data block",
+        py::arg("input"));
+
+    m.def(
+        "tpdecrypt",
+        [](py::bytes input)
+        {
+            std::string val(PyBytes_AsString(input.ptr()), PyBytes_Size(input.ptr()));
+
+            /* get the twice the output buffer... 
+             * should be larger than encrypte
+             */
+            tempbuf tmp(val.size());
+            {
+                py::gil_scoped_release release;
+            
+                if (EXSUCCEED!=tpdecrypt(const_cast<char *>(val.data()),
+                                    val.size(), tmp.buf, &tmp.size, 0))
+                {
+                    throw xatmi_exception(tperrno);
+                }
+            }
+            return py::bytes(tmp.buf, tmp.size);
+        },
+        "Encrypt data block",
+        py::arg("input"));
 }
 
 /* vim: set ts=4 sw=4 et smartindent: */
