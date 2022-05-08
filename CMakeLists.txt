@@ -24,6 +24,8 @@ SET(SOURCES
 	"${SOURCE_DIR}/bufconv.cpp"
 	"${SOURCE_DIR}/bufconv_view.cpp"
 	"${SOURCE_DIR}/bufconv_ubf.cpp"
+	"${SOURCE_DIR}/tpext.cpp"
+	"${SOURCE_DIR}/tplog.cpp"
    )
 
 #SET(TEST_DIR "tests")
