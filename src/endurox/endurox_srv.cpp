@@ -486,6 +486,11 @@ expublic void ndrxpy_register_srv(py::module &m)
             RFU, shall be set to **0**.
         )pbdoc",
           py::arg("svc"), py::arg("data"), py::arg("flags") = 0);    
+
+    m.def(
+        "tpexit", [](void)
+        { tpexit(); },
+        "Restart after return or terminate immediatally (if running from other thread than main)");
 }
 
 
