@@ -66,13 +66,12 @@
 /** current handle for b4poll callback */
 ndrxpy_object_t * M_b4pollcb_handler = nullptr;
 
-/** protect against concurrent changes */
-std::mutex M_handler_mutex;
+/** periodic server callback handler */
+ndrxpy_object_t * M_addperiodcb_handler = nullptr;
 
 /*---------------------------Prototypes---------------------------------*/
 
 namespace py = pybind11;
-
 
 /**
  * @brief Dispatch b4 poll callback
@@ -81,8 +80,10 @@ exprivate int ndrxpy_b4pollcb_callback(void)
 {
     //Get the gil...
     py::gil_scoped_acquire acquire;
+
     py::object ret = M_b4pollcb_handler->obj();
     return ret.cast<int>();
+
 }
 
 /**
@@ -92,8 +93,6 @@ exprivate int ndrxpy_b4pollcb_callback(void)
  */
 exprivate void ndrxpy_tpext_addb4pollcb (const py::object &func)
 {
-    const std::lock_guard<std::mutex> lock(M_handler_mutex);
-
     //Allocate the object
     if (nullptr!=M_b4pollcb_handler)
     {
@@ -110,6 +109,41 @@ exprivate void ndrxpy_tpext_addb4pollcb (const py::object &func)
     }
 }
 
+
+/**
+ * @brief Periodic callback dispatch
+ */
+exprivate int ndrxpy_addperiodcb_callback(void)
+{
+    //Get the gil...
+    py::gil_scoped_acquire acquire;
+    py::object ret = M_addperiodcb_handler->obj();
+    return ret.cast<int>();
+}
+
+/**
+ * @brief register periodic callback handler
+ * @param secs number of seconds for callback interval
+ * @param func callback function
+ */
+exprivate void ndrxpy_tpext_addperiodcb (int secs, const py::object &func)
+{
+    //Allocate the object
+    if (nullptr!=M_addperiodcb_handler)
+    {
+        delete M_addperiodcb_handler;
+        M_addperiodcb_handler = nullptr;
+    }
+
+    M_addperiodcb_handler = new ndrxpy_object_t();
+    M_addperiodcb_handler->obj = func;
+
+    if (EXSUCCEED!=tpext_addperiodcb(secs, ndrxpy_addperiodcb_callback))
+    {
+        throw xatmi_exception(tperrno);
+    }
+}
+
 /**
  * @brief Register XATMI server extensions
  * 
@@ -120,22 +154,45 @@ expublic void ndrxpy_register_tpext(py::module &m)
     m.def(
         "tpext_addb4pollcb", [](const py::object &func)
         { ndrxpy_tpext_addb4pollcb(func); },
-        "Register callback handler for server going ", py::arg("func"));
+        "Register callback handler for server going. Work only from server thread. "
+        "API is not thread safe. For MT servers only use in tpsvrinit().", py::arg("func"));
 
     m.def(
         "tpext_delb4pollcb", [](void)
-        {     
+        {   
             if (EXSUCCEED!=tpext_delb4pollcb())
             {
                 throw xatmi_exception(tperrno);
-            } 
+            }
+
+            //Reset handler...
+            delete M_b4pollcb_handler;
+            M_b4pollcb_handler = nullptr;
         },
         "Remove before-poll callback");
 
+     m.def(
+        "tpext_addperiodcb", [](int secs, const py::object &func)
+        { ndrxpy_tpext_addperiodcb(secs, func); },
+        "Register periodic callback handler. API is not thread safe. For MT servers only use in tpsvrinit().", 
+        py::arg("secs"), py::arg("func"));
+
+    m.def(
+        "tpext_delperiodcb", [](void)
+        {   
+            if (EXSUCCEED!=tpext_delperiodcb())
+            {
+                throw xatmi_exception(tperrno);
+            }
+
+            //Reset handler...
+            delete M_addperiodcb_handler;
+            M_addperiodcb_handler = nullptr;
+        },
+        "Remove before-poll callback. API is not thread safe. For MT servers only use in tpsvrinit().");
+
 /*
-tpext_addperiodcb
 tpext_addpollerfd
-tpext_delperiodcb
 tpext_delpollerfd
 */
     //TODO
