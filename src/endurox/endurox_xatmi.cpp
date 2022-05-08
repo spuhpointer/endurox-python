@@ -313,15 +313,6 @@ exprivate void ndrxpy_pytpbroadcast(const char *lmid, const char *usrname, const
 }
 
 /**
- * @brief to Have a ptr to object
- * 
- */
-typedef struct 
-{
-    py::object obj;
-} ndrxpy_object_t;
-
-/**
  * @brief Dispatch notification 
  * 
  * @param data 
@@ -340,7 +331,6 @@ exprivate void notification_callback (char *data, long len, long flags)
     ndrxpy_object_t *obj_ptr = reinterpret_cast<ndrxpy_object_t *>(priv->integptr1);
     py::gil_scoped_acquire gil;
 
-    //(*func)(ndrx_to_py(b, true));
     obj_ptr->obj(ndrx_to_py(b, true));
 }
 

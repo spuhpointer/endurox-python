@@ -186,6 +186,7 @@ PYBIND11_MODULE(endurox, m)
     ndrxpy_register_ubf(m);
     ndrxpy_register_xatmi(m);
     ndrxpy_register_srv(m);
+    ndrxpy_register_tpext(m);
 
     //Logging functions:
     m.def(
@@ -437,6 +438,9 @@ PYBIND11_MODULE(endurox, m)
     m.attr("log_info") = py::int_(log_info);
     m.attr("log_debug") = py::int_(log_debug);
     m.attr("log_dump") = py::int_(log_dump);
+
+    m.attr("EXSUCCEED") = py::int_(EXSUCCEED);
+    m.attr("EXFAIL") = py::int_(EXFAIL);
 
     m.doc() =
         R"pbdoc(

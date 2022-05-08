@@ -274,6 +274,19 @@ struct ndrxpy_tpqctl_t:tpqctl_t
 
 typedef struct ndrxpy_tpqctl_t NDRXPY_TPQCTL;
 
+
+/**
+ * @brief to Have a ptr to object
+ *
+ */
+typedef struct
+{
+    py::object obj;
+
+    /* TODO: Init? */
+
+} ndrxpy_object_t;
+
 /*---------------------------Globals------------------------------------*/
 /*---------------------------Statics------------------------------------*/
 /*---------------------------Prototypes---------------------------------*/
@@ -316,7 +329,7 @@ extern long ndrxpy_pytpsubscribe(char *eventexpr, char *filter, TPEVCTL *ctl, lo
 extern void ndrxpy_register_xatmi(py::module &m);
 extern void ndrxpy_register_ubf(py::module &m);
 extern void ndrxpy_register_srv(py::module &m);
-
+extern void ndrxpy_register_tpext(py::module &m);
 #endif /* NDRX_PYMOD.H */
 
 /* vim: set ts=4 sw=4 et smartindent: */
