@@ -114,5 +114,11 @@
 			<srvid>3300</srvid>
 			<sysopt>-e ${NDRX_ULOG}/periodcbsv.log -r -- </sysopt>
 		</server>
+		<server name="pollerfd.py">
+			<min>1</min>
+			<max>1</max>
+			<srvid>3400</srvid>
+			<sysopt>-e ${NDRX_ULOG}/pollerfd.log -r -- </sysopt>
+		</server>
 	</servers>
 </endurox>

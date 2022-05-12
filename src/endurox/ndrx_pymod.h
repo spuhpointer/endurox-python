@@ -282,8 +282,9 @@ typedef struct ndrxpy_tpqctl_t NDRXPY_TPQCTL;
 typedef struct
 {
     py::object obj;
-
-    /* TODO: Init? */
+    
+    /* secondary object */
+    py::object obj2;
 
 } ndrxpy_object_t;
 

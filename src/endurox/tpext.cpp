@@ -69,6 +69,9 @@ ndrxpy_object_t * M_b4pollcb_handler = nullptr;
 /** periodic server callback handler */
 ndrxpy_object_t * M_addperiodcb_handler = nullptr;
 
+/** filedescriptor map to py callbacks */
+std::map<int, ndrxpy_object_t*> M_fdmap {};
+
 /*---------------------------Prototypes---------------------------------*/
 
 namespace py = pybind11;
@@ -145,6 +148,63 @@ exprivate void ndrxpy_tpext_addperiodcb (int secs, const py::object &func)
 }
 
 /**
+ * @brief pollevent callback
+ * 
+ * @param fd monitored file descriptor
+ * @param events events monitored
+ * @param ptr1 not used
+ * @return -1 on failure, 0 ok 
+ */
+exprivate int ndrxpy_pollevent_cb(int fd, uint32_t events, void *ptr1)
+{
+    py::gil_scoped_acquire acquire;
+    py::object ret=M_fdmap[fd]->obj(fd, events, M_fdmap[fd]->obj2);
+    return ret.cast<int>();
+}
+
+/**
+ * @brief Register extensions callback
+ * 
+ * @param fd file descriptor
+ * @param events poll events
+ * @param ptr1 object to pass back
+ * @param func callback func
+ */
+exprivate void ndrxpy_tpext_addpollerfd (int fd, uint32_t events, const py::object ptr1, const py::object &func)
+{
+    ndrxpy_object_t * obj = new ndrxpy_object_t();
+
+    obj->obj = func;
+    obj->obj2 = ptr1;
+
+    if (EXSUCCEED!=tpext_addpollerfd(fd, events, NULL, ndrxpy_pollevent_cb))
+    {
+        throw xatmi_exception(tperrno);
+    }
+
+    M_fdmap[fd] = obj;
+}
+
+/**
+ * @brief remove fd from polling
+ * 
+ * @param fd file descriptor
+ */
+exprivate void ndrxpy_tpext_delpollerfd(int fd)
+{
+    auto it = M_fdmap.find(fd);
+    if (it != M_fdmap.end()) {
+        delete M_fdmap[fd];
+        M_fdmap.erase(it);
+    }
+
+    if (EXSUCCEED!=tpext_delpollerfd(fd))
+    {
+        throw xatmi_exception(tperrno);
+    }
+}
+
+/**
  * @brief Register XATMI server extensions
  * 
  * @param m Pybind11 module handle
@@ -191,12 +251,18 @@ expublic void ndrxpy_register_tpext(py::module &m)
         },
         "Remove before-poll callback. API is not thread safe. For MT servers only use in tpsvrinit().");
 
-/*
-tpext_addpollerfd
-tpext_delpollerfd
-*/
-    //TODO
+     m.def(
+        "tpext_addpollerfd", [](int fd, uint32_t events, const py::object ptr1, const py::object &func)
+        { ndrxpy_tpext_addpollerfd(fd, events, ptr1, func); },
+        "Add file descriptor to xatmi server polling", 
+        py::arg("fd"), py::arg("events"), py::arg("ptr1"), py::arg("func"));
+
+
+     m.def(
+        "tpext_delpollerfd", [](int fd)
+        { ndrxpy_tpext_delpollerfd(fd); },
+        "Delete file descriptor from XATMI poller", 
+        py::arg("fd"));
 }
 
 /* vim: set ts=4 sw=4 et smartindent: */
-
