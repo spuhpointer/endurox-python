@@ -103,7 +103,7 @@ expublic py::object ndrxpy_pytpimport(const std::string istr, long flags)
         throw xatmi_exception(tperrno);
     }
 
-    return ndrx_to_py(obuf, true);
+    return ndrx_to_py(obuf);
 }
 
 /**
@@ -157,7 +157,7 @@ expublic pytpreply ndrxpy_pytpcall(const char *svc, py::object idata, long flags
             }
         }
     }
-    return pytpreply(tperrno_saved, tpurcode, ndrx_to_py(out, true));
+    return pytpreply(tperrno_saved, tpurcode, ndrx_to_py(out));
 }
 
 /**
@@ -230,7 +230,7 @@ expublic std::pair<NDRXPY_TPQCTL, py::object> ndrx_pytpdequeue(const char *qspac
 
     ctl->convert_from_base();
     
-    return std::make_pair(*ctl, ndrx_to_py(out, true));
+    return std::make_pair(*ctl, ndrx_to_py(out));
 }
 
 /**
@@ -322,7 +322,6 @@ exprivate void ndrxpy_pytpbroadcast(const char *lmid, const char *usrname, const
 exprivate void notification_callback (char *data, long len, long flags)
 {
     xatmibuf b;
-    b.do_free_ptrs=NDRXPY_DO_DFLT;
     b.len = len;
     b.p=nullptr;//do not free the master buffer.
     b.pp = &data;
@@ -331,7 +330,7 @@ exprivate void notification_callback (char *data, long len, long flags)
     ndrxpy_object_t *obj_ptr = reinterpret_cast<ndrxpy_object_t *>(priv->integptr1);
     py::gil_scoped_acquire gil;
 
-    obj_ptr->obj(ndrx_to_py(b, true));
+    obj_ptr->obj(ndrx_to_py(b));
 }
 
 /**
@@ -433,7 +432,7 @@ expublic pytprecvret ndrxpy_pytprecv(int cd, long flags)
         }
     }
 
-    return pytprecvret(tperrno_saved, revent, tpurcode, ndrx_to_py(out, true));
+    return pytprecvret(tperrno_saved, revent, tpurcode, ndrx_to_py(out));
 }
 
 /**
@@ -459,7 +458,7 @@ expublic pytpreplycd ndrxpy_pytpgetrply(int cd, long flags)
             }
         }
     }
-    return pytpreplycd(tperrno_saved, tpurcode, ndrx_to_py(out, true), cd);
+    return pytpreplycd(tperrno_saved, tpurcode, ndrx_to_py(out), cd);
 }
 
 
@@ -486,7 +485,7 @@ expublic pytpreply ndrxpy_pytpadmcall(py::object idata, long flags)
             }
         }
     }
-    return pytpreply(tperrno_saved, 0, ndrx_to_py(out, true));
+    return pytpreply(tperrno_saved, 0, ndrx_to_py(out));
 }
 
 /**

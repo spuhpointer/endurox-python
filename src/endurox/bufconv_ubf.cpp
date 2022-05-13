@@ -195,7 +195,7 @@ expublic py::object ndrxpy_to_py_ubf(UBFH *fbfr, BFLDLEN buflen = 0)
             /* process stuff recursively + free up leave buffers,
              * as we are not using them any more
              */
-            val.append(ndrx_to_py(ptrbuf, false));
+            val.append(ndrx_to_py(ptrbuf));
         }
         break;
         default:
@@ -355,9 +355,6 @@ static void from_py1_ubf(xatmibuf &buf, BFLDID fieldid, BFLDOCC oc,
                 throw std::invalid_argument(tmp);
             }
             xatmibuf tmp = ndrx_from_py(obj.cast<py::object>());
-
-            //Master buffer will perform 
-            tmp.do_free_ptrs=NDRXPY_DO_NEVERFREE;
             
             buf.mutate([&](UBFH *fbfr)
                     { return Bchg(fbfr, fieldid, oc, reinterpret_cast<char *>(tmp.pp), 0); });
@@ -383,9 +380,6 @@ expublic void ndrxpy_from_py_ubf(py::dict obj, xatmibuf &b)
 {
     b.reinit("UBF", nullptr, 1024);
     xatmibuf f;
-
-    //this is temporary buffer.
-    f.do_free_ptrs=NDRXPY_DO_NEVERFREE;
 
     for (auto it : obj)
     {
@@ -553,7 +547,7 @@ expublic void ndrxpy_register_ubf(py::module &m)
 
             obuf.mutate([&](UBFH *fbfr)
                         { return Bextread(fbfr, fiop.get()); });
-            return ndrx_to_py(obuf, true);
+            return ndrx_to_py(obuf);
         },
         "Builds fielded buffer from printed format", py::arg("iop"));
 

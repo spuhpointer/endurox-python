@@ -177,7 +177,7 @@ void PY(TPSVCINFO *svcinfo)
     {
         py::gil_scoped_acquire acquire;
         auto ibuf=xatmibuf(svcinfo);
-        auto idata = ndrx_to_py(ibuf, true);
+        auto idata = ndrx_to_py(ibuf);
 
         pytpsvcinfo info(svcinfo);
 

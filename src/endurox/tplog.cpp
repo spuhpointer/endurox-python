@@ -61,8 +61,180 @@ namespace py = pybind11;
  */
 expublic void ndrxpy_register_tplog(py::module &m)
 {
+    //Logging functions:
+    m.def(
+        "tplog_debug",
+        [](const char *message)
+        {
+            tplog(log_debug, const_cast<char *>(message));
+        },
+        "Print debug log message", py::arg("message"));
 
-    //TODO
+    m.def(
+        "tplog_info",
+        [](const char *message)
+        {
+            tplog(log_info, const_cast<char *>(message));
+        },
+        "Print debug log message", py::arg("message"));
+
+    m.def(
+        "tplog_warn",
+        [](const char *message)
+        {
+            tplog(log_error, const_cast<char *>(message));
+        },
+        "Print warning log message", py::arg("message"));
+
+    m.def(
+        "tplog_error",
+        [](const char *message)
+        {
+            tplog(log_error, const_cast<char *>(message));
+        },
+        "Print error log message", py::arg("message"));
+
+    m.def(
+        "tplog_always",
+        [](const char *message)
+        {
+            tplog(log_error, const_cast<char *>(message));
+        },
+        "Print fatal log message", py::arg("message"));
+
+    m.def(
+        "tplog",
+        [](int lev, const char *message)
+        {
+            tplog(lev, const_cast<char *>(message));
+        },
+        "Print log message with specified level", py::arg("lev"), py::arg("message"));
+
+    m.def(
+        "tplogconfig",
+        [](int logger, int lev, const char *debug_string, const char *module, const char *new_file)
+        {
+            if (EXSUCCEED!=tplogconfig(logger, lev, const_cast<char *>(debug_string), 
+                const_cast<char *>(module), const_cast<char *>(new_file)))
+            {
+                throw xatmi_exception(tperrno);
+            }
+        },
+        "Configure logger", py::arg("logger"), py::arg("lev"), 
+        py::arg("debug_string"), py::arg("module"), py::arg("new_file"));
+
+    m.def(
+        "tplogqinfo",
+        [](int lev, long flags)
+        {
+            long ret=tplogqinfo(lev,flags);
+            if (EXFAIL==ret)
+            {
+                throw xatmi_exception(tperrno); 
+            }
+
+            return ret;
+        },
+        "Get logger info", py::arg("lev"), py::arg("flags"));
+
+    m.def(
+        "tplogsetreqfile",
+        [](py::object data, std::string filename, std::string filesvc)
+        {
+
+            auto in = ndrx_from_py(data);
+
+            if (EXFAIL==tplogsetreqfile(in.pp, const_cast<char *>(filename.c_str()), 
+                const_cast<char *>(filesvc.c_str())))
+            {
+                // In case if buffer changed..
+                in.p=*in.pp;
+                throw xatmi_exception(tperrno);   
+            }
+            // In case if buffer changed..
+            in.p=*in.pp;
+        },
+        "Redirect logger to request file extracted from buffer, filename or file name service", 
+            py::arg("data"), py::arg("filename")="", py::arg("filesvc")="");
+
+    m.def(
+        "tplogsetreqfile_direct",
+        [](std::string filename)
+        {
+            tplogsetreqfile_direct(const_cast<char *>(filename.c_str()));
+        },
+        "Set request log file from filename only", 
+            py::arg("filename")="");
+
+    m.def(
+        "tploggetbufreqfile",
+        [](py::object data)
+        {
+            char filename[PATH_MAX+1];
+            auto in = ndrx_from_py(data);
+            if (EXSUCCEED!=tploggetbufreqfile(*in.pp, filename, sizeof(filename)))
+            {
+                throw xatmi_exception(tperrno); 
+            }
+            return py::str(filename);
+        },
+        "Get request file name from UBF buffer");
+
+     m.def(
+        "tploggetreqfile",
+        [](void)
+        {
+            char filename[PATH_MAX+1]="";
+            tploggetreqfile(filename, sizeof(filename));
+            return py::str(filename);
+        },
+        "Get current request log file, returns empty if one is not set");
+
+     m.def(
+        "tplogdelbufreqfile",
+        [](py::object data)
+        {
+           auto in = ndrx_from_py(data);
+
+           if (EXSUCCEED!=tplogdelbufreqfile(*in.pp))
+           {
+                throw xatmi_exception(tperrno);
+           }
+
+            return ndrx_to_py(in);
+        },
+        "Get current request log file, returns empty if one is not set");
+
+     m.def(
+        "tplogclosereqfile",
+        [](void)
+        {
+           tplogclosereqfile();
+        },
+        "Close request logging file (if one is currenlty open)");
+
+     m.def(
+        "tplogclosethread",
+        [](void)
+        {
+           tplogclosethread();
+        },
+        "Close tread log file");
+
+        /*
+
+TODO:
+
+tplogdump.3
+tplogdumpdiff.3
+tplogfpget.3
+tplogfplock.3
+tplogfpunlock.3
+
+tplogprintubf.3
+
+*/
+
 }
 
 

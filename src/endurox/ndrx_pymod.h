@@ -111,8 +111,6 @@ public:
     UBFH **fbfr();
     char **pp;
 
-    int do_free_ptrs;
-
     /**
      * @brief This is used to release the buffer
      *  in case if processing embedded views, this is set nullptr,
@@ -295,7 +293,7 @@ typedef struct
 extern xao_svc_ctx *xao_svc_ctx_ptr;
 
 extern xatmibuf ndrx_from_py(py::object obj);
-extern py::object ndrx_to_py(xatmibuf &buf, bool is_master);
+extern py::object ndrx_to_py(xatmibuf &buf);
 
 //Buffer conversion support:
 extern void ndrxpy_from_py_view(py::dict obj, xatmibuf &b, const char *view);
@@ -331,6 +329,7 @@ extern void ndrxpy_register_xatmi(py::module &m);
 extern void ndrxpy_register_ubf(py::module &m);
 extern void ndrxpy_register_srv(py::module &m);
 extern void ndrxpy_register_tpext(py::module &m);
+extern void ndrxpy_register_tplog(py::module &m);
 #endif /* NDRX_PYMOD.H */
 
 /* vim: set ts=4 sw=4 et smartindent: */

@@ -66,10 +66,10 @@
 namespace py = pybind11;
 
 
-xatmibuf::xatmibuf() : pp(&p), len(0), p(nullptr), do_free_ptrs(NDRXPY_DO_DFLT) {}
+xatmibuf::xatmibuf() : pp(&p), len(0), p(nullptr) {}
 
 xatmibuf::xatmibuf(TPSVCINFO *svcinfo)
-    : pp(&p), len(svcinfo->len), p(svcinfo->data), do_free_ptrs(NDRXPY_DO_DFLT) {}
+    : pp(&p), len(svcinfo->len), p(svcinfo->data) {}
 
 /**
  * @brief Sub-type based allocation
@@ -77,12 +77,12 @@ xatmibuf::xatmibuf(TPSVCINFO *svcinfo)
  * @param type 
  * @param subtype 
  */
-xatmibuf::xatmibuf(const char *type, const char *subtype) : pp(&p), len(len), p(nullptr), do_free_ptrs(NDRXPY_DO_DFLT)
+xatmibuf::xatmibuf(const char *type, const char *subtype) : pp(&p), len(len), p(nullptr)
 {
     reinit(type, subtype, 1024);
 }
 
-xatmibuf::xatmibuf(const char *type, long len) : pp(&p), len(len), p(nullptr), do_free_ptrs(NDRXPY_DO_DFLT)
+xatmibuf::xatmibuf(const char *type, long len) : pp(&p), len(len), p(nullptr)
 {
     reinit(type, nullptr, len);
 }
@@ -107,13 +107,6 @@ void xatmibuf::reinit(const char *type, const char *subtype, long len_)
         {
             NDRX_LOG(log_error, "Failed to realloc: %s", tpstrerror(tperrno));
             throw xatmi_exception(tperrno);
-        }
-
-        //Never free?
-        if (0==strcmp(type, "UBF") &&
-            NDRXPY_DO_DFLT==do_free_ptrs)
-        {
-            do_free_ptrs=NDRXPY_DO_FREE;
         }
     }
     else
@@ -198,7 +191,6 @@ void xatmibuf::swap(xatmibuf &other) noexcept
 {
     std::swap(p, other.p);
     std::swap(len, other.len);
-    std::swap(do_free_ptrs, other.do_free_ptrs);
 
     //In case if using differt pp
     if (&other.p!=other.pp)

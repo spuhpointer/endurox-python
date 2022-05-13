@@ -71,7 +71,7 @@ namespace py = pybind11;
  * @param is_master is master buffer (from xatmi?)
  * @return python object (dict)
  */
-expublic py::object ndrx_to_py(xatmibuf &buf, bool is_master)
+expublic py::object ndrx_to_py(xatmibuf &buf)
 {
     char type[8]={EXEOS};
     char subtype[16]={EXEOS};
@@ -109,12 +109,6 @@ expublic py::object ndrx_to_py(xatmibuf &buf, bool is_master)
     else if (strcmp(type, "UBF") == 0)
     {
         result["data"]=ndrxpy_to_py_ubf(*buf.fbfr(), 0);
-
-        //Free up as master, recursive
-        if (is_master)
-        {
-            buf.do_free_ptrs=NDRXPY_DO_FREE;
-        }
     }
     else if (strcmp(type, "VIEW") == 0)
     {
