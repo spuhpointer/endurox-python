@@ -61,6 +61,12 @@ namespace py = pybind11;
  */
 expublic void ndrxpy_register_tplog(py::module &m)
 {
+
+    //Debug handle
+    py::class_<pyndrxdebugptr>(m, "NdrxDebugHandle")
+        //this is buffer for pointer...
+        .def_readonly("ptr", &pyndrxdebugptr::ptr);
+
     //Logging functions:
     m.def(
         "tplog_debug",
@@ -256,7 +262,7 @@ expublic void ndrxpy_register_tplog(py::module &m)
         "tplogfplock",
         [](int lev, long flags)
         {
-            return tplogfplock(lev, flags);
+            return pyndrxdebugptr(tplogfplock(lev, flags));
         },
         "Lock the file pointer / fileno"
         ,
@@ -264,20 +270,28 @@ expublic void ndrxpy_register_tplog(py::module &m)
 
      m.def(
         "tplogfpget",
-        [](ndrx_debug_t *dbg, long flags)
+        [](pyndrxdebugptr dbg, long flags)
         {
-            return fileno(tplogfpget(dbg, flags));
+            ndrx_debug_t *ptr = reinterpret_cast<ndrx_debug_t *>(dbg.ptr);
+            return fileno(tplogfpget(ptr, flags));
         },
         "Get file descriptor for Python."
         ,
         py::arg("dbg"), py::arg("flags")=0);
 
+     m.def(
+        "tplogfpunlock",
+        [](pyndrxdebugptr dbg)
+        {
+            ndrx_debug_t *ptr = reinterpret_cast<ndrx_debug_t *>(dbg.ptr);
+            tplogfpunlock(ptr);
+        },
+        "Unlock the debug handle"
+        ,
+        py::arg("dbg"));
+
         /*
 
-TODO:
-tplogfpget.3
-tplogfplock.3
-tplogfpunlock.3
 tplogprintubf.3
 */
 

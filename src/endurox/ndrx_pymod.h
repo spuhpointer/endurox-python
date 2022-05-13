@@ -286,6 +286,19 @@ typedef struct
 
 } ndrxpy_object_t;
 
+
+/**
+ * @brief Enduro/X debug handle
+ */
+struct pyndrxdebugptr
+{
+    pyndrxdebugptr(ndrx_debug_t * dbg)
+    {
+        ptr = reinterpret_cast<ndrx_longptr_t>(dbg);
+    }
+    ndrx_longptr_t ptr;
+};
+
 /*---------------------------Globals------------------------------------*/
 /*---------------------------Statics------------------------------------*/
 /*---------------------------Prototypes---------------------------------*/
