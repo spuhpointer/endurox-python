@@ -178,7 +178,8 @@ expublic void ndrxpy_register_tplog(py::module &m)
             }
             return py::str(filename);
         },
-        "Get request file name from UBF buffer");
+        "Get request file name from UBF buffer",
+        py::arg("data"));
 
      m.def(
         "tploggetreqfile",
@@ -203,7 +204,8 @@ expublic void ndrxpy_register_tplog(py::module &m)
 
             return ndrx_to_py(in);
         },
-        "Get current request log file, returns empty if one is not set");
+        "Get current request log file, returns empty if one is not set",
+        py::arg("data"));
 
      m.def(
         "tplogclosereqfile",
@@ -221,18 +223,62 @@ expublic void ndrxpy_register_tplog(py::module &m)
         },
         "Close tread log file");
 
+     m.def(
+        "tplogdump",
+        [](int lev, std::string comment, py::bytes data)
+        {
+            std::string val(PyBytes_AsString(data.ptr()), PyBytes_Size(data.ptr()));
+
+           tplogdump(lev, const_cast<char *>(comment.c_str()), 
+                const_cast<char *>(val.data()), val.size());
+        },
+        "Produce hex dump of byte array",
+        py::arg("lev"), py::arg("comment"), py::arg("data"));
+
+     m.def(
+        "tplogdumpdiff",
+        [](int lev, std::string comment, py::bytes data1, py::bytes data2)
+        {
+            std::string val1(PyBytes_AsString(data1.ptr()), PyBytes_Size(data1.ptr()));
+            std::string val2(PyBytes_AsString(data2.ptr()), PyBytes_Size(data2.ptr()));
+
+            long len = std::min(val1.size(), val2.size());
+
+            tplogdumpdiff(lev, const_cast<char *>(comment.c_str()), 
+                const_cast<char *>(val1.data()), const_cast<char *>(val2.data()), 
+                len);
+        },
+        "Compare two byte arrays and print differences in the log"
+        ,
+        py::arg("lev"), py::arg("comment"), py::arg("data1"), py::arg("data2"));
+
+     m.def(
+        "tplogfplock",
+        [](int lev, long flags)
+        {
+            return tplogfplock(lev, flags);
+        },
+        "Lock the file pointer / fileno"
+        ,
+        py::arg("lev")=-1, py::arg("flags")=0);
+
+     m.def(
+        "tplogfpget",
+        [](ndrx_debug_t *dbg, long flags)
+        {
+            return fileno(tplogfpget(dbg, flags));
+        },
+        "Get file descriptor for Python."
+        ,
+        py::arg("dbg"), py::arg("flags")=0);
+
         /*
 
 TODO:
-
-tplogdump.3
-tplogdumpdiff.3
 tplogfpget.3
 tplogfplock.3
 tplogfpunlock.3
-
 tplogprintubf.3
-
 */
 
 }
