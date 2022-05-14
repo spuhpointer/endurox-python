@@ -4,9 +4,7 @@
  * @file ndrx_pymod.h
  */
 /* -----------------------------------------------------------------------------
- * Enduro/X Middleware Platform for Distributed Transaction Processing
- * Copyright (C) 2009-2016, ATR Baltic, Ltd. All Rights Reserved.
- * Copyright (C) 2017-2022, Mavimax, Ltd. All Rights Reserved.
+ * Python module for Enduro/X
  * This software is released under MIT license.
  * 
  * -----------------------------------------------------------------------------
@@ -297,6 +295,30 @@ struct pyndrxdebugptr
         ptr = reinterpret_cast<ndrx_longptr_t>(dbg);
     }
     ndrx_longptr_t ptr;
+};
+
+/**
+ * @brief Tp context holder
+ */
+struct pytpcontext
+{
+    pytpcontext(TPCONTEXT_T *ctxt)
+    {
+        ctx_bytes = py::bytes(reinterpret_cast<char *>(ctxt), sizeof(TPCONTEXT_T));
+    }
+
+    /**
+     * @brief Get current context in C format
+     * 
+     * @param ctxt C context
+     */
+    void getCtxt(TPCONTEXT_T *ctxt)
+    {
+        std::string val(PyBytes_AsString(ctx_bytes.ptr()), PyBytes_Size(ctx_bytes.ptr()));
+        memcpy(reinterpret_cast<char *>(ctxt), 
+            const_cast<char *>(val.data()), val.size());
+    }
+    py::bytes ctx_bytes;
 };
 
 /*---------------------------Globals------------------------------------*/

@@ -4,9 +4,7 @@
  * @file endurox_xatmi.cpp
  */
 /* -----------------------------------------------------------------------------
- * Enduro/X Middleware Platform for Distributed Transaction Processing
- * Copyright (C) 2009-2016, ATR Baltic, Ltd. All Rights Reserved.
- * Copyright (C) 2017-2022, Mavimax, Ltd. All Rights Reserved.
+ * Python module for Enduro/X
  * This software is released under MIT license.
  * 
  * -----------------------------------------------------------------------------
@@ -638,6 +636,11 @@ expublic void ndrxpy_register_xatmi(py::module &m)
         .def_readonly("name1", &TPEVCTL::name1)
         .def_readonly("name2", &TPEVCTL::name2);
 
+    //Context handle
+    py::class_<pytpcontext>(m, "TPCONTEXT_T")
+        //this is buffer for pointer...
+        .def_readonly("ctx_bytes", &pytpcontext::ctx_bytes);
+
     //Functions:
     m.def("tpenqueue", &ndrxpy_pytpenqueue, "Routine to enqueue a message.",
           py::arg("qspace"), py::arg("qname"), py::arg("ctl"), py::arg("data"),
@@ -1105,6 +1108,70 @@ expublic void ndrxpy_register_xatmi(py::module &m)
         },
         "Get environment value",
         py::arg("envname"));
+
+    m.def(
+        "tpnewctxt",
+        [](bool auto_destroy, bool auto_set)
+        {
+            auto ctxt = tpnewctxt(auto_destroy, auto_set);
+            return pytpcontext(&ctxt);
+        },
+        "Create new ATMI context",
+        py::arg("auto_destroy"), py::arg("auto_set"));
+
+    m.def(
+        "tpgetctxt",
+        [](long flags)
+        {
+            TPCONTEXT_T ctxt;
+            if (EXFAIL==tpgetctxt(&ctxt, flags))
+            {
+                throw xatmi_exception(tperrno);
+            }
+
+            return pytpcontext(&ctxt);
+        },
+        "Disassociate from the thread and get current context",
+        py::arg("flags")=0);
+
+    m.def(
+        "tpsetctxt",
+        [](pytpcontext *context, long flags)
+        {
+            TPCONTEXT_T ctxt;
+            context->getCtxt(&ctxt);
+            if (EXSUCCEED!=tpsetctxt(ctxt, flags))
+            {
+                throw xatmi_exception(tperrno);
+            }
+        },
+        "Set current context",
+        py::arg("context"), py::arg("flags")=0);
+
+    m.def(
+        "tpsetctxt",
+        [](py::none, long flags)
+        {
+            if (EXSUCCEED!=tpsetctxt(TPNULLCONTEXT, flags))
+            {
+                throw xatmi_exception(tperrno);
+            }
+        },
+        "Set current context to TPNULLCONTEXT",
+        py::arg("context"), py::arg("flags")=0);
+
+    m.def(
+        "tpfreectxt",
+        [](pytpcontext *context)
+        {
+            TPCONTEXT_T ctxt;
+            context->getCtxt(&ctxt);
+
+            tpfreectxt(ctxt);
+        },
+        "Free current context",
+        py::arg("context"));
+
     }
 
 /* vim: set ts=4 sw=4 et smartindent: */

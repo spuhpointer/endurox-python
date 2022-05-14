@@ -4,9 +4,7 @@
  * @file tplog.cpp
  */
 /* -----------------------------------------------------------------------------
- * Enduro/X Middleware Platform for Distributed Transaction Processing
- * Copyright (C) 2009-2016, ATR Baltic, Ltd. All Rights Reserved.
- * Copyright (C) 2017-2022, Mavimax, Ltd. All Rights Reserved.
+ * Python module for Enduro/X
  * This software is released under MIT license.
  * 
  * -----------------------------------------------------------------------------
