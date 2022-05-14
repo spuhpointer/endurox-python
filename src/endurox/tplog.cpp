@@ -72,6 +72,7 @@ expublic void ndrxpy_register_tplog(py::module &m)
         "tplog_debug",
         [](const char *message)
         {
+            py::gil_scoped_release release;
             tplog(log_debug, const_cast<char *>(message));
         },
         "Print debug log message", py::arg("message"));
@@ -80,6 +81,7 @@ expublic void ndrxpy_register_tplog(py::module &m)
         "tplog_info",
         [](const char *message)
         {
+            py::gil_scoped_release release;
             tplog(log_info, const_cast<char *>(message));
         },
         "Print debug log message", py::arg("message"));
@@ -88,6 +90,7 @@ expublic void ndrxpy_register_tplog(py::module &m)
         "tplog_warn",
         [](const char *message)
         {
+            py::gil_scoped_release release;
             tplog(log_error, const_cast<char *>(message));
         },
         "Print warning log message", py::arg("message"));
@@ -96,6 +99,7 @@ expublic void ndrxpy_register_tplog(py::module &m)
         "tplog_error",
         [](const char *message)
         {
+            py::gil_scoped_release release;
             tplog(log_error, const_cast<char *>(message));
         },
         "Print error log message", py::arg("message"));
@@ -104,6 +108,7 @@ expublic void ndrxpy_register_tplog(py::module &m)
         "tplog_always",
         [](const char *message)
         {
+            py::gil_scoped_release release;
             tplog(log_error, const_cast<char *>(message));
         },
         "Print fatal log message", py::arg("message"));
@@ -112,6 +117,7 @@ expublic void ndrxpy_register_tplog(py::module &m)
         "tplog",
         [](int lev, const char *message)
         {
+            py::gil_scoped_release release;
             tplog(lev, const_cast<char *>(message));
         },
         "Print log message with specified level", py::arg("lev"), py::arg("message"));
@@ -120,6 +126,7 @@ expublic void ndrxpy_register_tplog(py::module &m)
         "tplogconfig",
         [](int logger, int lev, const char *debug_string, const char *module, const char *new_file)
         {
+            py::gil_scoped_release release;
             if (EXSUCCEED!=tplogconfig(logger, lev, const_cast<char *>(debug_string), 
                 const_cast<char *>(module), const_cast<char *>(new_file)))
             {
@@ -133,6 +140,7 @@ expublic void ndrxpy_register_tplog(py::module &m)
         "tplogqinfo",
         [](int lev, long flags)
         {
+            py::gil_scoped_release release;
             long ret=tplogqinfo(lev,flags);
             if (EXFAIL==ret)
             {
@@ -145,20 +153,42 @@ expublic void ndrxpy_register_tplog(py::module &m)
 
     m.def(
         "tplogsetreqfile",
-        [](py::object data, std::string filename, std::string filesvc)
+        [](py::object data, const char * filename, const char * filesvc)
         {
 
-            auto in = ndrx_from_py(data);
+            xatmibuf in;
 
-            if (EXFAIL==tplogsetreqfile(in.pp, const_cast<char *>(filename.c_str()), 
-                const_cast<char *>(filesvc.c_str())))
+            if (!py::isinstance<py::none>(data))
             {
+                in = ndrx_from_py(data);
+            }
+            
+            {
+                char type[8]={EXEOS};
+                char subtype[16]={EXEOS};
+                py::gil_scoped_release release;
+
+                //Check is it UBF or not?
+
+                if (tptypes(*in.pp, type, subtype) == EXFAIL)
+                {
+                    NDRX_LOG(log_error, "Invalid buffer type");
+                    throw std::invalid_argument("Invalid buffer type");
+                }
+
+                if (EXFAIL==tplogsetreqfile( (0==strcmp(type, "UBF")?in.pp:NULL), const_cast<char *>(filename), 
+                    const_cast<char *>(filesvc)))
+                {
+                    // In case if buffer changed..
+                    in.p=*in.pp;
+                    throw xatmi_exception(tperrno);   
+                }
                 // In case if buffer changed..
                 in.p=*in.pp;
-                throw xatmi_exception(tperrno);   
             }
-            // In case if buffer changed..
-            in.p=*in.pp;
+
+            //Return python object... (in case if one was passed in...)
+            return ndrx_to_py(in);
         },
         "Redirect logger to request file extracted from buffer, filename or file name service", 
             py::arg("data"), py::arg("filename")="", py::arg("filesvc")="");
@@ -167,6 +197,7 @@ expublic void ndrxpy_register_tplog(py::module &m)
         "tplogsetreqfile_direct",
         [](std::string filename)
         {
+            py::gil_scoped_release release;
             tplogsetreqfile_direct(const_cast<char *>(filename.c_str()));
         },
         "Set request log file from filename only", 
@@ -178,9 +209,12 @@ expublic void ndrxpy_register_tplog(py::module &m)
         {
             char filename[PATH_MAX+1];
             auto in = ndrx_from_py(data);
-            if (EXSUCCEED!=tploggetbufreqfile(*in.pp, filename, sizeof(filename)))
             {
-                throw xatmi_exception(tperrno); 
+                py::gil_scoped_release release;
+                if (EXSUCCEED!=tploggetbufreqfile(*in.pp, filename, sizeof(filename)))
+                {
+                    throw xatmi_exception(tperrno); 
+                }
             }
             return py::str(filename);
         },
@@ -192,7 +226,10 @@ expublic void ndrxpy_register_tplog(py::module &m)
         [](void)
         {
             char filename[PATH_MAX+1]="";
-            tploggetreqfile(filename, sizeof(filename));
+            {
+                py::gil_scoped_release release;
+                tploggetreqfile(filename, sizeof(filename));
+            }
             return py::str(filename);
         },
         "Get current request log file, returns empty if one is not set");
@@ -201,12 +238,14 @@ expublic void ndrxpy_register_tplog(py::module &m)
         "tplogdelbufreqfile",
         [](py::object data)
         {
-           auto in = ndrx_from_py(data);
-
-           if (EXSUCCEED!=tplogdelbufreqfile(*in.pp))
-           {
-                throw xatmi_exception(tperrno);
-           }
+            auto in = ndrx_from_py(data);
+            {
+                py::gil_scoped_release release;
+                if (EXSUCCEED!=tplogdelbufreqfile(*in.pp))
+                {
+                        throw xatmi_exception(tperrno);
+                }
+            }
 
             return ndrx_to_py(in);
         },
@@ -217,7 +256,8 @@ expublic void ndrxpy_register_tplog(py::module &m)
         "tplogclosereqfile",
         [](void)
         {
-           tplogclosereqfile();
+            py::gil_scoped_release release;
+            tplogclosereqfile();
         },
         "Close request logging file (if one is currenlty open)");
 
@@ -225,17 +265,19 @@ expublic void ndrxpy_register_tplog(py::module &m)
         "tplogclosethread",
         [](void)
         {
-           tplogclosethread();
+            py::gil_scoped_release release;
+            tplogclosethread();
         },
         "Close tread log file");
 
      m.def(
         "tplogdump",
-        [](int lev, std::string comment, py::bytes data)
+        [](int lev, const char * comment, py::bytes data)
         {
             std::string val(PyBytes_AsString(data.ptr()), PyBytes_Size(data.ptr()));
 
-           tplogdump(lev, const_cast<char *>(comment.c_str()), 
+            py::gil_scoped_release release;
+            tplogdump(lev, const_cast<char *>(comment), 
                 const_cast<char *>(val.data()), val.size());
         },
         "Produce hex dump of byte array",
@@ -243,14 +285,15 @@ expublic void ndrxpy_register_tplog(py::module &m)
 
      m.def(
         "tplogdumpdiff",
-        [](int lev, std::string comment, py::bytes data1, py::bytes data2)
+        [](int lev, const char * comment, py::bytes data1, py::bytes data2)
         {
             std::string val1(PyBytes_AsString(data1.ptr()), PyBytes_Size(data1.ptr()));
             std::string val2(PyBytes_AsString(data2.ptr()), PyBytes_Size(data2.ptr()));
 
             long len = std::min(val1.size(), val2.size());
 
-            tplogdumpdiff(lev, const_cast<char *>(comment.c_str()), 
+            py::gil_scoped_release release;
+            tplogdumpdiff(lev, const_cast<char *>(comment), 
                 const_cast<char *>(val1.data()), const_cast<char *>(val2.data()), 
                 len);
         },
@@ -290,13 +333,19 @@ expublic void ndrxpy_register_tplog(py::module &m)
         ,
         py::arg("dbg"));
 
-        /*
-
-tplogprintubf.3
-*/
+     m.def(
+        "tplogprintubf",
+        [](int lev, const char *title, py::object data)
+        {
+            auto in = ndrx_from_py(data);
+            py::gil_scoped_release release;
+            tplogprintubf(lev, const_cast<char *>(title), reinterpret_cast<UBFH *>(*in.pp));
+        },
+        "Get file descriptor for Python."
+        ,
+        py::arg("lev"), py::arg("title"), py::arg("data"));
 
 }
-
 
 /* vim: set ts=4 sw=4 et smartindent: */
 

@@ -1096,6 +1096,15 @@ expublic void ndrxpy_register_xatmi(py::module &m)
         },
         "Decrypt data block",
         py::arg("input"), py::arg("flags")=0);
+
+    m.def(
+        "tuxgetenv",
+        [](std::string envname)
+        {
+            return py::str(tuxgetenv(const_cast<char *>(envname.c_str())));
+        },
+        "Get environment value",
+        py::arg("envname"));
     }
 
 /* vim: set ts=4 sw=4 et smartindent: */
