@@ -1172,6 +1172,62 @@ expublic void ndrxpy_register_xatmi(py::module &m)
         "Free current context",
         py::arg("context"));
 
+    m.def(
+        "tpgetnodeid",
+        [](void)
+        {
+            return tpgetnodeid();
+        },
+        "Get current cluster node id");
+
+    m.def(
+        "tpgprio",
+        [](void)
+        {
+            return tpgprio();
+        },
+        "Get priority for last service call");
+
+    m.def(
+        "tpsprio",
+        [](int prio, long flags)
+        {
+            if (EXSUCCEED!=tpsprio(prio, flags))
+            {
+                throw xatmi_exception(tperrno);
+            }
+        },
+        "Set priority for next service call");
+
+    m.def(
+        "tpscmt",
+        [](long flags)
+        {
+            if (EXSUCCEED!=tpscmt(flags))
+            {
+                throw xatmi_exception(tperrno);
+            }
+        },
+        "Set commit return mode");
+
+    m.def(
+        "tptoutget",
+        [](void)
+        {
+            return tptoutget();
+        },
+        "Get process level XATMI timeout setting");
+
+    m.def(
+        "tptoutset",
+        [](int tout)
+        {
+            if (EXSUCCEED!=tptoutset(tout))
+            {
+                throw xatmi_exception(tperrno);
+            }
+        },
+        "Set process level XATMI call timeout");
     }
 
 /* vim: set ts=4 sw=4 et smartindent: */

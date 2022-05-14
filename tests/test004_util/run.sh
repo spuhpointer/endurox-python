@@ -50,7 +50,7 @@ xadmin provision -d \
 cd conf
 
 . settest1
-
+xadmin down -y
 
 # monitor our test instance, 0myWI5nu -> this is const by xadmin provision
 xmemck -d5 -m "0myWI5nu|unittest" 2>$XMEMCK_LOG 1>$XMEMCK_OUT &

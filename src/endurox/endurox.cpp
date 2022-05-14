@@ -368,6 +368,9 @@ PYBIND11_MODULE(endurox, m)
     m.attr("EXSUCCEED") = py::int_(EXSUCCEED);
     m.attr("EXFAIL") = py::int_(EXFAIL);
 
+    m.attr("TP_CMT_LOGGED") = py::int_(TP_CMT_LOGGED);
+    m.attr("TP_CMT_COMPLETE") = py::int_(TP_CMT_COMPLETE);
+
     m.doc() =
         R"pbdoc(
 Python3 bindings for writing Endurox clients and servers
