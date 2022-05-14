@@ -52,6 +52,18 @@
 
 #define MODULE "endurox"
 
+
+/**
+ * tpgetconn() struct values
+ * this is copy+paste from unexported header from xadrv/oracle/oracle_common.c (Enduro/X source)
+ */
+typedef struct
+{
+    long version;    /**< record version                                */
+    void *xaoSvcCtx;    /**< xaoSvcCtx handle,                          */
+    
+} ndrx_ora_tpgetconn_t;
+
 namespace py = pybind11;
 
 static PyObject *EnduroxException_code(PyObject *selfPtr, void *closure)
@@ -167,17 +179,37 @@ PYBIND11_MODULE(endurox, m)
 {
     register_exceptions(m);
 
-    //TODO: Implement oracle xadrv struct and use tpgetconn() to get handle:
+    //Access to XA drivers from cx_Oracle
     m.def(
         "xaoSvcCtx",
         []()
         {
-            if (xao_svc_ctx_ptr == nullptr)
+            struct xa_switch_t *sw = ndrx_xa_sw_get();
+
+            if (nullptr!=sw && 0==strcmp(sw->name, "Oracle_XA"))
             {
-                throw std::runtime_error("xaoSvcCtx is null");
+                /* this is ora */
+                ndrx_ora_tpgetconn_t *detail = reinterpret_cast<ndrx_ora_tpgetconn_t *>(tpgetconn());
+
+                if (nullptr!=detail)
+                {
+                    if (detail->version<1)
+                    {
+                        throw std::runtime_error("Expected tpgetconn() version >=1");
+                    }
+
+                    if (nullptr==detail->xaoSvcCtx)
+                    {
+                        throw std::runtime_error("xaoSvcCtx is null");
+                    }
+
+                    xao_svc_ctx *xao_svc_ctx_ptr = reinterpret_cast<xao_svc_ctx *>(detail->xaoSvcCtx);
+
+                    return reinterpret_cast<unsigned long long>(
+                            (*xao_svc_ctx_ptr)(nullptr));
+                }
             }
-            return reinterpret_cast<unsigned long long>(
-                (*xao_svc_ctx_ptr)(nullptr));
+            throw std::runtime_error("tpinit() not issued, or Oracle drivers not configured");
         },
         "Returns the OCI service handle for a given XA connection");
 

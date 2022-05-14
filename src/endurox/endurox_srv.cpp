@@ -326,7 +326,7 @@ static struct tmsvrargs_t tmsvrargs = {
 
 expublic xao_svc_ctx *xao_svc_ctx_ptr;
 
-
+#if 0
 /** TODO:  xaoSvcCtx shall be returned from tpgetconn() 
  * as extension from oracle loader lib
  */
@@ -369,6 +369,8 @@ struct tmsvrargs_t *_tmgetsvrargs(const char *rmname)
     }
     return &tmsvrargs;
 }
+#endif
+
 
 expublic void ndrxpy_pyrun(py::object svr, std::vector<std::string> args,
                   const char *rmname)
@@ -383,7 +385,30 @@ expublic void ndrxpy_pyrun(py::object svr, std::vector<std::string> args,
         {
             argv[i] = const_cast<char *>(args[i].c_str());
         }
+
+        /*
         (void)_tmstartserver(args.size(), &argv[0], _tmgetsvrargs(rmname));
+        */
+
+        _tmbuilt_with_thread_option=EXTRUE;
+        struct tmsvrargs_t tmsvrargs =
+        {
+            NULL,
+            &_tmdsptchtbl[0],
+            0,
+            tpsvrinit,
+            tpsvrdone,
+            NULL,
+            NULL,
+            NULL,
+            NULL,
+            NULL,
+            tpsvrthrinit,
+            tpsvrthrdone
+        };
+        
+        _tmstartserver( args.size(), &argv[0], &tmsvrargs );
+
         server = py::none();
     }
     catch (...)
