@@ -56,6 +56,7 @@ class TestTplog(unittest.TestCase):
         filename = "%s/tplog_req" % e.tuxgetenv('NDRX_ULOG')
         os.remove(filename) if os.path.exists(filename) else None
         os.remove(filename_def) if os.path.exists(filename_def) else None
+        os.remove(filename_th) if os.path.exists(filename_th) else None
 
         e.tplogconfig(e.LOG_FACILITY_TP, e.log_info, "file=%s" % filename_def, "TEST", None)
 
@@ -83,12 +84,65 @@ class TestTplog(unittest.TestCase):
 
 
         # set thread logger
+        e.tplogconfig(e.LOG_FACILITY_TP_THREAD, e.log_info, "file=%s" % filename_th, "TEST", None)
+        e.tplog_error("HELLO TH")
+        self.assertEqual(chk_file(filename_th, "HELLO TH"), 1)
+        e.tplogclosethread()
 
-        # close thread logger
+        e.tplog_error("LOGGER BACK")
+        self.assertEqual(chk_file(filename_def, "LOGGER BACK"), 1)
 
         # log some stuff...
         e.tpterm()
-        
+    
+    # test dump commands...
+    def test_tplog_dump(self):
+        e.tpinit()
+        filename = "%s/tplog_dump" % e.tuxgetenv('NDRX_ULOG')
+        os.remove(filename) if os.path.exists(filename) else None
+        e.tplogconfig(e.LOG_FACILITY_TP, e.log_info, "file=%s" % filename, "TEST", None)
+
+        e.tplogdump(e.log_error, "HELLO DUMP", b'\x00\x01\x02')
+        self.assertEqual(chk_file(filename, "HELLO DUMP"), 1)
+        self.assertEqual(chk_file(filename, "00 01 02"), 1)
+
+        e.tplogdumpdiff(e.log_error, "HELLO DUMP2", b'\xff\x01\x02', b'\xff\x02\04\05')
+        self.assertEqual(chk_file(filename, "HELLO DUMP2"), 1)
+        self.assertEqual(chk_file(filename, "ff 01 02"), 1)
+        self.assertEqual(chk_file(filename, "ff 02 04"), 1)
+        self.assertEqual(chk_file(filename, "ff 02 04 05"), 0)
+
+        e.tpterm()
+
+    # test fileno...
+    def test_tplog_dump(self):
+        e.tpinit()
+        filename = "%s/tplog_fd" % e.tuxgetenv('NDRX_ULOG')
+        os.remove(filename) if os.path.exists(filename) else None
+        e.tplogconfig(e.LOG_FACILITY_TP, e.log_info, "file=%s" % filename, "TEST", None)
+        handle = e.tplogfplock()
+        fd = e.tplogfpget(handle)
+        os.write(fd, b'\x41\x42\x43\x20\x48\x45\x4c\x4c\x4f')
+        os.fsync(fd)
+        self.assertEqual(chk_file(filename, "ABC HELLO"), 1)
+        e.tplogfpunlock(handle)
+        e.tpterm()
+
+
+    def test_tplogprintubf(self):
+        e.tpinit()
+        filename = "%s/tplog_ubf" % e.tuxgetenv('NDRX_ULOG')
+        os.remove(filename) if os.path.exists(filename) else None
+        e.tplogconfig(e.LOG_FACILITY_TP, e.log_info, "file=%s" % filename, "TEST", None)
+
+        e.tplogprintubf(e.log_info, "TEST_BUFFER", {"buftype":"UBF", "data":{"T_STRING_FLD":"STRING1", "T_STRING_10_FLD":"HELLO STRING"}})
+
+        self.assertEqual(chk_file(filename, "TEST_BUFFER"), 1)
+        self.assertEqual(chk_file(filename, "T_STRING_FLD\tSTRING1"), 1)
+        self.assertEqual(chk_file(filename, "T_STRING_10_FLD\tHELLO STRING"), 1)
+
+        e.tpterm()
+
         
 if __name__ == '__main__':
     unittest.main()
