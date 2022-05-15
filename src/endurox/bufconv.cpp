@@ -283,7 +283,7 @@ expublic xatmibuf ndrx_from_py(py::object obj)
         if (buftype!="" && buftype!="UBF")
         {
             NDRX_LOG(log_error, "For dict data "
-                "expected UBF buftype, got [%s]", buftype);
+                "expected UBF buftype, got [%s]", buftype.c_str());
 
             throw std::invalid_argument("For dict data "
                 "expected UBF buftype, got: "+buftype);

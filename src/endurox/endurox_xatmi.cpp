@@ -572,7 +572,8 @@ expublic void ndrxpy_register_xatmi(py::module &m)
                          pybind11::bytes msgid, pybind11::bytes corrid,
                          std::string & replyqueue, std::string & failurequeue)
                       {
-             auto p = std::make_unique<NDRXPY_TPQCTL>();
+             //auto p = std::make_unique<NDRXPY_TPQCTL>();
+             auto p = std::unique_ptr<NDRXPY_TPQCTL>(new NDRXPY_TPQCTL());
              //Default construction shall have performed memset
              //memset(p.get(), 0, sizeof(NDRXPY_TPQCTL));
              p->flags = flags;
@@ -615,7 +616,8 @@ expublic void ndrxpy_register_xatmi(py::module &m)
     py::class_<TPEVCTL>(m, "TPEVCTL")
         .def(py::init([](long flags, const char *name1, const char *name2)
             {
-             auto p = std::make_unique<TPEVCTL>();
+             //auto p = std::make_unique<TPEVCTL>();
+             auto p = std::unique_ptr<TPEVCTL>(new TPEVCTL());
              memset(p.get(), 0, sizeof(TPEVCTL));
              p->flags = flags;
 
