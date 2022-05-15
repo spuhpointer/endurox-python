@@ -200,6 +200,19 @@ struct pytprecvret:pytpsendret
 };
 
 /**
+ * @brief Atmi server context data type
+ */
+struct pytpsrvctxdata
+{
+    py::bytes pyctxt;
+
+    pytpsrvctxdata(char *buf, long len)
+    {
+        pyctxt = py::bytes(buf, len);
+    }
+};
+
+/**
  * @brief extended struct to expose msgid and corrid 
  *  to Pybind11 as byte arrays (instead of strings).
  *  and provide interface for converting to the base

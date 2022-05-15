@@ -247,7 +247,7 @@ expublic void ndrxpy_pytpunadvertise(const char *svcname)
  * 
  * @return byte array block 
  */
-exprivate py::bytes ndrxpy_tpsrvgetctxdata(void)
+exprivate struct pytpsrvctxdata ndrxpy_tpsrvgetctxdata(void)
 {
     long len=0;
     char *buf;
@@ -261,7 +261,7 @@ exprivate py::bytes ndrxpy_tpsrvgetctxdata(void)
         }
     }
 
-    auto ret = py::bytes(buf, len);
+    auto ret = pytpsrvctxdata(buf, len);
 
     tpsrvfreectxdata(buf);
 
@@ -273,9 +273,9 @@ exprivate py::bytes ndrxpy_tpsrvgetctxdata(void)
  * 
  * @param flags flags
  */
-exprivate void ndrxpy_tpsrvsetctxdata(py::bytes ctxt, long flags)
+exprivate void ndrxpy_tpsrvsetctxdata(struct pytpsrvctxdata* ctxt, long flags)
 {
-    std::string val(PyBytes_AsString(ctxt.ptr()), PyBytes_Size(ctxt.ptr()));
+    std::string val(PyBytes_AsString(ctxt->pyctxt.ptr()), PyBytes_Size(ctxt->pyctxt.ptr()));
     
     py::gil_scoped_release release;
 
@@ -424,6 +424,11 @@ expublic void ndrxpy_pyrun(py::object svr, std::vector<std::string> args,
  */
 expublic void ndrxpy_register_srv(py::module &m)
 {
+
+    //Atmi Context data type
+    py::class_<pytpsrvctxdata>(m, "TpSrvCtxtData")
+        .def_readonly("pyctxt", &pytpsrvctxdata::pyctxt);
+
     // Service call info object
     py::class_<pytpsvcinfo>(m, "pytpsvcinfo")
         .def_readonly("name", &pytpsvcinfo::name)
