@@ -952,24 +952,20 @@ expublic void ndrxpy_register_xatmi(py::module &m)
         "tpopen",
         []()
         {
-            int rc;
-            if ((rc = tpopen()) == -1)
+            if (EXFAIL==tpopen())
             {
                 throw xatmi_exception(tperrno);
             }
-            return py::bool_(rc);
         },
         "Open XA Sub-system");
     m.def(
         "tpclose",
         []()
         {
-            int rc;
-            if ((rc = tpclose()) == -1)
+            if (EXFAIL==tpclose())
             {
                 throw xatmi_exception(tperrno);
             }
-            return py::bool_(rc);
         },
         "Close XA Sub-system");
     m.def(
@@ -1205,10 +1201,12 @@ expublic void ndrxpy_register_xatmi(py::module &m)
         "tpscmt",
         [](long flags)
         {
-            if (EXSUCCEED!=tpscmt(flags))
+            int ret;
+            if (EXFAIL==(ret=tpscmt(flags)))
             {
                 throw xatmi_exception(tperrno);
             }
+            return ret;
         },
         "Set commit return mode");
 

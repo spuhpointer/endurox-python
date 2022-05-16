@@ -197,7 +197,8 @@ void PY(TPSVCINFO *svcinfo)
     {
         NDRX_LOG(log_error, "Got exception at tpreturn: %s", e.what());
         userlog(const_cast<char *>("%s"), e.what());
-        tpreturn(TPEXIT, 0, nullptr, 0, 0);
+        /* return service error, soft-err*/
+        tpreturn(TPFAIL, TPESVCERR, nullptr, 0, TPSOFTERR);
     }
 }
 
