@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
 
 import sys
-
 import endurox as e
+import time
 
 class Server:
 
@@ -17,6 +17,7 @@ class Server:
         e.tpadvertise('CONVSVC', 'CONVSVC', self.CONVSVC)
         e.tpadvertise('NOTIFSV', 'NOTIFSV', self.NOTIFSV)
         e.tpadvertise('BCASTSV', 'BCASTSV', self.BCASTSV)
+        e.tpadvertise('TOUT', 'TOUT', self.TOUT)
 
         # subscribe to TESTEV event.
         e.tplog_info("ev subs %d" % e.tpsubscribe('TESTEV', None, e.TPEVCTL(name1="EVSVC", flags=e.TPEVSERVICE)))
@@ -86,6 +87,11 @@ class Server:
     def BCASTSV(self, args):
         # may fill all python qs...
         e.tpbroadcast("", "", "python", {"data":"HELLO WORLD BCAST"}, e.TPREGEXMATCH)
+        return e.tpreturn(e.TPSUCCESS, 0, {})
+
+    # generate timeout ...
+    def TOUT(self, args):
+        time.sleep(args.data["data"]["T_SHORT_FLD"][0])
         return e.tpreturn(e.TPSUCCESS, 0, {})
 
 
