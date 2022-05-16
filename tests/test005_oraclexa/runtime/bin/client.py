@@ -13,6 +13,7 @@ class TestOracleXA(unittest.TestCase):
 
         e.tpinit()
         e.tpopen()
+        e.tplogconfig(e.LOG_FACILITY_NDRX, -1, "", "TEST", "%s/client.py" % e.tuxgetenv("NDRX_ULOG"))
         w = u.NdrxStopwatch()
         while w.get_delta_sec() < u.test_duratation():
 
