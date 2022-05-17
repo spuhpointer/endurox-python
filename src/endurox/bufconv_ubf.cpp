@@ -535,6 +535,19 @@ expublic void ndrxpy_register_ubf(py::module &m)
         py::arg("iop"));
 
     m.def(
+        "Bprint",
+        [](py::object fbfr)
+        {
+            auto buf = ndrx_from_py(fbfr);
+            auto rc = Bprint(*buf.fbfr());
+            if (rc == -1)
+            {
+                throw ubf_exception(Berror);
+            }
+        },
+        "Prints UBF buffer to specified stream", py::arg("fbfr"));
+
+    m.def(
         "Bextread",
         [](py::object iop)
         {
