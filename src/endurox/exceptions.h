@@ -35,6 +35,7 @@
 #include <pybind11/functional.h>
 #include <pybind11/pybind11.h>
 #include <pybind11/stl.h>
+#include <nerror.h>
 
 /*---------------------------Externs------------------------------------*/
 /*---------------------------Macros-------------------------------------*/
@@ -131,6 +132,21 @@ public:
     const char *what() const noexcept override { return message_.c_str(); }
     int code() const noexcept { return code_; }
 };
+
+struct nstd_exception : public std::exception
+{
+private:
+    int code_;
+    std::string message_;
+
+public:
+    explicit nstd_exception(int code)
+        : code_(code), message_(Nstrerror(code)) {}
+
+    const char *what() const noexcept override { return message_.c_str(); }
+    int code() const noexcept { return code_; }
+};
+
 
 /*---------------------------Globals------------------------------------*/
 /*---------------------------Statics------------------------------------*/

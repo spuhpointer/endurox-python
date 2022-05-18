@@ -151,6 +151,20 @@ static void register_exceptions(py::module &m)
         m.add_object("UbfException", py::handle(UbfException));
     }
 
+    static PyObject *NstdException =
+        PyErr_NewException(MODULE ".NstdException", nullptr, nullptr);
+    if (NstdException)
+    {
+        PyTypeObject *as_type = reinterpret_cast<PyTypeObject *>(NstdException);
+        as_type->tp_str = EnduroxException_tp_str;
+        PyObject *descr = PyDescr_NewGetSet(as_type, EnduroxException_getsetters);
+        auto dict = py::reinterpret_borrow<py::dict>(as_type->tp_dict);
+        dict[py::handle(((PyDescrObject *)(descr))->d_name)] = py::handle(descr);
+
+        Py_XINCREF(NstdException);
+        m.add_object("NstdException", py::handle(NstdException));
+    }
+
     py::register_exception_translator([](std::exception_ptr p)
                                       {
     try {
@@ -172,6 +186,11 @@ static void register_exceptions(py::module &m)
       args[0] = e.what();
       args[1] = e.code();
       PyErr_SetObject(UbfException, args.ptr());
+    } catch (const nstd_exception &e) {
+      py::tuple args(2);
+      args[0] = e.what();
+      args[1] = e.code();
+      PyErr_SetObject(NstdException, args.ptr());
     } });
 }
 
@@ -339,6 +358,30 @@ PYBIND11_MODULE(endurox, m)
     m.attr("BFLD_CARRAY") = py::int_(BFLD_CARRAY);
     m.attr("BFLD_UBF") = py::int_(BFLD_UBF);
     m.attr("BBADFLDID") = py::int_(BBADFLDID);
+
+    //Enduro/X standard library errors:
+
+    m.attr("NMINVAL") = py::int_(NMINVAL);
+    m.attr("NEINVALINI") = py::int_(NEINVALINI);
+    m.attr("NEMALLOC") = py::int_(NEMALLOC);
+    m.attr("NEUNIX") = py::int_(NEUNIX);
+    m.attr("NEINVAL") = py::int_(NEINVAL);
+    m.attr("NESYSTEM") = py::int_(NESYSTEM);
+    m.attr("NEMANDATORY") = py::int_(NEMANDATORY);
+    m.attr("NEFORMAT") = py::int_(NEFORMAT);
+    m.attr("NETOUT") = py::int_(NETOUT);
+    m.attr("NENOCONN") = py::int_(NENOCONN);
+    m.attr("NELIMIT") = py::int_(NELIMIT);
+    m.attr("NEPLUGIN") = py::int_(NEPLUGIN);
+    m.attr("NENOSPACE") = py::int_(NENOSPACE);
+    m.attr("NEINVALKEY") = py::int_(NEINVALKEY);
+    m.attr("NENOENT") = py::int_(NENOENT);
+    m.attr("NEWRITE") = py::int_(NEWRITE);
+    m.attr("NEEXEC") = py::int_(NEEXEC);
+    m.attr("NESUPPORT") = py::int_(NESUPPORT);
+    m.attr("NEEXISTS") = py::int_(NEEXISTS);
+    m.attr("NEVERSION") = py::int_(NEVERSION);
+    m.attr("NMAXVAL") = py::int_(NMAXVAL);
 
     m.attr("TPEX_STRING") = py::int_(TPEX_STRING);
 
