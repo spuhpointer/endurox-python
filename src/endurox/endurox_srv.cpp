@@ -431,7 +431,7 @@ expublic void ndrxpy_register_srv(py::module &m)
         .def_readonly("pyctxt", &pytpsrvctxdata::pyctxt);
 
     // Service call info object
-    py::class_<pytpsvcinfo>(m, "pytpsvcinfo")
+    py::class_<pytpsvcinfo>(m, "TpSvcInfo")
         .def_readonly("name", &pytpsvcinfo::name)
         .def_readonly("fname", &pytpsvcinfo::fname)
         .def_readonly("flags", &pytpsvcinfo::flags)
@@ -447,7 +447,31 @@ expublic void ndrxpy_register_srv(py::module &m)
     m.def(
         "tpadvertise", [](const char *svcname, const char *funcname, const py::object &func)
         { pytpadvertise(svcname, funcname, func); },
-        "Routine for advertising a service name", py::arg("svcname"), py::arg("funcname"), py::arg("func"));
+        R"pbdoc(
+        Routine for advertising a service name.
+
+        This function applies to XATMI servers only.
+
+        For more details see C call **tpadvertise(3)**.
+
+        :raise XatmiException:
+            | Following error codes may be present:
+            | **TPEINVAL** - Service name empty or too long (longer than **MAXTIDENT**)
+            | **TPELIMIT** - More than 48 services attempted to advertise by the script.
+            | **TPEMATCH** - Service already advertised.
+            | **TPEOS** - System error.
+
+        Parameters
+        ----------
+        svcname : str
+            Service name to advertise
+        funcname : str
+            Function name of the service
+        func : object
+            Callback function used by service. Callback function receives **data** argument
+            which corresponds to **TpSvcInfo** class.
+        )pbdoc"
+        , py::arg("svcname"), py::arg("funcname"), py::arg("func"));
 
     m.def("tpsubscribe", &ndrxpy_pytpsubscribe, "Subscribe to event (by server)",
           py::arg("eventexpr"), py::arg("filter"), py::arg("ctl"), py::arg("flags") = 0);
