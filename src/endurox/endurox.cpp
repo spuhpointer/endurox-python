@@ -459,9 +459,11 @@ Python3 bindings for writing Endurox clients and servers
         tpinit
         tpterm
         tpcall
+        tpsubscribe
         tpreturn
         tpforward
         tpadvertise
+        tpunadvertise
 
 XATMI buffer formats
 ********************

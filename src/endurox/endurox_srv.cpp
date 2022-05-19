@@ -327,54 +327,13 @@ static struct tmsvrargs_t tmsvrargs = {
 
 expublic xao_svc_ctx *xao_svc_ctx_ptr;
 
-#if 0
-/** TODO:  xaoSvcCtx shall be returned from tpgetconn() 
- * as extension from oracle loader lib
+/**
+ * @brief Enduro/X XATMI server main loop entry
+ * 
+ * @param svr Server object
+ * @param args cli args
  */
-struct tmsvrargs_t *_tmgetsvrargs(const char *rmname)
-{
-    tmsvrargs.reserved1 = nullptr;
-    tmsvrargs.reserved2 = nullptr;
-    if (strcasecmp(rmname, "NONE") == 0)
-    {
-        tmsvrargs.xa_switch = &tmnull_switch;
-    }
-    else if (strcasecmp(rmname, "Oracle_XA") == 0)
-    {
-        const char *orahome = getenv("ORACLE_HOME");
-        auto lib =
-            std::string((orahome == nullptr ? "" : orahome)) + "/lib/libclntsh.so";
-        void *handle = dlopen(lib.c_str(), RTLD_NOW);
-        if (!handle)
-        {
-            throw std::runtime_error(
-                std::string("Failed loading $ORACLE_HOME/lib/libclntsh.so ") +
-                dlerror());
-        }
-        tmsvrargs.xa_switch =
-            reinterpret_cast<xa_switch_t *>(dlsym(handle, "xaosw"));
-        if (tmsvrargs.xa_switch == nullptr)
-        {
-            throw std::runtime_error("xa_switch_t named xaosw not found");
-        }
-        xao_svc_ctx_ptr =
-            reinterpret_cast<xao_svc_ctx *>(dlsym(handle, "xaoSvcCtx"));
-        if (xao_svc_ctx_ptr == nullptr)
-        {
-            throw std::runtime_error("xa_switch_t named xaosw not found");
-        }
-    }
-    else
-    {
-        throw std::invalid_argument("Unsupported Resource Manager");
-    }
-    return &tmsvrargs;
-}
-#endif
-
-
-expublic void ndrxpy_pyrun(py::object svr, std::vector<std::string> args,
-                  const char *rmname)
+expublic void ndrxpy_pyrun(py::object svr, std::vector<std::string> args)
 {
     server = svr;
     try
@@ -386,10 +345,6 @@ expublic void ndrxpy_pyrun(py::object svr, std::vector<std::string> args,
         {
             argv[i] = const_cast<char *>(args[i].c_str());
         }
-
-        /*
-        (void)_tmstartserver(args.size(), &argv[0], _tmgetsvrargs(rmname));
-        */
 
         _tmbuilt_with_thread_option=EXTRUE;
         struct tmsvrargs_t tmsvrargs =
@@ -473,8 +428,52 @@ expublic void ndrxpy_register_srv(py::module &m)
         )pbdoc"
         , py::arg("svcname"), py::arg("funcname"), py::arg("func"));
 
-    m.def("tpsubscribe", &ndrxpy_pytpsubscribe, "Subscribe to event (by server)",
-          py::arg("eventexpr"), py::arg("filter"), py::arg("ctl"), py::arg("flags") = 0);
+    m.def("tpsubscribe", &ndrxpy_pytpsubscribe,
+        R"pbdoc(
+        Subscribe to event. Once event is published by the **tppost(3)**, it is
+        delivered to subscribers.
+
+        Service name is specified in **TPEVCTL** class which is following:
+
+        .. code-block:: python
+            :caption: TPEVCTL Calss
+            :name: TPEVCTL-class
+
+                class TPEVCTL:
+                    flags: int
+                    name1: str
+                    name2: str
+
+        where bitwise *flags* is set to: **TPEVSERVICE** - call service (this must be always set
+        for XATMI server). **TPEVPERSIST** is set to not to remove service from event broker
+        in case if service failed.
+
+        Service name to which to deliver event notification shall be set in *name1* field.
+
+        For more details see **tpsubscribe(3)** C API call.
+
+        :raise XatmiException:
+            | Following error codes may be present:
+            | **TPEINVAL** - Service name empty or too long (longer than **MAXTIDENT**)
+            | **TPELIMIT** - More than 48 services attempted to advertise by the script.
+            | **TPEMATCH** - Service already advertised.
+            | **TPEOS** - System error.
+
+        Parameters
+        ----------
+        eventexpr : str
+            Event expression.
+        filter : str
+            Boolean expression for **UBF** and regexp for **STRING** buffers to test data
+            before event delivery.
+        ctl : TPEVCTL
+            Control structure.
+        flags : int
+            Bitwise or'd **TPNOTRAN**, **TPSIGRSTRT**, **TPNOTIME** flags.
+            
+        )pbdoc",
+        py::arg("eventexpr"), py::arg("filter"), py::arg("ctl"), py::arg("flags") = 0);
+    //TODO: tpunsubscribe.
 
     //Server contexting:
     m.def("tpsrvgetctxdata", &ndrxpy_tpsrvgetctxdata, "Get service call context data");
@@ -489,20 +488,37 @@ expublic void ndrxpy_register_srv(py::module &m)
     m.def(
         "tpunadvertise", [](const char *svcname)
         { ndrxpy_pytpunadvertise(svcname); },
-        "Unadvertise service", py::arg("tpunadvertise"));
+        R"pbdoc(
+        Unadvertise service.
 
-    m.def("run", &ndrxpy_pyrun, "Run Endurox server", py::arg("server"), py::arg("args"),
-          py::arg("rmname") = "NONE");
+        This function applies to XATMI servers only.
+
+        For more details see C call **tpunadvertise(3)**.
+
+        :raise XatmiException:
+            | Following error codes may be present:
+            | **TPENOENT** - Service not advertised.
+            | **TPEOS** - System error.
+            | **TPESYSTEM** - Failed to report to **ndrxd(8)**.
+
+        Parameters
+        ----------
+        svcname : str
+            Service name to unadvertise
+        )pbdoc",
+        py::arg("tpunadvertise"));
+
+    m.def("run", &ndrxpy_pyrun, "Run Endurox server", py::arg("server"), py::arg("args"));
 
     m.def("tpreturn", &ndrxpy_pytpreturn, 
-            R"pbdoc(
+        R"pbdoc(
         Return from XATMI service call. Any XATMI processing after this call
         shall not be performed, i.e. shall last operation in the XATMI service
         processing.
 
         This function applies to XATMI servers only.
         
-        For more deatils see C call *tpreturn(3)*.
+        For more deatils see *tpreturn(3)* C API call.
 
         Parameters
         ----------

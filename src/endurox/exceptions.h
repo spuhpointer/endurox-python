@@ -1,7 +1,7 @@
 /**
- * @brief Enduro/X Python module
+ * @brief Register exceptions
  *
- * @file endurox.cpp
+ * @file exceptions.h
  */
 /* -----------------------------------------------------------------------------
  * Python module for Enduro/X
