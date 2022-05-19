@@ -143,7 +143,20 @@ class TestTplog(unittest.TestCase):
 
         e.tpterm()
 
-        
+    def test_tplogqinfo(self):
+
+        # test invalid flags via Nstd error
+        try:
+            e.tplogqinfo(-1, 16)
+        except e.NstdException as ex:
+            self.assertEqual(ex.code,e.NEINVAL)
+        else:
+            self.assertEqual(True,False)
+  
+        e.tplogconfig(e.LOG_FACILITY_TP|e.TPLOGQI_GET_NDRX, e.log_error, "", None, None)
+        info = (e.tplogqinfo(1, e.TPLOGQI_GET_TP) >> 24)
+        self.assertEqual(info,e.log_error)
+
 if __name__ == '__main__':
     unittest.main()
 

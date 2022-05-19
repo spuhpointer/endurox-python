@@ -35,6 +35,7 @@
 
 #include <atmi.h>
 #include <tpadm.h>
+#include <nerror.h>
 #include <userlog.h>
 #include <xa.h>
 #include <ubf.h>
@@ -142,7 +143,7 @@ expublic void ndrxpy_register_tplog(py::module &m)
             long ret=tplogqinfo(lev,flags);
             if (EXFAIL==ret)
             {
-                throw xatmi_exception(tperrno); 
+                throw nstd_exception(Nerror); 
             }
 
             return ret;
