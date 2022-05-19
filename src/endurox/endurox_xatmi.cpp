@@ -696,8 +696,41 @@ expublic void ndrxpy_register_xatmi(py::module &m)
      )pbdoc",
           py::arg("svc"), py::arg("idata"), py::arg("flags") = 0);
 
-    m.def("tpacall", &ndrxpy_pytpacall, "Routine for sending a service request",
-          py::arg("svc"), py::arg("idata"), py::arg("flags") = 0);
+    m.def("tpacall", &ndrxpy_pytpacall,           
+        R"pbdoc(
+        Asynchronous service call. Function returns call descriptor if **TPNOREPLY**
+        flag is not set. The replies shall be collected with **tpgetrply()** API
+        call by passing the returned call descriptor to the function.
+	
+        
+        For more deatils see **tpacall(3)**.
+
+        :raise XatmiException: 
+            | Following error codes may be present:
+            | **TPEINVAL** - Invalid arguments to function.
+            | **TPENOENT** - Service not is advertised.
+            | **TPETIME** - Destination queue was full/blocked on time-out expired.
+            | **TPESYSTEM** - System error.
+            | **TPEOS** - Operating system error.
+            | **TPEBLOCK** - Blocking condition found and **TPNOBLOCK** flag was specified
+            | **TPEITYPE** - Service error during input buffer handling.
+
+        Parameters
+        ----------
+        svc : str
+            Service name to call
+        idata : dict
+            Input XATMI data buffer
+        flags : int
+            Or'd bit flags: **TPNOTRAN**, **TPSIGRSTRT**, **TPNOBLOCK**, 
+            **TPNOREPLY**, **TPNOTIME**. Default value is **0**.
+
+        Returns
+        -------
+        int
+            cd - call descriptor. **0** in case if **TPNOREPLY** was specified.
+
+         )pbdoc", py::arg("svc"), py::arg("idata"), py::arg("flags") = 0);
 
     m.def("tpgetrply", &ndrxpy_pytpgetrply,
           "Routine for getting a reply from a previous request", py::arg("cd"),
