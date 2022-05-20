@@ -169,7 +169,6 @@ void tpsvrthrdone()
  */
 void PY(TPSVCINFO *svcinfo)
 {
-    //tsvcresult.clean = true;
 
     try
     {
@@ -185,13 +184,6 @@ void PY(TPSVCINFO *svcinfo)
 
         func(&info);
 
-/*
-        if (tsvcresult.clean)
-        {
-            userlog(const_cast<char *>("tpreturn() not called"));
-            tpreturn(TPEXIT, 0, nullptr, 0, 0);
-        }
-*/
     }
     catch (const std::exception &e)
     {
@@ -340,11 +332,6 @@ extern "C"
 
 static struct tmdsptchtbl_t _tmdsptchtbl[] = {
     {(char *)"", (char *)"PY", PY, 0, 0}, {nullptr, nullptr, nullptr, 0, 0}};
-
-static struct tmsvrargs_t tmsvrargs = {
-    nullptr, &_tmdsptchtbl[0], 0, tpsvrinit, tpsvrdone,
-    nullptr, nullptr, nullptr, nullptr, nullptr,
-    tpsvrthrinit, tpsvrthrdone};
 
 expublic xao_svc_ctx *xao_svc_ctx_ptr;
 
@@ -537,6 +524,7 @@ expublic void ndrxpy_register_srv(py::module &m)
 
     //Server contexting:
     m.def("tpsrvgetctxdata", &ndrxpy_tpsrvgetctxdata, "Get service call context data");
+
     //TODO: TPNOAUTBUF flag is not relevant here, as buffers in py are basically dictionaries
     //and we do not have direct access to underlaying buffer, thus let it restore in the 
     //thread context always.
@@ -568,7 +556,63 @@ expublic void ndrxpy_register_srv(py::module &m)
         )pbdoc",
         py::arg("tpunadvertise"));
 
-    m.def("run", &ndrxpy_pyrun, "Run Endurox server", py::arg("server"), py::arg("args"));
+    m.def("run", &ndrxpy_pyrun, 
+        R"pbdoc(
+
+        Run Enduro/X server. This transfer the control to XATMI server
+        main loop.
+
+        .. code-block:: python
+            :caption: XATMI Server
+            :name: XATMI Server
+
+                import endurox as e
+
+                class Server:
+
+                    def tpsvrinit(self, args):
+                        e.userlog('Server start')
+                        e.tpadvertise('SERVICE1', 'SERVICE1', self.SERVICE1)
+                        e.tpadvertise('SERVICE2', 'SERVICE2', self.SERVICE2)
+                        return 0
+
+                    # Optional used for Multi-threaded servers
+                    # configured by <mindispatchthreads> setting.
+                    def tpsvrthrinit(self, argv):
+                        e.userlog('Thread started')
+                        return 0
+
+                    # Optional used for Multi-threaded servers
+                    # configured by <mindispatchthreads> setting.
+                    def tpsvrthrdone(self):
+                        e.userlog('Thread done')
+
+                    def tpsvrdone(self):
+                        e.userlog('Server shutdown')
+
+                    # XATMI Service:
+                    def SERVICE1(self, args):
+                        return e.tpreturn(e.TPSUCCESS, 0, args.data)
+
+                    def SERVICE2(self, args):
+                        return e.tpreturn(e.TPSUCCESS, 0, args.data)
+            
+                if __name__ == '__main__':
+                    e.run(Server(), sys.argv)
+
+        At Server.tpsvrinit() service shall perform intialization, advertises,
+        event subscriptions, configure pollers, etc. 
+        At Server.tpsvrdone() showdown cleanups shall be performed.
+
+        In case if XATMI service code failed, caller receives **TPESVCERR** error,
+        the error is logged to ulog and XATMI servers main loop continues until
+        shutdown is received (e.g. xadmin stop -y).
+
+        For more details see **tpsvrinit(3)**, **tpsvrdone(3)**, **tpservice(3)**,
+        **tpsvrthrinit(3)**, **tpsvrthrdone(3)** C API calls.
+
+        )pbdoc",
+        py::arg("server"), py::arg("args"));
 
     m.def("tpreturn", &ndrxpy_pytpreturn, 
         R"pbdoc(

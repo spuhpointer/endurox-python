@@ -1,9 +1,6 @@
 #!/usr/bin/env python3
 
-import os
 import sys
-import gc
-
 import endurox as e
 
 class Server:
