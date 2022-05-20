@@ -401,23 +401,18 @@ expublic void ndrxpy_pyrun(py::object svr, std::vector<std::string> args)
  */
 expublic void ndrxpy_register_srv(py::module &m)
 {
-
     //Atmi Context data type
     py::class_<pytpsrvctxdata>(m, "TpSrvCtxtData")
         .def_readonly("pyctxt", &pytpsrvctxdata::pyctxt);
 
     // Service call info object
-    py::class_<pytpsvcinfo>(m, "TpSvcInfo")
+    py::class_<pytpsvcinfo>(m, "TPSVCINFO")
         .def_readonly("name", &pytpsvcinfo::name)
         .def_readonly("fname", &pytpsvcinfo::fname)
         .def_readonly("flags", &pytpsvcinfo::flags)
         .def_readonly("appkey", &pytpsvcinfo::appkey)
         .def_readonly("cd", &pytpsvcinfo::cd)
         .def_readonly("cltid", &pytpsvcinfo::cltid)
-        /*
-        .def("cltid", [](pytpsvcinfo &inf) { 
-            return py::bytes(reinterpret_cast<char *>(&inf.cltid), sizeof(inf.cltid)); })
-        */
         .def_readonly("data", &pytpsvcinfo::data);
 
     m.def(
@@ -445,7 +440,7 @@ expublic void ndrxpy_register_srv(py::module &m)
             Function name of the service
         func : object
             Callback function used by service. Callback function receives **data** argument
-            which corresponds to **TpSvcInfo** class.
+            which corresponds to **TPSVCINFO** class.
         )pbdoc"
         , py::arg("svcname"), py::arg("funcname"), py::arg("func"));
 
@@ -470,6 +465,9 @@ expublic void ndrxpy_register_srv(py::module &m)
         in case if service failed.
 
         Service name to which to deliver event notification shall be set in *name1* field.
+        Object may be constructed only by the TPEVCTL(flags, name1, name2).
+
+        This function applies to XATMI servers only.
 
         For more details see **tpsubscribe(3)** C API call.
 
@@ -491,11 +489,50 @@ expublic void ndrxpy_register_srv(py::module &m)
             Control structure.
         flags : int
             Bitwise or'd **TPNOTRAN**, **TPSIGRSTRT**, **TPNOTIME** flags.
-            
+
+        Returns
+        -------
+        int
+            subscription - subscription id (may be used to unsubscribe)
+
         )pbdoc",
         py::arg("eventexpr"), py::arg("filter"), py::arg("ctl"), py::arg("flags") = 0);
 
-    m.def("tpunsubscribe", &ndrxpy_pytpunsubscribe, "Remove subscription",
+    m.def("tpunsubscribe", &ndrxpy_pytpunsubscribe, 
+        R"pbdoc(
+        Unsubscribe from event.
+
+        This function applies to XATMI servers only.
+
+        For more details see **tpsubscribe(3)** C API call.
+
+        :raise XatmiException:
+            | Following error codes may be present:
+            | **TPEINVAL** - Invalid subscription id was passed.
+            | **TPENOENT** - Event server **tpevsrv(5)** is not available.
+            | **TPETIME** - Timeout calling event server.
+            | **TPESVCFAIL** - Event server failed.
+            | **TPESVCERR** - Event server crashed.
+            | **TPESYSTEM** - System error occurred.
+            | **TPEOS** - OS error.
+
+        Parameters
+        ----------
+        subscription : int
+            Subscription id.
+        flags : int
+            Optionally Or'd **TPSIGRSTRT**, **TPNOTIME**
+        ctl : TPEVCTL
+            Control structure.
+        flags : int
+            Bitwise or'd **TPNOTRAN**, **TPSIGRSTRT**, **TPNOTIME** flags.
+
+        Returns
+        -------
+        int
+            subscription - subscription id (may be used to unsubscribe)
+
+        )pbdoc",
           py::arg("subscription"), py::arg("flags") = 0);
 
     //Server contexting:
