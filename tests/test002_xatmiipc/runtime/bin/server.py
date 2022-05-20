@@ -14,6 +14,7 @@ class Server:
         e.tpadvertise('OKSVC', 'OKSVC', self.OKSVC)
         e.tpadvertise('FWDSVC', 'FWDSVC', self.FWDSVC)
         e.tpadvertise('EVSVC', 'EVSVC', self.EVSVC)
+        e.tpadvertise('EVSVC2', 'EVSVC2', self.EVSVC)
         e.tpadvertise('CONVSVC', 'CONVSVC', self.CONVSVC)
         e.tpadvertise('NOTIFSV', 'NOTIFSV', self.NOTIFSV)
         e.tpadvertise('BCASTSV', 'BCASTSV', self.BCASTSV)
@@ -21,7 +22,11 @@ class Server:
 
         # subscribe to TESTEV event.
         e.tplog_info("ev subs %d" % e.tpsubscribe('TESTEV', None, e.TPEVCTL(name1="EVSVC", flags=e.TPEVSERVICE)))
-        
+
+        for i in range(1, 10000):
+            sb = e.tpsubscribe('TEST..', None, e.TPEVCTL(name1="EVSVC2", flags=(e.TPEVSERVICE)))
+            e.tpunsubscribe(sb, 0)
+
         return 0
 
     def tpsvrdone(self):
@@ -57,6 +62,12 @@ class Server:
     # Just consume event, return NULL buffer.
     #
     def EVSVC(self, args):
+        return e.tpreturn(e.TPSUCCESS, 0, {})
+
+    #
+    # event service 2
+    # 
+    def EVSVC2(self, args):
         return e.tpreturn(e.TPSUCCESS, 0, {})
 
     #

@@ -308,6 +308,27 @@ expublic long ndrxpy_pytpsubscribe(char *eventexpr, char *filter, TPEVCTL *ctl, 
     return rc;
 }
 
+
+/**
+ * @brief unsubscribe from event
+ *
+ * @param eventexpr
+ * @param flags
+ * 
+ * @return Number of subscribtions removed
+ */
+expublic long ndrxpy_pytpunsubscribe(long subscription, long flags)
+{
+    py::gil_scoped_release release;
+
+    long rc = tpunsubscribe (subscription, flags);
+    if (rc == -1)
+    {
+        throw xatmi_exception(tperrno);
+    }
+    return rc;
+}
+
 //TODO: How about unadvertise?
 //However unadvertise is not supported for MT server, thus
 
@@ -473,7 +494,9 @@ expublic void ndrxpy_register_srv(py::module &m)
             
         )pbdoc",
         py::arg("eventexpr"), py::arg("filter"), py::arg("ctl"), py::arg("flags") = 0);
-    //TODO: tpunsubscribe.
+
+    m.def("tpunsubscribe", &ndrxpy_pytpunsubscribe, "Remove subscription",
+          py::arg("subscription"), py::arg("flags") = 0);
 
     //Server contexting:
     m.def("tpsrvgetctxdata", &ndrxpy_tpsrvgetctxdata, "Get service call context data");
