@@ -466,6 +466,8 @@ Python3 bindings for writing Endurox clients and servers
         tpforward
         tpadvertise
         tpunadvertise
+        tpsrvgetctxdata
+        tpexit
 
 XATMI buffer formats
 ====================

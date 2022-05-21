@@ -389,7 +389,7 @@ expublic void ndrxpy_pyrun(py::object svr, std::vector<std::string> args)
 expublic void ndrxpy_register_srv(py::module &m)
 {
     //Atmi Context data type
-    py::class_<pytpsrvctxdata>(m, "TpSrvCtxtData")
+    py::class_<pytpsrvctxdata>(m, "PyTpSrvCtxtData")
         .def_readonly("pyctxt", &pytpsrvctxdata::pyctxt);
 
     // Service call info object
@@ -523,7 +523,38 @@ expublic void ndrxpy_register_srv(py::module &m)
           py::arg("subscription"), py::arg("flags") = 0);
 
     //Server contexting:
-    m.def("tpsrvgetctxdata", &ndrxpy_tpsrvgetctxdata, "Get service call context data");
+    m.def("tpsrvgetctxdata", &ndrxpy_tpsrvgetctxdata, 
+        R"pbdoc(
+        Retrieve XATMI server context data. this function is used for cases
+        when server multi-threading is managed by the user software. The other
+        use of this function maybe related with architectures where immediate
+        response to the client process is not required, but next service request
+        may be processed.
+
+        After the function call, the server may proceed with call of
+        :meth:`endurox.tpcontinue` call (i.e. tpreturn or tpforward
+        must not be used).
+
+        This function applies to XATMI servers only.
+
+        For more details see **tpsrvgetctxdata(3)** C API call.
+
+        :raise XatmiException:
+            | Following error codes may be present:
+            | **TPEINVAL** - Invalid subscription id was passed.
+            | **TPEPROTO** - Global transaction was started and it was marked for abort-only, 
+                there was any open call descriptors with-in global transaction,
+            | **TPERMERR** - Resource Manager failed (failed to suspend global transaction).
+            | **TPESYSTEM** - System failure occurred during serving
+            | **TPESVCERR** - Event server crashed.
+            | **TPEOS** - OS error.
+
+        Returns
+        -------
+        PyTpSrvCtxtData
+            XATMI service current request context data.
+
+        )pbdoc");
 
     //TODO: TPNOAUTBUF flag is not relevant here, as buffers in py are basically dictionaries
     //and we do not have direct access to underlaying buffer, thus let it restore in the 
@@ -554,7 +585,7 @@ expublic void ndrxpy_register_srv(py::module &m)
         svcname : str
             Service name to unadvertise
         )pbdoc",
-        py::arg("tpunadvertise"));
+        py::arg("svcname"));
 
     m.def("run", &ndrxpy_pyrun, 
         R"pbdoc(
@@ -647,7 +678,7 @@ expublic void ndrxpy_register_srv(py::module &m)
 
         This function applies to XATMI servers only.
         
-        For more details see C call *tpforward(3)*.
+        For more details see *tpforward(3)* C API call.
 
         Parameters
         ----------
@@ -663,7 +694,17 @@ expublic void ndrxpy_register_srv(py::module &m)
     m.def(
         "tpexit", [](void)
         { tpexit(); },
-        "Restart after return or terminate immediatally (if running from other thread than main)");
+        R"pbdoc(
+        Restart after return or terminate immediately (if running from other 
+        thread than main). In case if called from XATMI server main thread
+        server exists after the service routine returns (i.e. after the 
+        tpreturn() or tpforward() called). 
+
+        This function applies to XATMI servers only.
+        
+        For more details see *tpexit(3)* C API call.
+
+        )pbdoc");
 }
 
 
