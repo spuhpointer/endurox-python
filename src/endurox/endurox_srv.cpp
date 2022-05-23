@@ -556,13 +556,40 @@ expublic void ndrxpy_register_srv(py::module &m)
 
         )pbdoc");
 
-    //TODO: TPNOAUTBUF flag is not relevant here, as buffers in py are basically dictionaries
+    //TPNOAUTBUF flag is not relevant here, as buffers in py are basically dictionaries
     //and we do not have direct access to underlaying buffer, thus let it restore in the 
     //thread context always.
-    m.def("tpsrvsetctxdata", &ndrxpy_tpsrvsetctxdata, "Restore context in the workder thread",
+    m.def("tpsrvsetctxdata", &ndrxpy_tpsrvsetctxdata, 
+        R"pbdoc(
+        Restore XATMI context data, previously captured by tpsrvgetctxdata() in XATMI service
+        main thread. If the service was in global transaction, the transaction is resumed
+        in current thread.
+
+        This function applies to XATMI servers only.
+
+        For more details see **tpsrvsetctxdata(3)** C API call.
+
+        :raise XatmiException:
+            | Following error codes may be present:
+            | **TPEPROTO** - Global transaction is started in current thread.
+            | **TPESYSTEM** - System failure, see logs.
+            | **TPEOS** - OS error, see logs.
+
+        Parameters
+        ----------
+        ctxt : PyTpSrvCtxtData
+            XATMI service context returned from tpsrvsetctxdata() function.
+        flags : int
+            Reserved for future use, shall be set to **0** which is default value.
+        )pbdoc",
           py::arg("ctxt"), py::arg("flags") = 0);
+
     m.def("tpcontinue", [](void)
-        { tpcontinue(); }, "Let server main thread to proceed without reply");
+        { tpcontinue(); },         R"pbdoc(
+        Continue XATMI service processing with next request, without tpreturn() or tpforward().
+        This function shall be invoked when XATMI service call context has been captured by
+        tpsrvgetctxdata().
+        )pbdoc");
 
     m.def(
         "tpunadvertise", [](const char *svcname)
