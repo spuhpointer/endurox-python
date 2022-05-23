@@ -169,7 +169,6 @@ void tpsvrthrdone()
  */
 void PY(TPSVCINFO *svcinfo)
 {
-    //tsvcresult.clean = true;
 
     try
     {
@@ -185,13 +184,6 @@ void PY(TPSVCINFO *svcinfo)
 
         func(&info);
 
-/*
-        if (tsvcresult.clean)
-        {
-            userlog(const_cast<char *>("tpreturn() not called"));
-            tpreturn(TPEXIT, 0, nullptr, 0, 0);
-        }
-*/
     }
     catch (const std::exception &e)
     {
@@ -308,6 +300,27 @@ expublic long ndrxpy_pytpsubscribe(char *eventexpr, char *filter, TPEVCTL *ctl, 
     return rc;
 }
 
+
+/**
+ * @brief unsubscribe from event
+ *
+ * @param eventexpr
+ * @param flags
+ * 
+ * @return Number of subscribtions removed
+ */
+expublic long ndrxpy_pytpunsubscribe(long subscription, long flags)
+{
+    py::gil_scoped_release release;
+
+    long rc = tpunsubscribe (subscription, flags);
+    if (rc == -1)
+    {
+        throw xatmi_exception(tperrno);
+    }
+    return rc;
+}
+
 //TODO: How about unadvertise?
 //However unadvertise is not supported for MT server, thus
 
@@ -319,11 +332,6 @@ extern "C"
 
 static struct tmdsptchtbl_t _tmdsptchtbl[] = {
     {(char *)"", (char *)"PY", PY, 0, 0}, {nullptr, nullptr, nullptr, 0, 0}};
-
-static struct tmsvrargs_t tmsvrargs = {
-    nullptr, &_tmdsptchtbl[0], 0, tpsvrinit, tpsvrdone,
-    nullptr, nullptr, nullptr, nullptr, nullptr,
-    tpsvrthrinit, tpsvrthrdone};
 
 expublic xao_svc_ctx *xao_svc_ctx_ptr;
 
@@ -380,23 +388,18 @@ expublic void ndrxpy_pyrun(py::object svr, std::vector<std::string> args)
  */
 expublic void ndrxpy_register_srv(py::module &m)
 {
-
     //Atmi Context data type
-    py::class_<pytpsrvctxdata>(m, "TpSrvCtxtData")
+    py::class_<pytpsrvctxdata>(m, "PyTpSrvCtxtData")
         .def_readonly("pyctxt", &pytpsrvctxdata::pyctxt);
 
     // Service call info object
-    py::class_<pytpsvcinfo>(m, "TpSvcInfo")
+    py::class_<pytpsvcinfo>(m, "TPSVCINFO")
         .def_readonly("name", &pytpsvcinfo::name)
         .def_readonly("fname", &pytpsvcinfo::fname)
         .def_readonly("flags", &pytpsvcinfo::flags)
         .def_readonly("appkey", &pytpsvcinfo::appkey)
         .def_readonly("cd", &pytpsvcinfo::cd)
         .def_readonly("cltid", &pytpsvcinfo::cltid)
-        /*
-        .def("cltid", [](pytpsvcinfo &inf) { 
-            return py::bytes(reinterpret_cast<char *>(&inf.cltid), sizeof(inf.cltid)); })
-        */
         .def_readonly("data", &pytpsvcinfo::data);
 
     m.def(
@@ -424,7 +427,7 @@ expublic void ndrxpy_register_srv(py::module &m)
             Function name of the service
         func : object
             Callback function used by service. Callback function receives **data** argument
-            which corresponds to **TpSvcInfo** class.
+            which corresponds to **TPSVCINFO** class.
         )pbdoc"
         , py::arg("svcname"), py::arg("funcname"), py::arg("func"));
 
@@ -449,6 +452,9 @@ expublic void ndrxpy_register_srv(py::module &m)
         in case if service failed.
 
         Service name to which to deliver event notification shall be set in *name1* field.
+        Object may be constructed only by the TPEVCTL(flags, name1, name2).
+
+        This function applies to XATMI servers only.
 
         For more details see **tpsubscribe(3)** C API call.
 
@@ -470,13 +476,86 @@ expublic void ndrxpy_register_srv(py::module &m)
             Control structure.
         flags : int
             Bitwise or'd **TPNOTRAN**, **TPSIGRSTRT**, **TPNOTIME** flags.
-            
+
+        Returns
+        -------
+        int
+            subscription - subscription id (may be used to unsubscribe)
+
         )pbdoc",
         py::arg("eventexpr"), py::arg("filter"), py::arg("ctl"), py::arg("flags") = 0);
-    //TODO: tpunsubscribe.
+
+    m.def("tpunsubscribe", &ndrxpy_pytpunsubscribe, 
+        R"pbdoc(
+        Unsubscribe from event.
+
+        This function applies to XATMI servers only.
+
+        For more details see **tpsubscribe(3)** C API call.
+
+        :raise XatmiException:
+            | Following error codes may be present:
+            | **TPEINVAL** - Invalid subscription id was passed.
+            | **TPENOENT** - Event server **tpevsrv(5)** is not available.
+            | **TPETIME** - Timeout calling event server.
+            | **TPESVCFAIL** - Event server failed.
+            | **TPESVCERR** - Event server crashed.
+            | **TPESYSTEM** - System error occurred.
+            | **TPEOS** - OS error.
+
+        Parameters
+        ----------
+        subscription : int
+            Subscription id.
+        flags : int
+            Optionally Or'd **TPSIGRSTRT**, **TPNOTIME**
+        ctl : TPEVCTL
+            Control structure.
+        flags : int
+            Bitwise or'd **TPNOTRAN**, **TPSIGRSTRT**, **TPNOTIME** flags.
+
+        Returns
+        -------
+        int
+            subscription - subscription id (may be used to unsubscribe)
+
+        )pbdoc",
+          py::arg("subscription"), py::arg("flags") = 0);
 
     //Server contexting:
-    m.def("tpsrvgetctxdata", &ndrxpy_tpsrvgetctxdata, "Get service call context data");
+    m.def("tpsrvgetctxdata", &ndrxpy_tpsrvgetctxdata, 
+        R"pbdoc(
+        Retrieve XATMI server context data. this function is used for cases
+        when server multi-threading is managed by the user software. The other
+        use of this function maybe related with architectures where immediate
+        response to the client process is not required, but next service request
+        may be processed.
+
+        After the function call, the server may proceed with call of
+        :meth:`endurox.tpcontinue` call (i.e. tpreturn or tpforward
+        must not be used).
+
+        This function applies to XATMI servers only.
+
+        For more details see **tpsrvgetctxdata(3)** C API call.
+
+        :raise XatmiException:
+            | Following error codes may be present:
+            | **TPEINVAL** - Invalid subscription id was passed.
+            | **TPEPROTO** - Global transaction was started and it was marked for abort-only, 
+                there was any open call descriptors with-in global transaction,
+            | **TPERMERR** - Resource Manager failed (failed to suspend global transaction).
+            | **TPESYSTEM** - System failure occurred during serving
+            | **TPESVCERR** - Event server crashed.
+            | **TPEOS** - OS error.
+
+        Returns
+        -------
+        PyTpSrvCtxtData
+            XATMI service current request context data.
+
+        )pbdoc");
+
     //TODO: TPNOAUTBUF flag is not relevant here, as buffers in py are basically dictionaries
     //and we do not have direct access to underlaying buffer, thus let it restore in the 
     //thread context always.
@@ -506,9 +585,65 @@ expublic void ndrxpy_register_srv(py::module &m)
         svcname : str
             Service name to unadvertise
         )pbdoc",
-        py::arg("tpunadvertise"));
+        py::arg("svcname"));
 
-    m.def("run", &ndrxpy_pyrun, "Run Endurox server", py::arg("server"), py::arg("args"));
+    m.def("run", &ndrxpy_pyrun, 
+        R"pbdoc(
+
+        Run Enduro/X server. This transfer the control to XATMI server
+        main loop.
+
+        .. code-block:: python
+            :caption: XATMI Server
+            :name: XATMI Server
+
+                import endurox as e
+
+                class Server:
+
+                    def tpsvrinit(self, args):
+                        e.userlog('Server start')
+                        e.tpadvertise('SERVICE1', 'SERVICE1', self.SERVICE1)
+                        e.tpadvertise('SERVICE2', 'SERVICE2', self.SERVICE2)
+                        return 0
+
+                    # Optional used for Multi-threaded servers
+                    # configured by <mindispatchthreads> setting.
+                    def tpsvrthrinit(self, argv):
+                        e.userlog('Thread started')
+                        return 0
+
+                    # Optional used for Multi-threaded servers
+                    # configured by <mindispatchthreads> setting.
+                    def tpsvrthrdone(self):
+                        e.userlog('Thread done')
+
+                    def tpsvrdone(self):
+                        e.userlog('Server shutdown')
+
+                    # XATMI Service:
+                    def SERVICE1(self, args):
+                        return e.tpreturn(e.TPSUCCESS, 0, args.data)
+
+                    def SERVICE2(self, args):
+                        return e.tpreturn(e.TPSUCCESS, 0, args.data)
+            
+                if __name__ == '__main__':
+                    e.run(Server(), sys.argv)
+
+        At Server.tpsvrinit() service shall perform intialization, advertises,
+        event subscriptions, configure pollers, etc. 
+        At Server.tpsvrdone() showdown cleanups shall be performed.
+
+        In case if XATMI service code failed, caller receives **TPESVCERR** error,
+        the error is logged to ulog and XATMI servers main loop continues until
+        shutdown is received (e.g. xadmin stop -y).
+
+        For more details see **tpsvrinit(3)**, **tpsvrdone(3)**, **tpservice(3)**,
+        **tpsvrthrinit(3)**, **tpsvrthrdone(3)** C API calls.
+
+        )pbdoc",
+        py::arg("server"), py::arg("args"));
 
     m.def("tpreturn", &ndrxpy_pytpreturn, 
         R"pbdoc(
@@ -543,7 +678,7 @@ expublic void ndrxpy_register_srv(py::module &m)
 
         This function applies to XATMI servers only.
         
-        For more details see C call *tpforward(3)*.
+        For more details see *tpforward(3)* C API call.
 
         Parameters
         ----------
@@ -559,7 +694,17 @@ expublic void ndrxpy_register_srv(py::module &m)
     m.def(
         "tpexit", [](void)
         { tpexit(); },
-        "Restart after return or terminate immediatally (if running from other thread than main)");
+        R"pbdoc(
+        Restart after return or terminate immediately (if running from other 
+        thread than main). In case if called from XATMI server main thread
+        server exists after the service routine returns (i.e. after the 
+        tpreturn() or tpforward() called). 
+
+        This function applies to XATMI servers only.
+        
+        For more details see *tpexit(3)* C API call.
+
+        )pbdoc");
 }
 
 

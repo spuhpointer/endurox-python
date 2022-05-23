@@ -449,7 +449,7 @@ PYBIND11_MODULE(endurox, m)
     m.doc() =
         R"pbdoc(
 Python3 bindings for writing Endurox clients and servers
---------------------------------------------------------
+########################################################
 
     .. currentmodule:: endurox
 
@@ -459,15 +459,22 @@ Python3 bindings for writing Endurox clients and servers
         tpinit
         tpterm
         tpcall
+<<<<<<< HEAD
         tpacall
+=======
+        run
+>>>>>>> e14cdf4d20d9e51df4e27a2bb1147055f1e06cef
         tpsubscribe
+        tpunsubscribe
         tpreturn
         tpforward
         tpadvertise
         tpunadvertise
+        tpsrvgetctxdata
+        tpexit
 
 XATMI buffer formats
-********************
+====================
 
 Core of **XATMI** **IPC** consists of messages being sent between binaries. Message may
 encode different type of data. Enduro/X supports following data buffer types:
@@ -493,7 +500,7 @@ encode different type of data. Enduro/X supports following data buffer types:
 Following chapters lists XATMI data encoding principles.
 
 UBF Data encoding
-=================
+-----------------
 
 When building XATMI buffer from Python dictionary, endurox-python library accepts
 values to be present as list of values, in such case values are loaded into UBF occurrences
@@ -515,61 +522,61 @@ Example call to echo service:
    :caption: UBF buffer encoding call
    :name: ubf-call
 
-    import endurox as e
+        import endurox as e
 
-    tperrno, tpurcode, retbuf = e.tpcall("ECHO", { "data":{
-        # 3x occs:
-        "T_CHAR_FLD": ["X", "Y", 0]
-        , "T_SHORT_FLD": 3200
-        , "T_LONG_FLD": 99999111
-        , "T_FLOAT_FLD": 1000.99
-        , "T_DOUBLE_FLD": 1000111.99
-        , "T_STRING_FLD": "HELLO INPUT"
-        # contains sub-ubf buffer, which againt contains sub-buffer
-        , "T_UBF_FLD": {"T_SHORT_FLD":99, "T_UBF_FLD":{"T_LONG_2_FLD":1000091}}
-        # at occ 0 EMPTY view is used
-        , "T_VIEW_FLD": [ {}, {"vname":"UBTESTVIEW2", "data":{
-                        "tshort1":5
-                        , "tlong1":100000
-                        , "tchar1":"J"
-                        , "tfloat1":9999.9
-                        , "tdouble1":11119999.9
-                        , "tstring1":"HELLO VIEW"
-                        , "tcarray1":[b'\x00\x00', b'\x01\x01'] 
-                        }}]
-        # contains pointer to STRING buffer:
-        , "T_PTR_FLD":{"data":"HELLO WORLD"}
-    }})
+        tperrno, tpurcode, retbuf = e.tpcall("ECHO", { "data":{
+            # 3x occs:
+            "T_CHAR_FLD": ["X", "Y", 0]
+            , "T_SHORT_FLD": 3200
+            , "T_LONG_FLD": 99999111
+            , "T_FLOAT_FLD": 1000.99
+            , "T_DOUBLE_FLD": 1000111.99
+            , "T_STRING_FLD": "HELLO INPUT"
+            # contains sub-ubf buffer, which againt contains sub-buffer
+            , "T_UBF_FLD": {"T_SHORT_FLD":99, "T_UBF_FLD":{"T_LONG_2_FLD":1000091}}
+            # at occ 0 EMPTY view is used
+            , "T_VIEW_FLD": [ {}, {"vname":"UBTESTVIEW2", "data":{
+                            "tshort1":5
+                            , "tlong1":100000
+                            , "tchar1":"J"
+                            , "tfloat1":9999.9
+                            , "tdouble1":11119999.9
+                            , "tstring1":"HELLO VIEW"
+                            , "tcarray1":[b'\x00\x00', b'\x01\x01'] 
+                            }}]
+            # contains pointer to STRING buffer:
+            , "T_PTR_FLD":{"data":"HELLO WORLD"}
+        }})
 
-    print(retbuf)
+        print(retbuf)
 
 
 .. code-block:: python
    :caption: UBF buffer encoding output (line wrapped)
    :name: ubf-call-output
    
-    {
-        'buftype': 'UBF', 'data':
         {
-            'T_SHORT_FLD': [3200]
-            , 'T_LONG_FLD': [99999111]
-            , 'T_CHAR_FLD': ['X', 'Y', b'\x00']
-            , 'T_FLOAT_FLD': [1000.989990234375]
-            , 'T_DOUBLE_FLD': [1000111.99]
-            , 'T_STRING_FLD': ['HELLO INPUT']
-            , 'T_PTR_FLD': [{'buftype': 'STRING', 'data': 'HELLO WORLD'}]
-            , 'T_UBF_FLD': [{'T_SHORT_FLD': [99], 'T_UBF_FLD': [{'T_LONG_2_FLD': [1000091]}]}]
-            , 'T_VIEW_FLD': [{}, {'vname': 'UBTESTVIEW2', 'data': {
-                    'tshort1': [5]
-                    , 'tlong1': [100000]
-                    , 'tchar1': ['J']
-                    , 'tfloat1': [9999.900390625]
-                    , 'tdouble1': [11119999.9]
-                    , 'tstring1': ['HELLO VIEW']
-                    , 'tcarray1': [b'\x00\x00', b'\x01\x01']
-            }}]
+            'buftype': 'UBF', 'data':
+            {
+                'T_SHORT_FLD': [3200]
+                , 'T_LONG_FLD': [99999111]
+                , 'T_CHAR_FLD': ['X', 'Y', b'\x00']
+                , 'T_FLOAT_FLD': [1000.989990234375]
+                , 'T_DOUBLE_FLD': [1000111.99]
+                , 'T_STRING_FLD': ['HELLO INPUT']
+                , 'T_PTR_FLD': [{'buftype': 'STRING', 'data': 'HELLO WORLD'}]
+                , 'T_UBF_FLD': [{'T_SHORT_FLD': [99], 'T_UBF_FLD': [{'T_LONG_2_FLD': [1000091]}]}]
+                , 'T_VIEW_FLD': [{}, {'vname': 'UBTESTVIEW2', 'data': {
+                        'tshort1': [5]
+                        , 'tlong1': [100000]
+                        , 'tchar1': ['J']
+                        , 'tfloat1': [9999.900390625]
+                        , 'tdouble1': [11119999.9]
+                        , 'tstring1': ['HELLO VIEW']
+                        , 'tcarray1': [b'\x00\x00', b'\x01\x01']
+                }}]
+            }
         }
-    }
 
 Following **exceptions** may be throw, when XATMI buffer is instantiated:
 
@@ -578,7 +585,7 @@ Following **exceptions** may be throw, when XATMI buffer is instantiated:
   | **BNOSPACE** - no space in view field.
 
 STRING Data encoding
-====================
+--------------------
 
 STRING data buffer may contain arbitrary UTF-8 string.
 STRING buffer type is selected by following rules:
@@ -590,21 +597,21 @@ STRING buffer type is selected by following rules:
 .. code-block:: python
    :caption: STRING buffer encoding call
    :name: string-call
-    import endurox as e
+        import endurox as e
 
-    tperrno, tpurcode, retbuf = e.tpcall("ECHO", { "data":"HELLO WORLD" })
+        tperrno, tpurcode, retbuf = e.tpcall("ECHO", { "data":"HELLO WORLD" })
 
-    print(retbuf)
+        print(retbuf)
 
 .. code-block:: python
    :caption: STRING buffer encoding output
    :name: sring-call-output
 
-    {'buftype': 'STRING', 'data': 'HELLO WORLD'}
+        {'buftype': 'STRING', 'data': 'HELLO WORLD'}
 
 
 CARRAY Data encoding
-====================
+--------------------
 
 CARRAY buffer type may transport arbitrary byte array.
 CARRAY buffer type is selected by following rules:
@@ -616,9 +623,9 @@ CARRAY buffer type is selected by following rules:
    :caption: CARRAY buffer encoding call
    :name: carray-call
 
-    import endurox as e
+        import endurox as e
 
-    tperrno, tpurcode, retbuf = e.tpcall("ECHO", { "data":b'\x00\x00\x01\x02\x04' })
+        tperrno, tpurcode, retbuf = e.tpcall("ECHO", { "data":b'\x00\x00\x01\x02\x04' })
 
     print(retbuf)
 
@@ -626,10 +633,10 @@ CARRAY buffer type is selected by following rules:
    :caption: CARRAY buffer encoding output
    :name: carray-call-output
 
-    {'buftype': 'CARRAY', 'data': b'\x00\x00\x01\x02\x04'}
+        {'buftype': 'CARRAY', 'data': b'\x00\x00\x01\x02\x04'}
 
 NULL Data encoding
-==================
+------------------
 
 NULL buffers are empty dictionaries, selected by following rules:
 
@@ -640,20 +647,20 @@ NULL buffers are empty dictionaries, selected by following rules:
    :caption: NULL buffer encoding call
    :name: null-call
 
-    import endurox as e
+        import endurox as e
 
-    tperrno, tpurcode, retbuf = e.tpcall("ECHO", {})
+        tperrno, tpurcode, retbuf = e.tpcall("ECHO", {})
 
-    print(retbuf)
+        print(retbuf)
     
 .. code-block:: python
    :caption: NULL buffer encoding output
    :name: null-call-output
 
-    {'buftype': 'NULL'}
+        {'buftype': 'NULL'}
 
 JSON Data encoding
-==================
+------------------
 
 JSON buffer type basically is valid UTF-8 string, but with indication that
 it contains json formatted data. JSON buffer is selected by following rules:
@@ -674,10 +681,10 @@ it contains json formatted data. JSON buffer is selected by following rules:
    :caption: JSON buffer encoding output
    :name: json-call-output
 
-    {'buftype': 'JSON', 'data': '{"name":"Jim", "age":30, "car":null}'}
+        {'buftype': 'JSON', 'data': '{"name":"Jim", "age":30, "car":null}'}
 
 VIEW Data encoding
-==================
+------------------
 
 VIEW buffer encodes record/structure data. On the Python side data is encoded in dictionary,
 and similary as with UBF, values may be set as direct values for the dictionary keys
@@ -698,17 +705,17 @@ VIEW buffer type is selected by following rules:
    :caption: VIEW buffer encoding call
    :name: view-call
 
-    import endurox as e
+        import endurox as e
 
-    tperrno, tpurcode, retbuf = e.tpcall("ECHO", { "buftype":"VIEW", "subtype":"UBTESTVIEW2", "data":{
-        "tshort1":5
-        , "tlong1":100000
-        , "tchar1":"J"
-        , "tfloat1":9999.9
-        , "tdouble1":11119999.9
-        , "tstring1":"HELLO VIEW"
-        , "tcarray1":[b'\x00\x00', b'\x01\x01']
-    }})
+        tperrno, tpurcode, retbuf = e.tpcall("ECHO", { "buftype":"VIEW", "subtype":"UBTESTVIEW2", "data":{
+            "tshort1":5
+            , "tlong1":100000
+            , "tchar1":"J"
+            , "tfloat1":9999.9
+            , "tdouble1":11119999.9
+            , "tstring1":"HELLO VIEW"
+            , "tcarray1":[b'\x00\x00', b'\x01\x01']
+        }})
 
     print(retbuf)
 
@@ -716,28 +723,55 @@ VIEW buffer type is selected by following rules:
    :caption: VIEW buffer encoding output
    :name: view-call-output
 
-    {'buftype': 'VIEW', 'subtype': 'UBTESTVIEW2', 'data': {
-        'tshort1': [5]
-        , 'tlong1': [100000]
-        , 'tchar1': ['J']
-        , 'tfloat1': [9999.900390625]
-        , 'tdouble1': [11119999.9]
-        , 'tstring1': ['HELLO VIEW']
-        , 'tcarray1': [b'\x00\x00', b'\x01\x01']
+        {'buftype': 'VIEW', 'subtype': 'UBTESTVIEW2', 'data': {
+            'tshort1': [5]
+            , 'tlong1': [100000]
+            , 'tchar1': ['J']
+            , 'tfloat1': [9999.900390625]
+            , 'tdouble1': [11119999.9]
+            , 'tstring1': ['HELLO VIEW']
+            , 'tcarray1': [b'\x00\x00', b'\x01\x01']
+            }
         }
-    }
 
 CALL-INFO XATMI buffer association
-==================================
+----------------------------------
+
 Call-info block is additional UBF buffer that may be linked with Any XATMI buffer 
-(except NULL buffer). The concept behind with call-info block is similar like
+(except **NULL** buffer). The concept behind with call-info block is similar like
 HTTP headers information, i.e. additional data linked to the message body.
 
-TODO:
+.. code-block:: python
+   :caption: Call info example
+   :name: call-info
 
+        import endurox as e
+
+        tperrno, tpurcode, retbuf = e.tpcall("ECHO", { 
+                "data":"HELLO STRING"
+                , "callinfo":{"T_SHORT_FLD":55, "T_STRING_FLD":"HELLO"}
+            })
+        print(retbuf)
+
+.. code-block:: python
+   :caption: Call info example
+   :name: call-info-output
+
+        {'buftype': 'STRING', 'data': 'HELLO STRING'
+            , 'callinfo': {'T_SHORT_FLD': [55], 'T_STRING_FLD': ['HELLO']}
+        }
+
+Key Classes
+===========
+
+This section describes key classes used by Enduro/X API.
+
+
+Flags
+=====
 
 Flags to service routines
-**************************
+-------------------------
 
 - TPNOBLOCK - non-blocking send/rcv
 - TPSIGRSTRT - restart rcv on interrupt
@@ -754,21 +788,21 @@ Flags to service routines
 - TPRECVONLY - recv-only mode
 
 Flags to tpreturn
-*****************
+-----------------
 
 - TPFAIL - service FAILURE for tpreturn
 - TPEXIT - service FAILURE with server exit
 - TPSUCCESS - service SUCCESS for tpreturn
 
 Flags to tpsblktime/tpgblktime
-******************************
+------------------------------
 
 - TPBLK_SECOND - This flag sets the blocktime value, in seconds. This is default behavior.
 - TPBLK_NEXT - This flag sets the blocktime value for the next potential blocking API.
 - TPBLK_ALL - This flag sets the blocktime value for the all subsequent potential blocking APIs.
 
 Flags to tpenqueue/tpdequeue
-****************************
+----------------------------
 
 - TPQCORRID - set/get correlation id
 - TPQFAILUREQ - set/get failure queue
@@ -796,7 +830,6 @@ Flags to tpenqueue/tpdequeue
 
 )pbdoc";
 }
-
 
 /* vim: set ts=4 sw=4 et smartindent: */
 
