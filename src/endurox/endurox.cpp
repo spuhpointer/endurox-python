@@ -459,11 +459,8 @@ Python3 bindings for writing Endurox clients and servers
         tpinit
         tpterm
         tpcall
-<<<<<<< HEAD
         tpacall
-=======
         run
->>>>>>> e14cdf4d20d9e51df4e27a2bb1147055f1e06cef
         tpsubscribe
         tpunsubscribe
         tpreturn
