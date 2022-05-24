@@ -766,6 +766,74 @@ Key Classes
 
 This section describes key classes used by Enduro/X API.
 
+TPQCTL
+------
+
+This class is used to pass/receive additional information to/from
+tpenqueue() and tpdequeue() module function.
+
+.. code-block:: python
+    :caption: TPQCTL Class
+    :name: TPQCTL-class
+
+        class TPQCTL:
+            flags: int
+            deq_time: int
+            msgid: bytes
+            diagnostic: int
+            diagmsg: str
+            priority: int
+            corrid: bytes
+            urcode: int
+            cltid: CLIENTID
+            replyqueue: str
+            failurequeue: str
+            delivery_qos: int
+            reply_qos: int
+            exp_time: int
+
+Class members such as *TPQCTL.deq_time*, *TPQCTL.priority*, *TPQCTL.urcode*, *TPQCTL.delivery_qos*
+*TPQCTL.deq_time*, *TPQCTL.cltid* and *TPQCTL.reply_qos* are reserved for future used.
+
+*TPQCTL.flags* may be set to following values:
+
+- **TPQCORRID** - use *TPQCTL.corrid* identifier, set correlator or get message by correlator.
+- **TPQREPLYQ** - use *TPQCTL.replyqueue* set reply queue for automatic queues.
+- **TPQFAILUREQ** - use *TPQCTL.failurequeue* use failure queue for failed 
+    automatic queue messages.
+
+*TPQCTL.msgid* is assigned by Enduro/X when message is enqueued. Message id is 32 bytes long.
+
+*TPQCTL.diagnostic* diagnostic error code and *TPQCTL.diagmsg* messages are translated to
+**QmException**.
+
+Following *TPQCTL.diagnostic* (*QmException.code*) codes may be returned:
+
+- **QMEINVAL** - Invalid data.
+- **QMEBADRMID** - RFU.
+- **QMENOTOPEN** - RFU.
+- **QMETRAN** - RFU.
+- **QMEBADMSGID** - RFU.
+- **QMESYSTEM** - System error.
+- **QMEOS** - OS error.
+- **QMEABORTED** - RFU.
+- **QMENOTA** - RFU.         
+- **QMEPROTO** - RFU.
+- **QMEBADQUEUE** - Bad queue name.
+- **QMENOMSG** - No messages in queue.
+- **QMEINUSE** - RFU.
+- **QMENOSPACE** - RFU.
+- **QMERELEASE** - RFU.
+- **QMEINVHANDLE** - RFU.
+- **QMESHARE** - RFU.
+
+*TPQCTL.corrid* is correlator between messages. ID is 32 bytes long.
+
+*TPQCTL.replyqueue* is queue name where automatic queues may post the response provided by
+destination service.
+
+*TPQCTL.failurequeue* is queue name where failed message (destination automatic service failed all attempts)
+are enqueued.
 
 Flags
 =====

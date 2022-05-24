@@ -600,6 +600,7 @@ expublic void ndrxpy_register_xatmi(py::module &m)
              py::arg("failurequeue") = std::string(""))
 
         .def_readwrite("flags", &NDRXPY_TPQCTL::flags)
+        .def_readwrite("deq_time", &NDRXPY_TPQCTL::deq_time)
         .def_readwrite("msgid", &NDRXPY_TPQCTL::msgid)
         .def_readonly("diagnostic", &NDRXPY_TPQCTL::diagnostic)
         .def_readonly("diagmsg", &NDRXPY_TPQCTL::diagmsg)
@@ -610,7 +611,8 @@ expublic void ndrxpy_register_xatmi(py::module &m)
         .def_readwrite("replyqueue", &NDRXPY_TPQCTL::replyqueue)
         .def_readwrite("failurequeue", &NDRXPY_TPQCTL::failurequeue)
         .def_readwrite("delivery_qos", &NDRXPY_TPQCTL::delivery_qos)
-        .def_readwrite("reply_qos", &NDRXPY_TPQCTL::reply_qos);
+        .def_readwrite("reply_qos", &NDRXPY_TPQCTL::reply_qos)
+        .def_readwrite("exp_time", &NDRXPY_TPQCTL::exp_time);
 
     //TPEVCTL mapping
     py::class_<TPEVCTL>(m, "TPEVCTL")
@@ -647,7 +649,16 @@ expublic void ndrxpy_register_xatmi(py::module &m)
     m.def("tpenqueue", &ndrxpy_pytpenqueue, 
           R"pbdoc(
         Enqueue message to persistent message queue.
-        
+
+        .. code-block:: python
+            :caption: tpenqueue example
+            :name: tpenqueue-example
+
+                qctl = e.TPQCTL()
+                qctl.corrid=b'\x01\x02'
+                qctl.flags=e.TPQCORRID
+                qctl1 = e.tpenqueue("SAMPLESPACE", "TESTQ", qctl, {"data":"SOME DATA 1"})
+
         For more details see **tpenqueue(3)**.
 
         :raise XatmiException: 
@@ -669,7 +680,6 @@ expublic void ndrxpy_register_xatmi(py::module &m)
             | **QMESYSTEM** - System error.
             | **QMEBADQUEUE** - Bad queue name.
 
-
         Parameters
         ----------
         qspace : str
@@ -682,7 +692,7 @@ expublic void ndrxpy_register_xatmi(py::module &m)
             Input XATMI data buffer
         flags : int
             Or'd bit flags: **TPNOTRAN**, **TPSIGRSTRT**, **TPNOCHANGE**, 
-            **TPTRANSUSPEND**, **TPNOBLOCK**, **TPNOABORT**.
+            **TPTRANSUSPEND**, **TPNOBLOCK**, **TPNOABORT**. Default flag is **0**.
 
         Returns
         -------
@@ -817,7 +827,7 @@ expublic void ndrxpy_register_xatmi(py::module &m)
     "Forced disconnect from conversation", py::arg("cd") = 0);
     
 
-    //TODO: notification API.
+    //notification API.
     m.def("tpnotify", &ndrxpy_pytpnotify, "Send unsolicited notification to the process",
           py::arg("clientid"), py::arg("idata"), py::arg("flags") = 0);
 
