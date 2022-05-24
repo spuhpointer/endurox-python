@@ -1,7 +1,6 @@
 import unittest
 import endurox as e
 import exutils as u
-import gc
 
 class TestUbf(unittest.TestCase):
 

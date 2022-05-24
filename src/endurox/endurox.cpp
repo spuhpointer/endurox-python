@@ -460,6 +460,7 @@ Python3 bindings for writing Endurox clients and servers
         tpterm
         tpcall
         tpacall
+        tpenqueue
         run
         tpsubscribe
         tpunsubscribe

@@ -644,8 +644,52 @@ expublic void ndrxpy_register_xatmi(py::module &m)
         .def_readonly("ctx_bytes", &pytpcontext::ctx_bytes);
 
     //Functions:
-    m.def("tpenqueue", &ndrxpy_pytpenqueue, "Routine to enqueue a message.",
-          py::arg("qspace"), py::arg("qname"), py::arg("ctl"), py::arg("data"),
+    m.def("tpenqueue", &ndrxpy_pytpenqueue, 
+          R"pbdoc(
+        Enqueue message to persistent message queue.
+        
+        For more details see **tpenqueue(3)**.
+
+        :raise XatmiException: 
+            | Following error codes may be present:
+            | **TPEINVAL** - Invalid arguments to function (See C descr).
+            | **TPETIME** - Queue space call timeout.
+            | **TPENOENT** - Queue space not found.
+            | **TPESVCFAIL** - Queue space server failed.
+            | **TPESVCERR** - Queue space server crashed.
+            | **TPESYSTEM** - System error.
+            | **TPEOS** - OS error.
+            | **TPEBLOCK** - Blocking condition exists and **TPNOBLOCK** was specified.
+            | **TPETRAN** - Failed to join global transaction.
+
+        :raise QmException: 
+            | Following error codes may be present:
+            | **QMEINVAL** - Invalid request buffer. 
+            | **QMEOS** - OS error.
+            | **QMESYSTEM** - System error.
+            | **QMEBADQUEUE** - Bad queue name.
+
+
+        Parameters
+        ----------
+        qspace : str
+            Queue space name.
+        qname : str
+            Queue name.
+        ctl : TPQCTL
+            Control structure.
+        data : dict
+            Input XATMI data buffer
+        flags : int
+            Or'd bit flags: **TPNOTRAN**, **TPSIGRSTRT**, **TPNOCHANGE**, 
+            **TPTRANSUSPEND**, **TPNOBLOCK**, **TPNOABORT**.
+
+        Returns
+        -------
+        TPQCTL
+            Return control structure (updated with details).
+
+     )pbdoc", py::arg("qspace"), py::arg("qname"), py::arg("ctl"), py::arg("data"),
           py::arg("flags") = 0);
 
     m.def("tpdequeue", &ndrx_pytpdequeue, "Routine to dequeue a message from a queue.",
@@ -658,7 +702,7 @@ expublic void ndrxpy_register_xatmi(py::module &m)
         exception is not thrown, instead first return argument shall be tested for
         the tperrno for 0 (to check success case).
         
-        For more deatils see **tpcall(3)**.
+        For more details see **tpcall(3)**.
 
         :raise XatmiException: 
             | Following error codes may be present:
