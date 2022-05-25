@@ -617,7 +617,7 @@ expublic void ndrxpy_register_srv(py::module &m)
     m.def("run", &ndrxpy_pyrun, 
         R"pbdoc(
 
-        Run Enduro/X server. This transfer the control to XATMI server
+        Run Enduro/X XATMI server process. This transfer the control to XATMI server
         main loop.
 
         .. code-block:: python
@@ -658,9 +658,9 @@ expublic void ndrxpy_register_srv(py::module &m)
                 if __name__ == '__main__':
                     e.run(Server(), sys.argv)
 
-        At Server.tpsvrinit() service shall perform intialization, advertises,
+        At :py:meth:`Server.tpsvrinit()` server shall perform initialization, advertises,
         event subscriptions, configure pollers, etc. 
-        At Server.tpsvrdone() showdown cleanups shall be performed.
+        At :py:meth:`Server.tpsvrdone()` shutdown cleanups shall be performed.
 
         In case if XATMI service code failed, caller receives **TPESVCERR** error,
         the error is logged to ulog and XATMI servers main loop continues until

@@ -446,11 +446,14 @@ PYBIND11_MODULE(endurox, m)
     m.attr("TP_CMT_LOGGED") = py::int_(TP_CMT_LOGGED);
     m.attr("TP_CMT_COMPLETE") = py::int_(TP_CMT_COMPLETE);
 
+    //Doc syntax
+    //https://www.sphinx-doc.org/en/master/usage/restructuredtext/domains.html#cross-referencing-python-objects
     m.doc() =
         R"pbdoc(
 Python3 bindings for writing Endurox clients and servers
 ########################################################
 
+    .. module:: endurox
     .. currentmodule:: endurox
 
     .. autosummary::
@@ -468,6 +471,7 @@ Python3 bindings for writing Endurox clients and servers
         tpacall
         tpenqueue
         tpscmt
+        tpdequeue
         run
         tpsubscribe
         tpunsubscribe
@@ -526,9 +530,9 @@ regardless of did field had several occurrences or just one.
 
 UBF buffer type is selected by following rules:
 
-- **data** key is dictionary and **buftype** key is not present.
+- *data* key is dictionary and *buftype* key is not present.
 
-- **data** key is dictionary and **buftype** key is set to **UBF**.
+- *data* key is dictionary and *buftype* key is set to **UBF**.
 
 Example call to echo service:
 
@@ -561,7 +565,6 @@ Example call to echo service:
             # contains pointer to STRING buffer:
             , "T_PTR_FLD":{"data":"HELLO WORLD"}
         }})
-
         print(retbuf)
 
 
@@ -604,9 +607,9 @@ STRING Data encoding
 STRING data buffer may contain arbitrary UTF-8 string.
 STRING buffer type is selected by following rules:
 
-- **data** key value is string (does not contain 0x00 byte) and **buftype** key is not present.
+- *data* key value is string (does not contain 0x00 byte) and *buftype* key is not present.
 
-- **buftype** key is set and contains **STRING** keyword.
+- *buftype* key is set and contains **STRING** keyword.
 
 .. code-block:: python
    :caption: STRING buffer encoding call
@@ -630,8 +633,8 @@ CARRAY Data encoding
 CARRAY buffer type may transport arbitrary byte array.
 CARRAY buffer type is selected by following rules:
 
-- **data** key value is byte array and **buftype** key is not present.
-- **data** key value is byte array and **buftype** is set to **CARRAY**.
+- *data* key value is byte array and *buftype* key is not present.
+- *data* key value is byte array and *buftype* is set to *CARRAY*.
 
 .. code-block:: python
    :caption: CARRAY buffer encoding call
@@ -654,8 +657,8 @@ NULL Data encoding
 
 NULL buffers are empty dictionaries, selected by following rules:
 
-- **data** key value is empty dictionary and **buftype** key is not present.
-- **data** key value is empty dictionary and **buftype** is set to **NULL**.
+- *data* key value is empty dictionary and *buftype* key is not present.
+- *data* key value is empty dictionary and *buftype* is set to **NULL**.
 
 .. code-block:: python
    :caption: NULL buffer encoding call
@@ -679,7 +682,7 @@ JSON Data encoding
 JSON buffer type basically is valid UTF-8 string, but with indication that
 it contains json formatted data. JSON buffer is selected by following rules:
 
-- **data** is string value and **buftype** is set to **JSON**.
+- *data* is string value and *buftype* is set to **JSON**.
 
 .. code-block:: python
    :caption: JSON buffer encoding call
@@ -701,7 +704,7 @@ VIEW Data encoding
 ------------------
 
 VIEW buffer encodes record/structure data. On the Python side data is encoded in dictionary,
-and similary as with UBF, values may be set as direct values for the dictionary keys
+and similarly as with UBF, values may be set as direct values for the dictionary keys
 (and are loaded into occurrence 0 of the view field). Or lists may be used to encode
 values, if the view field is array, in such case values are loaded in corresponding
 occurrences.
@@ -713,7 +716,7 @@ For received buffers all values are encapsulated in lists.
 
 VIEW buffer type is selected by following rules:
 
-- **buftype** is set to **VIEW**, **subtype** is set to valid view name and **data** is dictionary.
+- *buftype* is set to **VIEW**, *subtype* is set to valid view name and *data* is dictionary.
 
 .. code-block:: python
    :caption: VIEW buffer encoding call
@@ -786,42 +789,82 @@ TPQCTL
 This class is used to pass/receive additional information to/from
 tpenqueue() and tpdequeue() module function.
 
-.. code-block:: python
-    :caption: TPQCTL Class
-    :name: TPQCTL-class
+.. py:class:: TPQCTL()
+   :module: endurox
 
-        class TPQCTL:
-            flags: int
-            deq_time: int
-            msgid: bytes
-            diagnostic: int
-            diagmsg: str
-            priority: int
-            corrid: bytes
-            urcode: int
-            cltid: CLIENTID
-            replyqueue: str
-            failurequeue: str
-            delivery_qos: int
-            reply_qos: int
-            exp_time: int
+   Persistent queue API control class
 
-Class members such as *TPQCTL.deq_time*, *TPQCTL.priority*, *TPQCTL.urcode*, *TPQCTL.delivery_qos*
-*TPQCTL.deq_time*, *TPQCTL.cltid* and *TPQCTL.reply_qos* are reserved for future used.
+   .. attribute:: flags
 
-*TPQCTL.flags* may be set to following values:
+      *int* -- See bellow flags
 
-- **TPQCORRID** - use *TPQCTL.corrid* identifier, set correlator or get message by correlator.
-- **TPQREPLYQ** - use *TPQCTL.replyqueue* set reply queue for automatic queues.
-- **TPQFAILUREQ** - use *TPQCTL.failurequeue* use failure queue for failed 
+   .. attribute:: deq_time
+
+      *int* -- RFU
+
+   .. attribute:: msgid
+
+      *bytes* -- is assigned by Enduro/X when message is enqueued. 
+        Message id is 32 bytes long. When doing dequeue, may specify
+        message id to read from Q.
+
+   .. attribute:: diagnostic
+
+      *int* -- See exception codes bellow.
+
+   .. attribute:: diagmsg
+
+      *str* -- Diagnostic messages. Used in **QmException**.
+
+   .. attribute:: priority
+
+      *int* -- RFU.
+
+   .. attribute:: corrid
+
+      *bytes* -- is correlator between messages. ID is 32 bytes long.
+
+   .. attribute:: urcode
+
+      *int* -- RFU.
+
+   .. attribute:: cltid
+
+      *CLIENTID* -- RFU.
+
+   .. attribute:: replyqueue
+
+      *str* -- is queue name where automatic queues may post the
+        response provided by destination service.
+
+   .. attribute:: failurequeue
+
+      *str* -- is queue name where failed message 
+        (destination automatic service failed all attempts) are enqueued.
+
+   .. attribute:: delivery_qos
+
+      *int* -- RFU.
+
+   .. attribute:: reply_qos
+
+      *int* -- RFU.
+
+   .. attribute:: exp_time
+
+      *int* -- RFU.
+
+:attr:`TPQCTL.flags` may be set to following values:
+
+- **TPQCORRID** - use *TPQCTL.corrid* identifier, set correlator id when performing
+    enqueue.
+- **TPQGETBYCORRID** - dequeue message by :attr:`TPQCTL.corrid`.
+- **TPQGETBYMSGID** - dequeue message by :attr:`TPQCTL.msgid`.
+- **TPQREPLYQ** - use :attr:`TPQCTL.replyqueue` set reply queue for automatic queues.
+- **TPQFAILUREQ** - use :attr:`TPQCTL.failurequeue` use failure queue for failed 
     automatic queue messages.
 
-*TPQCTL.msgid* is assigned by Enduro/X when message is enqueued. Message id is 32 bytes long.
-
-*TPQCTL.diagnostic* diagnostic error code and *TPQCTL.diagmsg* messages are translated to
-**QmException**.
-
-Following *TPQCTL.diagnostic* (*QmException.code*) codes may be returned:
+Following :attr:`TPQCTL.diagnostic` (*QmException.code*) codes may be returned:
 
 - **QMEINVAL** - Invalid data.
 - **QMEBADRMID** - RFU.
@@ -840,14 +883,6 @@ Following *TPQCTL.diagnostic* (*QmException.code*) codes may be returned:
 - **QMERELEASE** - RFU.
 - **QMEINVHANDLE** - RFU.
 - **QMESHARE** - RFU.
-
-*TPQCTL.corrid* is correlator between messages. ID is 32 bytes long.
-
-*TPQCTL.replyqueue* is queue name where automatic queues may post the response provided by
-destination service.
-
-*TPQCTL.failurequeue* is queue name where failed message (destination automatic service failed all attempts)
-are enqueued.
 
 Flags
 =====

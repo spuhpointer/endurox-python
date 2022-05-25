@@ -647,7 +647,7 @@ expublic void ndrxpy_register_xatmi(py::module &m)
 
     //Functions:
     m.def("tpenqueue", &ndrxpy_pytpenqueue, 
-          R"pbdoc(
+        R"pbdoc(
         Enqueue message to persistent message queue.
 
         .. code-block:: python
@@ -659,7 +659,9 @@ expublic void ndrxpy_register_xatmi(py::module &m)
                 qctl.flags=e.TPQCORRID
                 qctl1 = e.tpenqueue("SAMPLESPACE", "TESTQ", qctl, {"data":"SOME DATA 1"})
 
-        For more details see **tpenqueue(3)**.
+        For more details see **tpenqueue(3)** C API call.
+
+        See **tests/test003_tmq/runtime/bin/tpenqueue.py** for sample code.
 
         :raise XatmiException: 
             | Following error codes may be present:
@@ -702,7 +704,66 @@ expublic void ndrxpy_register_xatmi(py::module &m)
      )pbdoc", py::arg("qspace"), py::arg("qname"), py::arg("ctl"), py::arg("data"),
           py::arg("flags") = 0);
 
-    m.def("tpdequeue", &ndrx_pytpdequeue, "Routine to dequeue a message from a queue.",
+    m.def("tpdequeue", &ndrx_pytpdequeue, 
+        R"pbdoc(
+        Dequeue message from persistent queue.
+
+        .. code-block:: python
+            :caption: tpdequeue example
+            :name: tpdequeue-example
+
+                qctl = e.TPQCTL()
+                qctl.flags=e.TPQGETBYCORRID
+                qctl.corrid=b'\x01\x02'
+                qctl, retbuf = e.tpdequeue("SAMPLESPACE", "TESTQ", qctl)
+                print(retbuf["data"])
+
+        For more details see **tpdequeue(3)**.
+
+        See **tests/test003_tmq/runtime/bin/tpenqueue.py** for sample code.
+
+        :raise XatmiException: 
+            | Following error codes may be present:
+            | **TPEINVAL** - Invalid arguments to function (See C descr).
+            | **TPENOENT** - Queue space not found (tmqueue process for qspace not started).
+            | **TPETIME** - Queue space call timeout.
+            | **TPESVCFAIL** - Queue space server failed.
+            | **TPESVCERR** - Queue space server crashed.
+            | **TPESYSTEM** - System error.
+            | **TPEOS** - OS error.
+            | **TPEBLOCK** - Blocking condition exists and **TPNOBLOCK** was specified.
+            | **TPETRAN** - Failed to join global transaction.
+
+        :raise QmException: 
+            | Following error codes may be present:
+            | **QMEINVAL** - Invalid request buffer or qctl. 
+            | **QMEOS** - OS error.
+            | **QMESYSTEM** - System error.
+            | **QMEBADQUEUE** - Bad queue name.
+            | **QMENOMSG** - No messages in
+
+        Parameters
+        ----------
+        qspace : str
+            Queue space name.
+        qname : str
+            Queue name.
+        ctl : TPQCTL
+            Control structure.
+        data : dict
+            Input XATMI data buffer
+        flags : int
+            Or'd bit flags: **TPNOTRAN**, **TPSIGRSTRT**, **TPNOCHANGE**, 
+            **TPNOTIME**, **TPNOBLOCK**. Default flag is **0**.
+
+        Returns
+        -------
+        TPQCTL
+            Return control structure (updated with details).
+        dict
+            XATMI data buffer.
+
+     )pbdoc",
           py::arg("qspace"), py::arg("qname"), py::arg("ctl"),
           py::arg("flags") = 0);
 
