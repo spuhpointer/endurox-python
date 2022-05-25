@@ -1254,7 +1254,21 @@ expublic void ndrxpy_register_xatmi(py::module &m)
 
             tpfreectxt(ctxt);
         },
-        "Free current context",
+        R"pbdoc(
+        Free XATMI context.
+
+        For more details see **tpfreectxt(3)** C API call.
+
+        :raise XatmiException:
+            | Following error codes may be present:
+            | *TPESYSTEM* - System error occurred.
+            | *TPEOS* - Operating System error occurred.
+
+        Parameters
+        ----------
+        context : int
+            | XATMI context read by :func:`tpgetctxt` or :func:`tpnewctxt`
+         )pbdoc",
         py::arg("context"));
 
     m.def(
@@ -1263,7 +1277,22 @@ expublic void ndrxpy_register_xatmi(py::module &m)
         {
             return tpgetnodeid();
         },
-        "Get current cluster node id");
+        R"pbdoc(
+        Return current Enduro/X cluster node id.
+
+        For more details see C call *tpgetnodeid(3)*.
+
+        :raise XatmiException:
+            | Following error codes may be present:
+            | *TPESYSTEM* - System error occurred.
+            | *TPEOS* - Operating System error occurred.
+
+        Returns
+        -------
+        nodeid : int
+            | Enduro/X cluster node id.
+         )pbdoc"
+        );
 
     m.def(
         "tpgprio",
@@ -1271,7 +1300,16 @@ expublic void ndrxpy_register_xatmi(py::module &m)
         {
             return tpgprio();
         },
-        "Get priority for last service call");
+        R"pbdoc(
+        Get last last service call priority.
+
+        For more details see C call *tpgprio(3)*.
+
+        Returns
+        -------
+        prio : int
+            | Last XATMI service call priority.
+     )pbdoc");
 
     m.def(
         "tpsprio",
@@ -1282,7 +1320,28 @@ expublic void ndrxpy_register_xatmi(py::module &m)
                 throw xatmi_exception(tperrno);
             }
         },
-        "Set priority for next service call");
+        R"pbdoc(
+        Set priority for next XATMI service call. *prio* can be absolute value
+        in such case it must be in range of **1..100** (if flag **TPABSOLUTE**
+        is used). In relative mode, priority range must be in range of *-100..100*.
+        Default mode for *flags* (value **0**) is relative mode.
+
+        Priority is used in **epoll** and **kqueue** poller modes. In other
+        modes setting is ignored and no message prioritization is used.
+
+        For more details see C call *tpsprio(3)*.
+
+        :raise XatmiException:
+            | Following error codes may be present:
+            | *TPEINVAL* - *prio* is out of range.
+
+        Parameters
+        ----------
+        prio : int
+            | Service call priority.
+        flags : int
+            | Flag **TPABSOLUTE**. Default is **0**.
+     )pbdoc", py::arg("prio"), py::arg("flags")=0);
 
     m.def(
         "tpscmt",
@@ -1295,7 +1354,17 @@ expublic void ndrxpy_register_xatmi(py::module &m)
             }
             return ret;
         },
-        "Set commit return mode");
+        R"pbdoc(
+        Set commit mode, how :func:`tpcommit` returns, either after full two phase
+        commit, or only after decision logged (i.e. prepare phase).
+
+        For more details see C call *tpscmt(3)*.
+
+        Returns
+        -------
+        flags : int
+            | **TP_CMT_LOGGED** or **TP_CMT_COMPLETE** (default).
+         )pbdoc", py::arg("flags"));
 
     m.def(
         "tptoutget",
@@ -1303,7 +1372,17 @@ expublic void ndrxpy_register_xatmi(py::module &m)
         {
             return tptoutget();
         },
-        "Get process level XATMI timeout setting");
+        R"pbdoc(
+        Return current XATMI level timeout setting.
+
+        For more details see C call *toutget(3)*.
+
+        Parameters
+        -------
+        int
+            tout - current timeout setting in seconds.
+     )pbdoc"
+        );
 
     m.def(
         "tptoutset",
@@ -1314,7 +1393,23 @@ expublic void ndrxpy_register_xatmi(py::module &m)
                 throw xatmi_exception(tperrno);
             }
         },
-        "Set process level XATMI call timeout");
+        R"pbdoc(
+        Set process level XATMI call timeout.
+        Setting overrides *NDRX_TOUT* environment setting.
+
+        For more details see C call *tptoutset(3)*.
+
+        :raise XatmiException:
+            | Following error codes may be present:
+            | *TPEINVAL* - value **0** as passed in *tout*.
+
+        Parameters
+        ----------
+        tout : int
+            | Timeout value in seconds.
+     )pbdoc",
+        py::arg("tout")
+        );
     }
 
 /* vim: set ts=4 sw=4 et smartindent: */

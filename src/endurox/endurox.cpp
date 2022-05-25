@@ -457,10 +457,17 @@ Python3 bindings for writing Endurox clients and servers
         :toctree: _generate
 
         tpinit
+        tptoutset
+        tptoutget
+        tpsprio
+        tpgprio
+        tpgetnodeid
         tpterm
+        tpfreectxt
         tpcall
         tpacall
         tpenqueue
+        tpscmt
         run
         tpsubscribe
         tpunsubscribe
@@ -472,6 +479,13 @@ Python3 bindings for writing Endurox clients and servers
         tpsrvsetctxdata
         tpcontinue
         tpexit
+
+How to read this documentation
+==============================
+
+This documentation contains only short description of the API calls which mentions
+core functinoality provided by the API. Each API call contains reference to underlaying
+C call which explains in deep details how exactly given function behaves.
 
 XATMI buffer formats
 ====================
@@ -841,60 +855,60 @@ Flags
 Flags to service routines
 -------------------------
 
-- TPNOBLOCK - non-blocking send/rcv
-- TPSIGRSTRT - restart rcv on interrupt
-- TPNOREPLY - no reply expected
-- TPNOTRAN - not sent in transaction mode
-- TPTRAN - sent in transaction mode
-- TPNOTIME - no timeout
-- TPABSOLUTE - absolute value on tmsetprio
-- TPGETANY - get any valid reply
-- TPNOCHANGE - force incoming buffer to match
-- RESERVED_BIT1 - reserved for future use
-- TPCONV - conversational service
-- TPSENDONLY - send-only mode
-- TPRECVONLY - recv-only mode
+- **TPNOBLOCK** - non-blocking send/rcv
+- **TPSIGRSTRT** - restart rcv on interrupt
+- **TPNOREPLY** - no reply expected
+- **TPNOTRAN** - not sent in transaction mode
+- **TPTRAN** - sent in transaction mode
+- **TPNOTIME** - no timeout
+- **TPABSOLUTE** - absolute value on tmsetprio
+- **TPGETANY** - get any valid reply
+- **TPNOCHANGE** - force incoming buffer to match
+- **RESERVED_BIT1** - reserved for future use
+- **TPCONV** - conversational service
+- **TPSENDONLY** - send-only mode
+- **TPRECVONLY** - recv-only mode
 
 Flags to tpreturn
 -----------------
 
-- TPFAIL - service FAILURE for tpreturn
-- TPEXIT - service FAILURE with server exit
-- TPSUCCESS - service SUCCESS for tpreturn
+- **TPFAIL** - service FAILURE for tpreturn
+- **TPEXIT** - service FAILURE with server exit
+- **TPSUCCESS** - service SUCCESS for tpreturn
 
 Flags to tpsblktime/tpgblktime
 ------------------------------
 
-- TPBLK_SECOND - This flag sets the blocktime value, in seconds. This is default behavior.
-- TPBLK_NEXT - This flag sets the blocktime value for the next potential blocking API.
-- TPBLK_ALL - This flag sets the blocktime value for the all subsequent potential blocking APIs.
+- **TPBLK_SECOND** - This flag sets the blocktime value, in seconds. This is default behavior.
+- **TPBLK_NEXT** - This flag sets the blocktime value for the next potential blocking API.
+- **TPBLK_ALL** - This flag sets the blocktime value for the all subsequent potential blocking APIs.
 
 Flags to tpenqueue/tpdequeue
 ----------------------------
 
-- TPQCORRID - set/get correlation id
-- TPQFAILUREQ - set/get failure queue
-- TPQBEFOREMSGID - enqueue before message id
-- TPQGETBYMSGIDOLD - deprecated
-- TPQMSGID - get msgid of enq/deq message
-- TPQPRIORITY - set/get message priority
-- TPQTOP - enqueue at queue top
-- TPQWAIT - wait for dequeuing
-- TPQREPLYQ - set/get reply queue
-- TPQTIME_ABS - set absolute time
-- TPQTIME_REL - set absolute time
-- TPQGETBYCORRIDOLD - deprecated
-- TPQPEEK - peek
-- TPQDELIVERYQOS - delivery quality of service
-- TPQREPLYQOS   - reply message quality of service
-- TPQEXPTIME_ABS - absolute expiration time
-- TPQEXPTIME_REL - relative expiration time
-- TPQEXPTIME_NONE  - never expire
-- TPQGETBYMSGID - dequeue by msgid
-- TPQGETBYCORRID - dequeue by corrid
-- TPQQOSDEFAULTPERSIST - queue's default persistence policy
-- TPQQOSPERSISTENT  - disk message
-- TPQQOSNONPERSISTENT - memory message
+- **TPQCORRID** - set/get correlation id
+- **TPQFAILUREQ** - set/get failure queue
+- **TPQBEFOREMSGID** - enqueue before message id
+- **TPQGETBYMSGIDOLD** - deprecated
+- **TPQMSGID** - get msgid of enq/deq message
+- **TPQPRIORITY** - set/get message priority
+- **TPQTOP** - enqueue at queue top
+- **TPQWAIT** - wait for dequeuing
+- **TPQREPLYQ** - set/get reply queue
+- **TPQTIME_ABS** - set absolute time
+- **TPQTIME_REL** - set absolute time
+- **TPQGETBYCORRIDOLD** - deprecated
+- **TPQPEEK** - peek
+- **TPQDELIVERYQOS** - delivery quality of service
+- **TPQREPLYQOS**   - reply message quality of service
+- **TPQEXPTIME_ABS** - absolute expiration time
+- **TPQEXPTIME_REL** - relative expiration time
+- **TPQEXPTIME_NONE**  - never expire
+- **TPQGETBYMSGID** - dequeue by msgid
+- **TPQGETBYCORRID** - dequeue by corrid
+- **TPQQOSDEFAULTPERSIST** - queue's default persistence policy
+- **TPQQOSPERSISTENT**  - disk message
+- **TPQQOSNONPERSISTENT** - memory message
 
 )pbdoc";
 }
