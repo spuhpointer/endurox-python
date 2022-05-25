@@ -94,10 +94,10 @@ class CMakeBuild(build_ext):
 
 setup(
     name='endurox',
-    version='0.2',
-    author='Benjamin Jack',
-    author_email='benjamin.r.jack@gmail.com',
-    description='A hybrid Python/C++ test project',
+    version='8.0.1',
+    author='Mavimax, SIA',
+    author_email='support@mavimax.com',
+    description='Enduro/X Python binding',
     long_description='',
     packages=find_packages('src'),
     package_dir={'':'src'},
