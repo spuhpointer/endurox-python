@@ -466,7 +466,10 @@ Python3 bindings for writing Endurox clients and servers
         tpgprio
         tpgetnodeid
         tpterm
+        tpnewctxt
+        tpsetctxt
         tpfreectxt
+        tuxgetenv
         tpcall
         tpacall
         tpenqueue

@@ -54,9 +54,6 @@
 
 namespace py = pybind11;
 
-
-//TODO: Keep the Python func in ndrx_ctx_priv_get()
-
 /**
  * @brief export XATMI buffer
  * @param [in] idata XATMI buffer to export
@@ -1252,7 +1249,24 @@ expublic void ndrxpy_register_xatmi(py::module &m)
         {
             return py::str(tuxgetenv(const_cast<char *>(envname.c_str())));
         },
-        "Get environment value",
+        R"pbdoc(
+        Get environment variable. This function directly uses libc getenv() function (i.e. avoids
+        Python env variable cache). Use this function to access any [@global] settings applied
+        from Enduro/X ini config.
+
+        For more details see **tuxgetenv(3)** C API call.
+
+        Parameters
+        ----------
+        envname : str
+            | Environment name.
+
+        Returns
+        -------
+        env_val : str
+            | Environment variable value.
+
+         )pbdoc",
         py::arg("envname"));
 
     m.def(
@@ -1262,7 +1276,24 @@ expublic void ndrxpy_register_xatmi(py::module &m)
             auto ctxt = tpnewctxt(auto_destroy, auto_set);
             return pytpcontext(&ctxt);
         },
-        "Create new ATMI context",
+        R"pbdoc(
+        Create new XATMI Context.
+
+        For more details see **tpnewctxt(3)** C API call.
+
+        Parameters
+        ----------
+        auto_destroy : bool
+            | If set to **true**, delete the Context when current thread exits.
+        auto_set : bool
+            | If set to **true**, associate current thread with created context.
+
+        Returns
+        -------
+        context : TPCONTEXT_T
+            | XATMI Context handle.
+
+         )pbdoc",
         py::arg("auto_destroy"), py::arg("auto_set"));
 
     m.def(
@@ -1277,7 +1308,23 @@ expublic void ndrxpy_register_xatmi(py::module &m)
 
             return pytpcontext(&ctxt);
         },
-        "Disassociate from the thread and get current context",
+        R"pbdoc(
+        Retrieve current XATMI context handle and put current thread
+        in **TPNULLCONTEXT** context.
+
+        For more details see **tpgetctxt(3)** C API call.
+
+        Parameters
+        ----------
+        flags : int
+            | RFU, default **0**.
+
+        Returns
+        -------
+        context : TPCONTEXT_T
+            | XATMI Context handle.
+
+         )pbdoc",
         py::arg("flags")=0);
 
     m.def(
@@ -1291,20 +1338,54 @@ expublic void ndrxpy_register_xatmi(py::module &m)
                 throw xatmi_exception(tperrno);
             }
         },
-        "Set current context",
+        R"pbdoc(
+        Set current XATMI context from handle received from :func:`.tpgetctxt`
+        or :func:`.tpnewctxt`.
+
+        For more details see **tpsetctxt(3)** C API call.
+
+        :raise XatmiException:
+            | Following error codes may be present:
+            | **TPENOENT** - Invalid context data.
+            | **TPESYSTEM** - System error occurred.
+
+        Parameters
+        ----------
+        context : TPCONTEXT_T
+            | Context handle.
+        flags : int
+            | RFU, default **0**.
+
+         )pbdoc",
         py::arg("context"), py::arg("flags")=0);
 
     m.def(
         "tpsetctxt",
-        [](py::none, long flags)
+        [](py::none none, long flags)
         {
             if (EXSUCCEED!=tpsetctxt(TPNULLCONTEXT, flags))
             {
                 throw xatmi_exception(tperrno);
             }
         },
-        "Set current context to TPNULLCONTEXT",
-        py::arg("context"), py::arg("flags")=0);
+        R"pbdoc(
+        Set **TPNULLCONTEXT**. Removes given thread from any XATMI context.
+
+        For more details see **tpsetctxt(3)** C API call.
+
+        :raise XatmiException:
+            | Following error codes may be present:
+            | **TPESYSTEM** - System error occurred.
+
+        Parameters
+        ----------
+        none : none
+            | Python's :const:`py::None` constant.
+        flags : int
+            | RFU, default **0**.
+
+         )pbdoc",
+        py::arg("none"), py::arg("flags")=0);
 
     m.def(
         "tpfreectxt",
@@ -1322,13 +1403,13 @@ expublic void ndrxpy_register_xatmi(py::module &m)
 
         :raise XatmiException:
             | Following error codes may be present:
-            | *TPESYSTEM* - System error occurred.
-            | *TPEOS* - Operating System error occurred.
+            | **TPESYSTEM** - System error occurred.
+            | **TPEOS** - Operating System error occurred.
 
         Parameters
         ----------
         context : int
-            | XATMI context read by :func:`tpgetctxt` or :func:`tpnewctxt`
+            | XATMI context read by :func:`.tpgetctxt` or :func:`.tpnewctxt`
          )pbdoc",
         py::arg("context"));
 
@@ -1345,8 +1426,8 @@ expublic void ndrxpy_register_xatmi(py::module &m)
 
         :raise XatmiException:
             | Following error codes may be present:
-            | *TPESYSTEM* - System error occurred.
-            | *TPEOS* - Operating System error occurred.
+            | **TPESYSTEM** - System error occurred.
+            | **TPEOS** - Operating System error occurred.
 
         Returns
         -------
@@ -1394,7 +1475,7 @@ expublic void ndrxpy_register_xatmi(py::module &m)
 
         :raise XatmiException:
             | Following error codes may be present:
-            | *TPEINVAL* - *prio* is out of range.
+            | **TPEINVAL** - *prio* is out of range.
 
         Parameters
         ----------
@@ -1462,7 +1543,7 @@ expublic void ndrxpy_register_xatmi(py::module &m)
 
         :raise XatmiException:
             | Following error codes may be present:
-            | *TPEINVAL* - value **0** as passed in *tout*.
+            | **TPEINVAL** - value **0** as passed in *tout*.
 
         Parameters
         ----------

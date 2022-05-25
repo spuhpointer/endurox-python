@@ -11,7 +11,7 @@ find_package(PkgConfig REQUIRED)
 pkg_check_modules(ATMI REQUIRED atmisrvinteg)
 
 SET(CMAKE_CXX_FLAGS "-ggdb ${CMAKE_CXX_FLAGS}")
-set (CMAKE_CXX_STANDARD 14)
+set (CMAKE_CXX_STANDARD 11)
 
 SET(SOURCE_DIR "src/endurox")
 # Tell cmake that headers are in alse in source_dir
