@@ -859,7 +859,7 @@ tpenqueue() and tpdequeue() module function.
 
 :attr:`TPQCTL.flags` may be set to following values:
 
-- **TPQCORRID** - use *TPQCTL.corrid* identifier, set correlator id when performing
+- **TPQCORRID** - use :attr:`TPQCTL.corrid` identifier, set correlator id when performing
     enqueue.
 - **TPQGETBYCORRID** - dequeue message by :attr:`TPQCTL.corrid`.
 - **TPQGETBYMSGID** - dequeue message by :attr:`TPQCTL.msgid`.
@@ -886,6 +886,30 @@ Following :attr:`TPQCTL.diagnostic` (*QmException.code*) codes may be returned:
 - **QMERELEASE** - RFU.
 - **QMEINVHANDLE** - RFU.
 - **QMESHARE** - RFU.
+
+
+TPEVCTL
+-------
+
+Class used to control event subscription for the XATMI servers.
+Used by :func:`.tpsubscribe` and :func:`.tpunsubscribe`.
+
+.. py:class:: TPQCTL()
+   :module: endurox
+
+   Event control class
+
+   .. attribute:: flags
+
+      *int* -- Bitwise flags of: **TPEVSERVICE** and **TPEVPERSIST**.
+
+   .. attribute:: name1
+
+      *str* -- Data field 1
+
+   .. attribute:: name2
+
+      *str* -- Data field 2
 
 Flags
 =====
@@ -947,6 +971,14 @@ Flags to tpenqueue/tpdequeue
 - **TPQQOSDEFAULTPERSIST** - queue's default persistence policy
 - **TPQQOSPERSISTENT**  - disk message
 - **TPQQOSNONPERSISTENT** - memory message
+
+Flags to tpsubscribe/tpunsubscribe (:attr:`TPEVCTL.flags`)
+----------------------------------------------------------
+
+- **TPEVSERVICE** - Must be present when XATMI server subscribes to event.
+- **TPEVPERSIST** - Do not unsubscribe from event in case if service failed
+ when event was delivered.
+
 
 )pbdoc";
 }
