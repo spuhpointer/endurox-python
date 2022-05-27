@@ -769,6 +769,17 @@ expublic void ndrxpy_register_xatmi(py::module &m)
         Synchronous service call. In case if service returns **TPFAIL** or **TPEXIT**,
         exception is not thrown, instead first return argument shall be tested for
         the tperrno for 0 (to check success case).
+
+        .. code-block:: python
+            :caption: tpcall example
+            :name: tpcall-example
+                import endurox as e
+
+                # Call service with UBF buffer
+                tperrno, tpurcode, retbuf = e.tpcall("EXBENCH", { "data":{"T_STRING_FLD":"Hi Jim"}})
+                if e.TPESVCFAIL==tperrno:
+                    e.tplog_warn("Service failed")
+                e.tplog_debug("Service responded %s" % retbuf["data"]["T_STRING_2_FLD"][0])
         
         For more details see **tpcall(3)**.
 
@@ -814,8 +825,15 @@ expublic void ndrxpy_register_xatmi(py::module &m)
         flag is not set. The replies shall be collected with **tpgetrply()** API
         call by passing the returned call descriptor to the function.
 	
+        .. code-block:: python
+            :caption: tpacall example
+            :name: tpacall-example
+                import endurox as e
+
+                cd = e.tpcall("EXBENCH", { "data":{"T_STRING_FLD":"Hi Jim"}})
+                tperrno, tpurcode, retbuf, cd = e.tpgetrply(cd)
         
-        For more deatils see **tpacall(3)**.
+        For more details see **tpacall(3)**.
 
         :raise XatmiException: 
             | Following error codes may be present:
@@ -845,24 +863,116 @@ expublic void ndrxpy_register_xatmi(py::module &m)
          )pbdoc", py::arg("svc"), py::arg("idata"), py::arg("flags") = 0);
 
     m.def("tpgetrply", &ndrxpy_pytpgetrply,
-          "Routine for getting a reply from a previous request", py::arg("cd"),
-          py::arg("flags") = 0);
+        R"pbdoc(
+        Get reply message for asynchronous call initiated by :func:`.tpacall`.
+        Exception is throw in case if error occurs other than **TPESVCFAIL**, in
+        which case returned `tperrno` value contains **TPESVCFAIL** value.        
+	
+        .. code-block:: python
+            :caption: tpgetrply example
+            :name: tpgetrply-example
+                import endurox as e
+
+                cd = e.tpcall("EXBENCH", { "data":{"T_STRING_FLD":"Hi Jim"}})
+                tperrno, tpurcode, retbuf, cd = e.tpgetrply(cd)
+        
+        For more details see **tpgetrply(3)** C API call.
+
+        :raise XatmiException: 
+            | Following error codes may be present:
+            | **TPEINVAL** - Invalid arguments to function.
+            | **TPEBADDESC** - Call descriptor passed in *cd* is not valid, and 
+                **TPGETANY** flag was not specified.
+            | **TPETIME** - Destination queue was full/blocked on time-out expired.
+            | **TPESVCERR** - Service crashed.
+            | **TPEBLOCK** - Blocking condition found and **TPNOBLOCK** flag was specified
+            | **TPEITYPE** - Service error during input buffer handling.
+            | **TPETRAN** - Service/server failed to start auto-tran.
+            | **TPEITYPE** - Buffer type not supported by service.
+            | **TPESYSTEM** - System error.
+            | **TPEOS** - Operating system error.
+
+        Parameters
+        ----------
+        cd : int
+            Call descriptor. Value is ignored in case if **TPGETANY** flag is
+            passed in *flags*.
+        flags : int
+            Or'd bit flags: **TPGETANY**, **TPNOBLOCK**, **TPSIGRSTRT**, 
+            **TPNOTIME**, **TPNOCHANGE**, **TPNOABORT**. Default value is **0**.
+
+        Returns
+        -------
+        int
+            tperrno - error code (**0** or **TPESVCFAIL**)
+        int
+            tpurcode - code passed to **tpreturn(3)** by the server
+        dict
+            XATMI buffer returned from the server.
+         )pbdoc", 
+         py::arg("cd"), py::arg("flags") = 0);
 
     m.def(
     "tpcancel",
-    [](int cd)
-    {
-        py::gil_scoped_release release;
-
-        if (tpcancel(cd) == EXFAIL)
+        [](int cd)
         {
-            throw xatmi_exception(tperrno);
-        }
-    },
-    "Cancel call", py::arg("cd") = 0);
+            py::gil_scoped_release release;
 
-    m.def("tpconnect", &ndrxpy_pytpconnect, "Connect to service (conversational)",
-          py::arg("svc"), py::arg("idata"), py::arg("flags") = 0);
+            if (tpcancel(cd) == EXFAIL)
+            {
+                throw xatmi_exception(tperrno);
+            }
+        },
+        R"pbdoc(
+        Cancel asynchronous call. In case if call descriptor was not issued,
+        error is not returned.	
+        
+        For more details see **tpcancel(3)** C API call.
+
+        :raise XatmiException: 
+            | Following error codes may be present:
+            | **TPEBADDESC** - *cd* is out of the range of valid values.
+            | **TPEINVAL** - Enduro/X is not configured.
+            | **TPESYSTEM** - System error.
+            | **TPEOS** - Operating system error.
+
+        Parameters
+        ----------
+        cd : int
+            Call descriptor returned by :func:`.tpacall`
+         )pbdoc",
+    py::arg("cd") = 0);
+
+    m.def("tpconnect", &ndrxpy_pytpconnect,
+        R"pbdoc(
+        Connect to conversational service. Connection provides half-duplex
+        data streaming between client and service/server where data exchange is
+        organized by using :func:`.tpsend` and :func:`.tprecv` XATMI calls.
+        
+        For more details see **tpconnect(3)** C API call.
+
+        :raise XatmiException: 
+            | Following error codes may be present:
+            | **TPEINVAL** - Invalid arguments passed to function.
+            | **TPENOENT** - *svc* service is not available.
+            | **TPELIMIT** - Max number of open connections are reached.
+            | **TPESVCERR** - Service crashed.
+            | **TPESYSTEM** - System error occurred.
+            | **TPEOS** - Operating system error occurred.
+            | **TPETRAN** - Destination service was unable to start global transaction.
+            | **TPEITYPE** - Destination server does not accept buffer type sent.
+
+        Parameters
+        ----------
+        svc : str
+            Service name to connect to.
+        idata : dict
+            XATMI buffer to send in connection request.
+        flags : int
+            Bitwise or'd **TPNOTRAN**, **TPSIGRSTRT**, **TPNOTIME**, **TPSENDONLY**,
+            **TPRECVONLY**.
+         )pbdoc",
+        py::arg("svc"), py::arg("idata"), py::arg("flags") = 0);
 
     //Conversational APIs
     m.def("tpsend", &ndrxpy_pytpsend, "Send conversational data",
