@@ -477,6 +477,7 @@ Python3 bindings for writing Endurox clients and servers
         tpconnect
         tpsend
         tprecv
+        tpdiscon
         tpenqueue
         tpdequeue
         tpscmt

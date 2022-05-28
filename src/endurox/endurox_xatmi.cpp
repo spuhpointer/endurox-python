@@ -946,6 +946,7 @@ expublic void ndrxpy_register_xatmi(py::module &m)
          )pbdoc",
     py::arg("cd") = 0);
 
+    //Conversational APIs
     m.def("tpconnect", &ndrxpy_pytpconnect,
         R"pbdoc(
         Connect to conversational service. Connection provides half-duplex
@@ -977,7 +978,6 @@ expublic void ndrxpy_register_xatmi(py::module &m)
          )pbdoc",
         py::arg("svc"), py::arg("idata"), py::arg("flags") = 0);
 
-    //Conversational APIs
     m.def("tpsend", &ndrxpy_pytpsend,
         R"pbdoc(
         Send conversational data to connected peer. In case if **TPEEVENT** error
@@ -1008,7 +1008,7 @@ expublic void ndrxpy_register_xatmi(py::module &m)
         Parameters
         ----------
         cd : int
-            call descriptor.
+            Conversation descriptor.
         idata : dict
             XATMI buffer to send.
         flags : int
@@ -1039,14 +1039,14 @@ expublic void ndrxpy_register_xatmi(py::module &m)
         to **0**.
 
         .. code-block:: python
-            :caption: tpsend example
-            :name: tpsend-example
+            :caption: tprecv example
+            :name: tprecv-example
                 import endurox as e
 
-                cd = e.tpconnect("CONVSV", {"data":"HELLO"}, e.TPSENDONLY)
-                tperrno, revent = e.tpsend(cd, {"data":"HELLO"})
+                cd = e.tpconnect("CONVSV", {"data":"HELLO"}, e.TPRECVONLY)
+                tperrno, tpurcode, revent = e.tprecv(cd)
         
-        For more details see **tpsend(3)** C API call.
+        For more details see **tprecv(3)** C API call.
 
         :raise XatmiException: 
             | Following error codes may be present:
@@ -1061,7 +1061,7 @@ expublic void ndrxpy_register_xatmi(py::module &m)
         Parameters
         ----------
         cd : int
-            call descriptor.
+            Conversation descriptor.
         idata : dict
             XATMI buffer to send.
         flags : int
@@ -1080,6 +1080,8 @@ expublic void ndrxpy_register_xatmi(py::module &m)
             revent - In case if **TPEEVENT** tperrno was returned, may contain:
                 **TPEV_DISCONIMM**, **TPEV_SENDONLY**, **TPEV_SVCERR**, **TPEV_SVCFAIL**,
                 **TPEV_SVCSUCC**.
+        dict
+            XATMI buffer send by peer.
          )pbdoc",
           py::arg("cd"), py::arg("flags") = 0);
 
@@ -1094,7 +1096,23 @@ expublic void ndrxpy_register_xatmi(py::module &m)
             throw xatmi_exception(tperrno);
         }
     },
-    "Forced disconnect from conversation", py::arg("cd") = 0);
+    R"pbdoc(
+        Force disconnect from the conversation session. May be called
+        by any peer for the conversation.
+        
+        For more details see **tpsend(3)** C API call.
+
+        :raise XatmiException: 
+            | Following error codes may be present:
+            | **TPEINVAL** - Invalid conversation descriptor.
+            | **TPEOS** - Operating system error occurred.
+
+        Parameters
+        ----------
+        cd : int
+            Conversation descriptor.
+         )pbdoc",
+        py::arg("cd") = 0);
     
 
     //notification API.
