@@ -473,8 +473,10 @@ Python3 bindings for writing Endurox clients and servers
         tpcall
         tpacall
         tpenqueue
-        tpscmt
         tpdequeue
+        tpscmt
+        tpencrypt
+        tpdecrypt
         run
         tpsubscribe
         tpunsubscribe

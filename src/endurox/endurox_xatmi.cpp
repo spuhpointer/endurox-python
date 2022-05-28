@@ -1149,9 +1149,33 @@ expublic void ndrxpy_register_xatmi(py::module &m)
 
             return py::bytes(tmp.buf, tmp.size);
         },
-        "Encrypt data block",
+        R"pbdoc(
+        Encrypt data block (byte array).
+
+        For more details see **tpencrypt(3)** C API call.
+
+        :raise XatmiException:
+            | Following error codes may be present:
+            | **TPEINVAL** - Invalid input data.
+
+
+        **Parameters:**
+
+        input : bytes
+            | Data to encrypt.
+        flags : int
+            | Shall be set to **0** (default).
+
+        **Returns:**
+
+        value : bytes
+            | Encrypted value block
+
+         )pbdoc",
         py::arg("input"), py::arg("flags")=0);
 
+    //Having issuing with sphinx and overloaded functions
+    //thus we have manual titles...
     m.def(
         "tpencrypt",
         [](py::str input, long flags)
@@ -1181,7 +1205,28 @@ expublic void ndrxpy_register_xatmi(py::module &m)
 
             return py::str(tmp.buf);
         },
-        "Encrypt data block",
+        R"pbdoc(
+        Encrypt string.
+
+        For more details see **tpencrypt(3)** C API call.
+
+        :raise XatmiException:
+            | Following error codes may be present:
+            | **TPEINVAL** - Invalid input data.
+
+        **Parameters:**
+
+        input : str
+            | Data to encrypt, string.
+        flags : int
+            | Shall be set to **0** (default).
+
+        **Returns:**
+
+        value : str
+            | Encrypted value, Base64 string
+
+         )pbdoc",
         py::arg("input"), py::arg("flags")=0);
 
     m.def(
@@ -1210,7 +1255,29 @@ expublic void ndrxpy_register_xatmi(py::module &m)
             }
             return py::bytes(tmp.buf, tmp.size);
         },
-        "Encrypt data block",
+        R"pbdoc(
+        Decrypt byte array. Original value was encrypted with :func:`.tpencrypt`, byte array version.
+
+        For more details see **tpdecrypt(3)** C API call.
+
+        :raise XatmiException:
+            | Following error codes may be present:
+            | **TPEINVAL** - Invalid input data.
+            | **TPEOS** - System error occurred.
+
+        **Parameters:**
+
+        input : bytes
+            | Encrypted data.
+        flags : int
+            | Shall be set to **0** (default).
+
+        **Returns:**
+
+        value : bytes
+            | Decrypted value.
+
+         )pbdoc",
         py::arg("input"), py::arg("flags")=0);
 
     m.def(
@@ -1240,7 +1307,29 @@ expublic void ndrxpy_register_xatmi(py::module &m)
 
             return py::str(tmp.buf);
         },
-        "Decrypt data block",
+        R"pbdoc(
+        Decrypt string. Original value was encrypted with :func:`.tpencrypt`, string version.
+
+        For more details see **tpdecrypt(3)** C API call.
+
+        :raise XatmiException:
+            | Following error codes may be present:
+            | **TPEINVAL** - Invalid input data.
+            | **TPEOS** - System error occurred.
+
+        **Parameters:**
+
+        input : str
+            | Base64 encrypted data.
+        flags : int
+            | Shall be set to **0** (default).
+
+        **Returns:**
+
+        value : str
+            | Decrypted value.
+
+         )pbdoc",
         py::arg("input"), py::arg("flags")=0);
 
     m.def(
