@@ -975,7 +975,42 @@ expublic void ndrxpy_register_xatmi(py::module &m)
         py::arg("svc"), py::arg("idata"), py::arg("flags") = 0);
 
     //Conversational APIs
-    m.def("tpsend", &ndrxpy_pytpsend, "Send conversational data",
+    m.def("tpsend", &ndrxpy_pytpsend,
+        R"pbdoc(
+        Send conversational data to connected peer. In case if **TPEEVENT** error
+        is received, exception is not thrown, instead event code is loaded into
+        *revent* return value. In case if event is not generated, *revent* is set
+        to **0**.
+
+        .. code-block:: python
+            :caption: tpsend example
+            :name: tpsend-example
+                import endurox as e
+
+                cd = e.tpconnect("CONVSV", {"data":"HELLO"}, e.TPSENDONLY)
+                tperrno, revent = e.tpsend(cd, {"data":"HELLO"})
+        
+        For more details see **tpsend(3)** C API call.
+
+        :raise XatmiException: 
+            | Following error codes may be present:
+            | **TPEINVAL** - Invalid call descriptor.
+            | **TPETIME** - Queue was blocked and it timeout out.
+            | **TPESYSTEM** - System error occurred.
+            | **TPEOS** - Operating system error occurred.
+            | **TPEPROTO** -  Protocol error is generated if given process is 
+                in receiver (**TPRECVONLY**) mode.
+            | **TPEBLOCK** - **TPNOBLOCK** flag was set and message queue was full.
+
+        Parameters
+        ----------
+        cd : int
+            call descriptor.
+        idata : dict
+            XATMI buffer to send.
+        flags : int
+            Bitwise or'd **TPRECVONLY**, **TPNOBLOCK**, **TPSIGRSTRT**, **TPNOTIME**.
+         )pbdoc",
           py::arg("cd"), py::arg("idata"), py::arg("flags") = 0);
 
     m.def("tprecv", &ndrxpy_pytprecv, "Receive conversational data",
