@@ -1285,7 +1285,8 @@ expublic void ndrxpy_register_xatmi(py::module &m)
         py::arg("input"), py::arg("flags")=0);
 
     //Having issuing with sphinx and overloaded functions
-    //thus we have manual titles...
+    //Such as "CRITICAL: Unexpected section title"
+    //thus we have manual titles... (just bold)
     m.def(
         "tpencrypt",
         [](py::str input, long flags)
