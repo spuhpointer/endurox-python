@@ -76,16 +76,17 @@ class Server:
     def CONVSVC(self, args):
 
         # receive something
-        rc, ev, urcode, data = e.tprecv(args.cd)
+        rc, urcode, ev, data = e.tprecv(args.cd)
 
         assert (rc == e.TPEEVENT)
+        #assert (urcode == 0)
         assert (ev == e.TPEV_SENDONLY)
-        assert (urcode == 0)
         assert (data["data"]["T_STRING_FLD"][0] == "From client")
 
         # send something
-        rc, ev = e.tpsend(args.cd, {"data":{"T_STRING_FLD":"From server"}})
+        rc, ur, ev = e.tpsend(args.cd, {"data":{"T_STRING_FLD":"From server"}})
         assert (rc == 0)
+        #assert (ur == 0)
         assert (ev == 0)
 
         return e.tpreturn(e.TPSUCCESS, 6, {"data":{"T_STRING_FLD":"From server 2"}})

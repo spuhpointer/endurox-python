@@ -156,7 +156,7 @@ expublic pytpreply ndrxpy_pytpcall(const char *svc, py::object idata, long flags
 }
 
 /**
- * @brief enqueue message to persisten Q
+ * @brief enqueue message to persistent Q
  * 
  * @param [in] qspace queue space name
  * @param [in] qname queue name
@@ -397,7 +397,7 @@ expublic pytpsendret ndrxpy_pytpsend(int cd, py::object idata, long flags)
         }
     }
 
-    return pytpsendret(tperrno_saved, revent);
+    return pytpsendret(tperrno_saved, tpurcode, revent);
 }
 
 /**
@@ -427,7 +427,7 @@ expublic pytprecvret ndrxpy_pytprecv(int cd, long flags)
         }
     }
 
-    return pytprecvret(tperrno_saved, revent, tpurcode, ndrx_to_py(out));
+    return pytprecvret(tperrno_saved, tpurcode, revent, ndrx_to_py(out));
 }
 
 /**
@@ -493,16 +493,16 @@ expublic void ndrxpy_register_xatmi(py::module &m)
     // Structures:
     // Poor man's namedtuple
     py::class_<pytpreply>(m, "TpReply")
-        .def_readonly("rval", &pytpreply::rval)
-        .def_readonly("rcode", &pytpreply::rcode)
+        .def_readonly("tperrno", &pytpreply::pytperrno)
+        .def_readonly("tpurcode", &pytpreply::pytpurcode)
         .def_readonly("data", &pytpreply::data)
         .def_readonly("cd", &pytpreply::cd)
         .def("__getitem__", [](const pytpreply &s, size_t i) -> py::object
              {
         if (i == 0) {
-          return py::int_(s.rval);
+          return py::int_(s.pytperrno);
         } else if (i == 1) {
-          return py::int_(s.rcode);
+          return py::int_(s.pytpurcode);
         } else if (i == 2) {
           return s.data;
         } else {
@@ -511,16 +511,16 @@ expublic void ndrxpy_register_xatmi(py::module &m)
 
     //For tpgetrply, include cd
     py::class_<pytpreplycd>(m, "TpReplyCd")
-        .def_readonly("rval", &pytpreply::rval)
-        .def_readonly("rcode", &pytpreply::rcode)
+        .def_readonly("tperrno", &pytpreply::pytperrno)
+        .def_readonly("tpurcode", &pytpreply::pytpurcode)
         .def_readonly("data", &pytpreply::data)
         .def_readonly("cd", &pytpreply::cd)
         .def("__getitem__", [](const pytpreplycd &s, size_t i) -> py::object
              {
         if (i == 0) {
-          return py::int_(s.rval);
+          return py::int_(s.pytperrno);
         } else if (i == 1) {
-          return py::int_(s.rcode);
+          return py::int_(s.pytpurcode);
         } else if (i == 2) {
           return s.data;
         } else if (i == 3) {
@@ -531,13 +531,16 @@ expublic void ndrxpy_register_xatmi(py::module &m)
 
     //Return value for tpsend
     py::class_<pytpsendret>(m, "TpSendRet")
-        .def_readonly("rval", &pytpsendret::rval)
+        .def_readonly("tperrno", &pytpsendret::pytperrno)
+        .def_readonly("tpurcode", &pytpsendret::pytpurcode)
         .def_readonly("revent", &pytpsendret::revent)
         .def("__getitem__", [](const pytpsendret &s, size_t i) -> py::object
              {
         if (i == 0) {
-          return py::int_(s.rval);
+          return py::int_(s.pytperrno);
         } else if (i == 1) {
+          return py::int_(s.pytpurcode);
+        } else if (i == 2) {
           return py::int_(s.revent);
         } else {
           throw py::index_error();
@@ -545,18 +548,18 @@ expublic void ndrxpy_register_xatmi(py::module &m)
 
     //Return value for tprecv()
     py::class_<pytprecvret>(m, "TpRecvRet")
-        .def_readonly("rval", &pytprecvret::rval)
+        .def_readonly("tperrno", &pytprecvret::pytperrno)
+        .def_readonly("tpurcode", &pytprecvret::pytpurcode)
         .def_readonly("revent", &pytprecvret::revent)
-        .def_readonly("rcode", &pytprecvret::rcode)
         .def_readonly("data", &pytprecvret::data)
         .def("__getitem__", [](const pytprecvret &s, size_t i) -> py::object
              {
         if (i == 0) {
-          return py::int_(s.rval);
+          return py::int_(s.pytperrno);
         } else if (i == 1) {
-          return py::int_(s.revent);
+          return py::int_(s.pytpurcode);
         } else if (i == 2) {
-            return py::int_(s.rcode);
+            return py::int_(s.revent);
         } else if (i == 3) {
           return s.data;
         } else {
@@ -830,7 +833,7 @@ expublic void ndrxpy_register_xatmi(py::module &m)
             :name: tpacall-example
                 import endurox as e
 
-                cd = e.tpcall("EXBENCH", { "data":{"T_STRING_FLD":"Hi Jim"}})
+                cd = e.tpacall("EXBENCH", { "data":{"T_STRING_FLD":"Hi Jim"}})
                 tperrno, tpurcode, retbuf, cd = e.tpgetrply(cd)
         
         For more details see **tpacall(3)**.
@@ -873,7 +876,7 @@ expublic void ndrxpy_register_xatmi(py::module &m)
             :name: tpgetrply-example
                 import endurox as e
 
-                cd = e.tpcall("EXBENCH", { "data":{"T_STRING_FLD":"Hi Jim"}})
+                cd = e.tpacall("EXBENCH", { "data":{"T_STRING_FLD":"Hi Jim"}})
                 tperrno, tpurcode, retbuf, cd = e.tpgetrply(cd)
         
         For more details see **tpgetrply(3)** C API call.
@@ -1010,10 +1013,74 @@ expublic void ndrxpy_register_xatmi(py::module &m)
             XATMI buffer to send.
         flags : int
             Bitwise or'd **TPRECVONLY**, **TPNOBLOCK**, **TPSIGRSTRT**, **TPNOTIME**.
+
+        Returns
+        -------
+        int
+            tperrno - error code (**0** or **TPEEVENT**). For other errors, exceptions
+                thrown.
+        int
+            tpurcode - return code passed to :func:`tpreturn`. Value is loaded in case
+                if *revent* returned is **TPEV_SVCFAIL** or **TPEV_SVCSUCC**, otherwise
+                previous tpurcode is returned.
+        int
+            revent - In case if **TPEEVENT** tperrno was returned, may contain:
+                **TPEV_DISCONIMM**, **TPEV_SENDONLY**, **TPEV_SVCERR**, **TPEV_SVCFAIL**,
+                **TPEV_SVCSUCC**.
+
          )pbdoc",
           py::arg("cd"), py::arg("idata"), py::arg("flags") = 0);
 
-    m.def("tprecv", &ndrxpy_pytprecv, "Receive conversational data",
+    m.def("tprecv", &ndrxpy_pytprecv, 
+        R"pbdoc(
+        Receive conversation data block. In case if **TPEEVENT** error
+        is received, exception is not thrown, instead event code is loaded into
+        *revent* return value. In case if event is not generated, *revent* is set
+        to **0**.
+
+        .. code-block:: python
+            :caption: tpsend example
+            :name: tpsend-example
+                import endurox as e
+
+                cd = e.tpconnect("CONVSV", {"data":"HELLO"}, e.TPSENDONLY)
+                tperrno, revent = e.tpsend(cd, {"data":"HELLO"})
+        
+        For more details see **tpsend(3)** C API call.
+
+        :raise XatmiException: 
+            | Following error codes may be present:
+            | **TPEINVAL** - Invalid call descriptor.
+            | **TPETIME** - Queue was blocked and it timeout out.
+            | **TPESYSTEM** - System error occurred.
+            | **TPEOS** - Operating system error occurred.
+            | **TPEPROTO** -  Protocol error is generated if given process is 
+                in receiver (**TPRECVONLY**) mode.
+            | **TPEBLOCK** - **TPNOBLOCK** flag was set and message queue was full.
+
+        Parameters
+        ----------
+        cd : int
+            call descriptor.
+        idata : dict
+            XATMI buffer to send.
+        flags : int
+            Bitwise or'd **TPNOBLOCK**, **TPSIGRSTRT**, **TPNOTIME**.
+
+        Returns
+        -------
+        int
+            tperrno - error code (**0** or **TPEEVENT**). For other errors, exceptions
+                thrown.
+        int
+            tpurcode - return code passed to :func:`tpreturn`. Value is loaded in case
+                if *revent* returned is **TPEV_SVCFAIL** or **TPEV_SVCSUCC**, otherwise
+                previous tpurcode is returned.
+        int
+            revent - In case if **TPEEVENT** tperrno was returned, may contain:
+                **TPEV_DISCONIMM**, **TPEV_SENDONLY**, **TPEV_SVCERR**, **TPEV_SVCFAIL**,
+                **TPEV_SVCSUCC**.
+         )pbdoc",
           py::arg("cd"), py::arg("flags") = 0);
 
     m.def(

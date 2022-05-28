@@ -157,13 +157,13 @@ typedef void *(xao_svc_ctx)(void *);
  */
 struct pytpreply
 {
-    int rval;
-    long rcode;
+    int pytperrno;
+    long pytpurcode;
     py::object data;
     int cd;
 
-    pytpreply(int rval, long rcode, py::object data, int cd = -1)
-        : rval(rval), rcode(rcode), data(data), cd(cd) {}
+    pytpreply(int pytperrno, long pytpurcode, py::object data, int cd = -1)
+        : pytperrno(pytperrno), pytpurcode(pytpurcode), data(data), cd(cd) {}
 };
 
 /**
@@ -179,11 +179,12 @@ struct pytpreplycd:pytpreply
  */
 struct pytpsendret
 {
-    int rval;   /**< tperrno curren (if not thrown) */
-    long revent;    /**< any event published        */
+    int pytperrno;   /**< tperrno current (if not thrown) */
+    long pytpurcode; /**< tpurcode value                  */
+    long revent;    /**< any event published         */
 
-    pytpsendret(int rval, long revent)
-        : rval(rval), revent(revent) {}
+    pytpsendret(int pytperrno, long pytpurcode, long revent)
+        : pytperrno(pytperrno), pytpurcode(pytpurcode), revent(revent) {}
 
 };
 
@@ -192,11 +193,10 @@ struct pytpsendret
  */
 struct pytprecvret:pytpsendret
 {
-    long rcode;     /**< tpurcode if any                */
     py::object data; /**< receive data                  */
 
-    pytprecvret(int rval, long revent, long rcode, py::object data)
-        : pytpsendret(rval, revent), rcode(rcode), data(data) {}
+    pytprecvret(int pytperrno, long pytpurcode, long revent, py::object data)
+        : pytpsendret(pytperrno, pytpurcode, revent), data(data) {}
 };
 
 /**
