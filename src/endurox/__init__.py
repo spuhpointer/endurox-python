@@ -2,8 +2,6 @@
 
 import sys
 import ctypes
-#import pkgutil
-#import imp
 
 flags = sys.getdlopenflags()
 
