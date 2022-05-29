@@ -481,6 +481,8 @@ Python3 bindings for writing Endurox clients and servers
         tpnotify
         tpbroadcast
         tpsetunsol
+        tpchkunsol
+        tpexport
         tpenqueue
         tpdequeue
         tpscmt

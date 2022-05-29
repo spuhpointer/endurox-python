@@ -75,7 +75,7 @@ expublic py::object ndrxpy_pytpexport(py::object idata, long flags)
 
     if (flags == 0)
     {
-        return py::bytes(&ostr[0], olen);
+        return py::bytes(&ostr[0], olen-1);
     }
     return py::str(&ostr[0]);
 }
@@ -1269,13 +1269,64 @@ expublic void ndrxpy_register_xatmi(py::module &m)
                 throw xatmi_exception(tperrno);
             }
             return ret;
-        }, "Check and process unsolicited notifications");
+        }, 
+        R"pbdoc(
+        Check and process (do callback) unsolicited messages delivered by 
+        :func:`.tpnotify` and :func:`.tpbroadcast` to given process.
+
+        For more details see **tpchkunsol(3)** C API call.
+
+        :raise XatmiException: 
+            | Following error codes may be present:
+            | **TPESYSTEM** -  System error occurred.
+            | **TPEOS** - Operating system error occurred.
+
+        Returns
+        -------
+        cnt : int
+            | Number of unsolicited messages processed.
+
+            )pbdoc");
 
     m.def("tpexport", &ndrxpy_pytpexport,
-          "Converts a typed message buffer into an exportable, "
-          "machine-independent string representation, that includes digital "
-          "signatures and encryption seals",
-          py::arg("ibuf"), py::arg("flags") = 0);
+                 R"pbdoc(
+        Export XATMI buffer. **NULL** buffer export is not supported.
+
+        .. code-block:: python
+            :caption: tpexport example
+            :name: tpexport-example
+
+            import endurox as e
+            buf = e.tpexport({"data":"HELLO WORLD"})
+            print(buf)
+            # will print:
+            # b'{"buftype":"STRING","version":1,"data":"HELLO WORLD"}'
+            
+
+        For more details see **tpexport(3)** C API call.
+
+        :raise XatmiException: 
+            | Following error codes may be present:
+            | **TPEINVAL** - Invalid buffer passed.
+            | **TPEOTYPE** -  Invalid input type.
+            | **TPESYSTEM** - System error occurred.
+            | **TPEOS** - Operating system error occurred.
+
+        Parameters
+        ----------
+        ibuf : dict
+            | XATMI buffer.
+        flags : int
+            | Bitwise flags, may contain **TPEX_STRING**. Default is **0**.
+
+        Returns
+        -------
+        buf_serial : object
+            By default function returns byte array. If *flags* did contain **TPEX_STRING**,
+            output format is in Base64 and returned value type is string.
+
+            )pbdoc"
+          , py::arg("ibuf"), py::arg("flags") = 0);
 
     m.def("tpimport", &ndrxpy_pytpimport,
           "Converts an exported representation back into a typed message buffer",
@@ -1363,7 +1414,7 @@ expublic void ndrxpy_register_xatmi(py::module &m)
         R"pbdoc(
         Leaves application, closes XATMI session.
         
-        For more deatils see C call *tpterm(3)*.
+        For more details see C call *tpterm(3)*.
 
         :raise XatmiException: 
             | Following error codes may be present:
