@@ -480,6 +480,7 @@ Python3 bindings for writing Endurox clients and servers
         tpdiscon
         tpnotify
         tpbroadcast
+        tpsetunsol
         tpenqueue
         tpdequeue
         tpscmt

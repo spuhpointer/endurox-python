@@ -333,7 +333,10 @@ exprivate void notification_callback (char *data, long len, long flags)
  */
 exprivate void ndrxpy_pytpsetunsol(const py::object &func)
 {
-    tpsetunsol(notification_callback);
+    if (TPUNSOLERR==tpsetunsol(notification_callback))
+    {
+        throw xatmi_exception(tperrno);
+    }
 
     ndrxpy_object_t *obj_ptr = new ndrxpy_object_t();
     obj_ptr->obj = func;
@@ -1117,7 +1120,7 @@ expublic void ndrxpy_register_xatmi(py::module &m)
     //notification API.
     m.def("tpnotify", &ndrxpy_pytpnotify,
         R"pbdoc(
-        Send unsolicted notification to the client process.
+        Send unsolicited notification to the client process.
 
         For more details see **tpnotify(3)** C API call.
 
@@ -1169,7 +1172,7 @@ expublic void ndrxpy_register_xatmi(py::module &m)
 
     m.def("tpbroadcast", &ndrxpy_pytpbroadcast, 
         R"pbdoc(
-        Broadcast unsolicted message to several processes at once.
+        Broadcast unsolicited message to several processes at once.
 
         For more details see **tpbroadcast(3)** C API call.
 
@@ -1205,7 +1208,54 @@ expublic void ndrxpy_register_xatmi(py::module &m)
           py::arg("lmid"), py::arg("usrname"), py::arg("cltname"), 
           py::arg("idata"), py::arg("flags") = 0);
 
-    m.def("tpsetunsol", [](const py::object &func) { ndrxpy_pytpsetunsol(func); }, "Set unsolicted message callback",
+    m.def("tpsetunsol", [](const py::object &func) { ndrxpy_pytpsetunsol(func); }, 
+        R"pbdoc(
+        Set unsolicited message callback handler. Handler receives matched messages posted
+        by :func:`.tpnotify` and :func:`.tpbroadcast`. Note that in handler only limited XATMI
+        processing may be done. See C API descr.
+        Note that callback handler is associated with the XATMI context. If using several
+        contexts or threads, each of them shall be initialized.
+
+        For more details see **tpsetunsol(3)** C API call.
+
+        .. code-block:: python
+            :caption: tpsetunsol example
+            :name: tpsetunsol-example
+
+            import unittest
+            import endurox as e
+
+            class TestTpnotify(unittest.TestCase):
+
+                cnt = 0
+
+                def unsol_handler(self, data):
+                    if data["data"] == "HELLO WORLD":
+                        TestTpnotify.cnt=TestTpnotify.cnt+1
+
+                # NOTIFSV publishes one notification to this CLIENTID.
+                def test_tpnotify(self):
+                    e.tpsetunsol(self.unsol_handler)
+                    tperrno, tpurcode, retbuf = e.tpcall("NOTIFSV", { "data":{"T_STRING_FLD":"Hi Jim"}})
+                    self.assertEqual(1, TestTpnotify.cnt)
+                    e.tpterm()
+
+            if __name__ == '__main__':
+                unittest.main()
+
+        :raise XatmiException: 
+            | Following error codes may be present:
+            | **TPEINVAL** - Invalid environment or invalid parameters.
+            | **TPESYSTEM** -  System error occurred.
+            | **TPEOS** - Operating system error occurred.
+
+        Parameters
+        ----------
+        func : callbackFunction(data) -> None
+            Callback function to be invoked when unsolicited message is received
+            by the process. *data* parameter is standard XATMI buffer.
+
+            )pbdoc",
           py::arg("func"));
     m.def(
         "tpchkunsol",
