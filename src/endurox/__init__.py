@@ -13,10 +13,6 @@ sys.setdlopenflags(flags | ctypes.RTLD_GLOBAL)
 
 from .endurox import *
 
-#import endurox.endurox
-#sys.modules['endurox'] = endurox.endurox
-#sys.modules['endurox'].__name__='endurox';
-
 # change module name... for importeds symbols
 sys.setdlopenflags(flags)
 
