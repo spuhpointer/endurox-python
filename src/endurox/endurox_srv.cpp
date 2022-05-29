@@ -392,6 +392,9 @@ expublic void ndrxpy_register_srv(py::module &m)
     py::class_<pytpsrvctxdata>(m, "PyTpSrvCtxtData")
         .def_readonly("pyctxt", &pytpsrvctxdata::pyctxt);
 
+    //Client id..
+    py::class_<pyclientid>(m, "CLIENTID");
+
     // Service call info object
     py::class_<pytpsvcinfo>(m, "TPSVCINFO")
         .def_readonly("name", &pytpsvcinfo::name)

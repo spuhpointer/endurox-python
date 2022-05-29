@@ -257,11 +257,11 @@ expublic int ndrxpy_pytpacall(const char *svc, py::object idata, long flags)
  * @param idata data to send to the client
  * @param flags 
  */
-exprivate void ndrxpy_pytpnotify(py::bytes clientid, py::object idata, long flags)
+exprivate void ndrxpy_pytpnotify(pyclientid *clientid, py::object idata, long flags)
 {
     auto in = ndrx_from_py(idata);
 
-    int size = PyBytes_Size(clientid.ptr());
+    int size = PyBytes_Size(clientid->pycltid.ptr());
 
     //Check the size
     if (sizeof(CLIENTID)!=size)
@@ -271,7 +271,7 @@ exprivate void ndrxpy_pytpnotify(py::bytes clientid, py::object idata, long flag
         throw std::invalid_argument("INvalid `clientid' size");
     }
 
-    CLIENTID *cltid = reinterpret_cast<CLIENTID*>(PyBytes_AsString(clientid.ptr()));
+    CLIENTID *cltid = reinterpret_cast<CLIENTID*>(PyBytes_AsString(clientid->pycltid.ptr()));
 
     py::gil_scoped_release release;
     //int rc = tpnotify(cltid, *in.pp, in.len, flags);
@@ -1114,13 +1114,96 @@ expublic void ndrxpy_register_xatmi(py::module &m)
          )pbdoc",
         py::arg("cd") = 0);
     
-
     //notification API.
-    m.def("tpnotify", &ndrxpy_pytpnotify, "Send unsolicited notification to the process",
+    m.def("tpnotify", &ndrxpy_pytpnotify,
+        R"pbdoc(
+        Send unsolicted notification to the client process.
+
+        For more details see **tpnotify(3)** C API call.
+
+        .. code-block:: python
+            :caption: tpnotify example
+            :name: tpnotify-example
+                #!/usr/bin/env python3
+
+                import sys
+                import endurox as e
+
+                class Server:
+
+                    def tpsvrinit(self, args):
+                        e.userlog('Server startup')
+                        e.tpadvertise('NOTIFSV', 'NOTIFSV', self.NOTIFSV)
+                        return 0
+
+                    def tpsvrdone(self):
+                        e.userlog('Server shutdown')
+                        
+                    def NOTIFSV(self, args):
+                        e.tpnotify(args.cltid, {"data":"HELLO WORLD"}, 0)
+                        return e.tpreturn(e.TPSUCCESS, 0, {})
+
+                if __name__ == '__main__':
+                    e.run(Server(), sys.argv)
+
+        :raise XatmiException: 
+            | Following error codes may be present:
+            | **TPEINVAL** - Invalid environment or invalid parameters.
+            | **TPENOENT** - Local process queue does not exist.
+            | **TPETIME** - Destination queue was blocking and timeout expired.
+            | **TPEBLOCK** - Destination queue was blocking and **TPNOBLOCK** was specified.
+            | **TPESYSTEM** -  System error occurred.
+            | **TPEOS** - Operating system error occurred.
+
+        Parameters
+        ----------
+        clientid : CLIENTID
+            Client ID, as received from service call in *args.cltid*.
+        idata : dict
+            XATMI buffer to send.
+        flags : int
+            Bitwise or'd **TPNOBLOCK**, **TPSIGRSTRT**, **TPNOTIME**, **TPACK**.
+
+         )pbdoc",
           py::arg("clientid"), py::arg("idata"), py::arg("flags") = 0);
 
-    m.def("tpbroadcast", &ndrxpy_pytpbroadcast, "Broadcast unsolicited notifications to the cluster",
-          py::arg("lmid"), py::arg("usrname"), py::arg("cltname"), py::arg("idata"), py::arg("flags") = 0);
+    m.def("tpbroadcast", &ndrxpy_pytpbroadcast, 
+        R"pbdoc(
+        Broadcast unsolicted message to several processes at once.
+
+        For more details see **tpbroadcast(3)** C API call.
+
+        .. code-block:: python
+            :caption: tpbroadcast example
+            :name: tpbroadcast-example
+
+            import endurox as e
+            e.tpbroadcast("", "", "python3", {})
+
+        :raise XatmiException: 
+            | Following error codes may be present:
+            | **TPEINVAL** - Invalid environment or invalid parameters.
+            | **TPESYSTEM** -  System error occurred.
+            | **TPEOS** - Operating system error occurred.
+
+        Parameters
+        ----------
+        lmid : str
+            Cluster node id. In case of **TPREGEXMATCH** flag several nodes
+            may be matched with regexp.
+        usrname : str
+            RFU.
+        cltname : str
+            Client process binary name. In case of **TPREGEXMATCH** flag several nodes
+            may be matched with regexp.
+        idata : dict
+            Input XATMI buffer to be delivered to matched processes and nodes.
+        flags : int
+            Bitwise or'd **TPNOBLOCK**, **TPSIGRSTRT**, **TPNOTIME**, **TPREGEXMATCH**.
+
+         )pbdoc",
+          py::arg("lmid"), py::arg("usrname"), py::arg("cltname"), 
+          py::arg("idata"), py::arg("flags") = 0);
 
     m.def("tpsetunsol", [](const py::object &func) { ndrxpy_pytpsetunsol(func); }, "Set unsolicted message callback",
           py::arg("func"));

@@ -61,13 +61,28 @@
 /*---------------------------Typedefs-----------------------------------*/
 
 /**
+ * @brief CLIENTID mirror in py
+ */
+struct pyclientid
+{
+    py::bytes pycltid;
+
+    pyclientid(){}
+    
+    pyclientid(char *buf, long len)
+    {
+        pycltid = py::bytes(buf, len);
+    }
+};
+
+
+/**
  * @brief Extend the XATMI C struct with python specific fields
  */
 struct pytpsvcinfo: TPSVCINFO
 {
-
-    //Override clientid as bytes
-    py::bytes cltid;
+    //Override clientid as pyclientid
+    pyclientid cltid;
 
     pytpsvcinfo(TPSVCINFO *inf)
     {
@@ -77,11 +92,7 @@ struct pytpsvcinfo: TPSVCINFO
         flags = inf->flags;
         cd = inf->cd;
         appkey = inf->appkey;
-        /*
-        CLIENTID cltid;
-        memcpy(&cltid, &inf->cltid, sizeof(cltid));
-        */
-       cltid = py::bytes(reinterpret_cast<char *>(&inf->cltid), sizeof(inf->cltid));
+        cltid.pycltid = py::bytes(reinterpret_cast<char *>(&inf->cltid), sizeof(inf->cltid));
     }
     py::object data;
 };
