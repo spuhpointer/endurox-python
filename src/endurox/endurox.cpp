@@ -483,6 +483,7 @@ Python3 bindings for writing Endurox clients and servers
         tpsetunsol
         tpchkunsol
         tpexport
+        tpimport
         tpenqueue
         tpdequeue
         tpscmt
@@ -988,10 +989,16 @@ Flags to tpenqueue/tpdequeue
 Flags to tpsubscribe/tpunsubscribe (:attr:`TPEVCTL.flags`)
 ----------------------------------------------------------
 
-- **TPEVSERVICE** - Must be present when XATMI server subscribes to event.
-- **TPEVPERSIST** - Do not unsubscribe from event in case if service failed
- when event was delivered.
+See this const :data:`.TPEVSERVICE`
 
+.. data:: TPEVSERVICE
+
+    Must be present when XATMI server subscribes to event.
+
+.. data:: TPEVPERSIST
+
+    Do not unsubscribe from event in case if service failed
+    when event was delivered.
 
 )pbdoc";
 }

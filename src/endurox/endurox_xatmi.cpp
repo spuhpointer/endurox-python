@@ -1329,8 +1329,41 @@ expublic void ndrxpy_register_xatmi(py::module &m)
           , py::arg("ibuf"), py::arg("flags") = 0);
 
     m.def("tpimport", &ndrxpy_pytpimport,
-          "Converts an exported representation back into a typed message buffer",
-          py::arg("istr"), py::arg("flags") = 0);
+                 R"pbdoc(
+        Import previously exported XATMI buffer. If it was exported with :data:`.TPEX_STRING` flag,
+        then this function shall be invoked with this flag too.
+
+        .. code-block:: python
+            :caption: tpimport example
+            :name: tpimport-example
+
+            import endurox as e
+            buf_exp = e.tpexport({"data":"HELLO WORLD"}, e.TPEX_STRING)
+            buf_org = e.tpimport(buf_exp, e.TPEX_STRING)
+            
+
+        For more details see **tpimport(3)** C API call.
+
+        :raise XatmiException: 
+            | Following error codes may be present:
+            | **TPEINVAL** - Invalid parameters.
+            | **TPEOTYPE** -  Invalid input type.
+            | **TPESYSTEM** - System error occurred.
+            | **TPEOS** - Operating system error occurred.
+
+        Parameters
+        ----------
+        istr : str
+            | Serialized buffer with :func:`.tpexport`
+        flags : int
+            | Bitwise flags, may contain :data:`.TPEX_STRING`, :data:`.TPEX_NOCHANGE`. Default is **0**.
+
+        Returns
+        -------
+        buf : dict
+            Restored XATMI buffer.
+            )pbdoc"
+          , py::arg("istr"), py::arg("flags") = 0);
 
     m.def("tppost", &ndrxpy_pytppost, "Posts an event", py::arg("eventname"),
           py::arg("data"), py::arg("flags") = 0);
@@ -1853,8 +1886,8 @@ expublic void ndrxpy_register_xatmi(py::module &m)
             | **TPENOENT** - Invalid context data.
             | **TPESYSTEM** - System error occurred.
 
-        Parameters
-        ----------
+        ** Parameters**
+
         context : TPCONTEXT_T
             | Context handle.
         flags : int
@@ -1881,8 +1914,8 @@ expublic void ndrxpy_register_xatmi(py::module &m)
             | Following error codes may be present:
             | **TPESYSTEM** - System error occurred.
 
-        Parameters
-        ----------
+        ** Parameters **
+
         none : none
             | Python's :const:`py::None` constant.
         flags : int
