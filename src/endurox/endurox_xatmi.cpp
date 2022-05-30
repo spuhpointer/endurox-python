@@ -1365,7 +1365,47 @@ expublic void ndrxpy_register_xatmi(py::module &m)
             )pbdoc"
           , py::arg("istr"), py::arg("flags") = 0);
 
-    m.def("tppost", &ndrxpy_pytppost, "Posts an event", py::arg("eventname"),
+    m.def("tppost", &ndrxpy_pytppost,
+                 R"pbdoc(
+        Post event to the event broker.
+
+        .. code-block:: python
+            :caption: tppost example
+            :name: tppost-example
+
+            import endurox as e
+            # post event with UBF buffer
+            cnt = e.tppost("TESTEV", {"data":{"T_STRING_FLD":"HELLO EVENT"}}, 0)
+            print("Applied %d" % cnt)
+            
+        For more details see **tppost(3)** C API call.
+
+        :raise XatmiException: 
+            | Following error codes may be present:
+            | **TPEINVAL** - Invalid parameters.
+            | **TPENOENT** -  Event server (**tpevsrv(3)**) is not started.
+            | **TPETIME** - Event server timeout out.
+            | **TPESVCFAIL** - Event server failure.
+            | **TPESVCERR** - Event server has crashed.
+            | **TPESYSTEM** - System error occurred.
+            | **TPEOS** - Operating system error occurred.
+
+        Parameters
+        ----------
+        eventname : str
+            | Event name.
+        data : dict
+            | XATMI buffer to post.
+        flags : int
+            | Bitwise flags, may contain :data:`.TPNOTRAN`, :data:`.TPNOREPLY`, :data:`.TPSIGRSTRT`, :data:`.TPNOTIME` and :data:`.TPNOBLOCK` 
+            | Default is **0**.
+
+        Returns
+        -------
+        cnt : int
+            Number of XATMI servers consumed the event.
+            )pbdoc"
+          , py::arg("eventname"),
           py::arg("data"), py::arg("flags") = 0);
 
     m.def(
@@ -1394,10 +1434,6 @@ expublic void ndrxpy_register_xatmi(py::module &m)
         "Routine for setting blocktime in seconds or milliseconds for the next "
         "service call or for all service calls",
         py::arg("blktime"), py::arg("flags"));
-
-
-    m.def("tpadmcall", &ndrxpy_pytpadmcall, "Administers unbooted application",
-          py::arg("idata"), py::arg("flags") = 0);
 
     m.def(
         "tpinit",
@@ -1886,7 +1922,7 @@ expublic void ndrxpy_register_xatmi(py::module &m)
             | **TPENOENT** - Invalid context data.
             | **TPESYSTEM** - System error occurred.
 
-        ** Parameters**
+        **Parameters**
 
         context : TPCONTEXT_T
             | Context handle.
@@ -1914,7 +1950,7 @@ expublic void ndrxpy_register_xatmi(py::module &m)
             | Following error codes may be present:
             | **TPESYSTEM** - System error occurred.
 
-        ** Parameters **
+        **Parameters**
 
         none : none
             | Python's :const:`py::None` constant.
