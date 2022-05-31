@@ -75,6 +75,21 @@ struct pyclientid
     }
 };
 
+/**
+ * @brief TPTRANID mirror in py
+ */
+struct pytptranid
+{
+    py::bytes tranid;
+
+    pytptranid(){}
+
+    pytptranid(char *buf, long len)
+    {
+        tranid = py::bytes(buf, len);
+    }
+};
+
 
 /**
  * @brief Extend the XATMI C struct with python specific fields
