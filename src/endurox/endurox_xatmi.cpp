@@ -494,6 +494,7 @@ expublic pytpreply ndrxpy_pytpadmcall(py::object idata, long flags)
 expublic void ndrxpy_register_xatmi(py::module &m)
 {
     // Structures:
+    py::class_<pytptranid>(m, "TPTRANID");
     // Poor man's namedtuple
     py::class_<pytpreply>(m, "TpReply")
         .def_readonly("tperrno", &pytpreply::pytperrno)
@@ -1503,9 +1504,29 @@ expublic void ndrxpy_register_xatmi(py::module &m)
                 throw xatmi_exception(tperrno);
             }
         },
-        "Routine for beginning a transaction", py::arg("timeout"),
-        py::arg("flags") = 0);
+         R"pbdoc(
+        Start global transaction.
 
+        For more details see **tpbegin(3)** C API call.
+
+        :raise XatmiException: 
+            | Following error codes may be present:
+            | **TPEINVAL** - Invalid flags passed.
+            | **TPETIME** - Transaction manager (**tmsrv(8)**) timeout out.
+            | **TPESVCERR** - Transaction manager crashed.
+            | **TPEPROTO** - Invalid operations sequence.
+            | **TPESYSTEM** - System error occurred.
+            | **TPEOS** - Operating system error occurred.
+
+        Parameters
+        ----------
+        timeout : int
+            | Transaction timeout value in seconds.
+        flags : int
+            | RFU. Shall be set to **0**, which is default value.
+
+         )pbdoc"
+         , py::arg("timeout"), py::arg("flags") = 0);
     m.def(
         "tpsuspend",
         [](long flags)
@@ -1516,20 +1537,43 @@ expublic void ndrxpy_register_xatmi(py::module &m)
             {
                 throw xatmi_exception(tperrno);
             }
-            return py::bytes(reinterpret_cast<char *>(&tranid), sizeof(tranid));
+            return pytptranid(reinterpret_cast<char *>(&tranid), sizeof(tranid));
         },
-        "Suspend a global transaction", py::arg("flags") = 0);
+        R"pbdoc(
+        Suspend global transaction.
+
+        For more details see **tpsuspend(3)** C API call.
+
+        :raise XatmiException: 
+            | Following error codes may be present:
+            | **TPEINVAL** - Invalid flags passed.
+            | **TPEPROTO** - Invalid operations sequence.
+            | **TPESYSTEM** - System error occurred.
+            | **TPEOS** - Operating system error occurred.
+
+        Parameters
+        ----------
+        flags : int
+            | Bitwise flags of :data:`.TPTXNOOPTIM` and :data:`.TPTXTMSUSPEND`.
+            | default value is **0**.
+
+        Returns
+        -------
+        tid : TPTRANID
+            Suspend transaction identifier
+
+         )pbdoc", py::arg("flags") = 0);
 
     m.def(
         "tpresume",
-        [](py::bytes tranid, long flags)
+        [](pytptranid tranid, long flags)
         {
             py::gil_scoped_release release;
             if (tpresume(reinterpret_cast<TPTRANID *>(
 #if PY_MAJOR_VERSION >= 3
-                             PyBytes_AsString(tranid.ptr())
+                             PyBytes_AsString(tranid.tranid.ptr())
 #else
-                             PyString_AsString(tranid.ptr())
+                             PyString_AsString(tranid.tranid.ptr())
 #endif
                                  ),
                          flags) == -1)
@@ -1537,7 +1581,32 @@ expublic void ndrxpy_register_xatmi(py::module &m)
                 throw xatmi_exception(tperrno);
             }
         },
-        "Resume a global transaction", py::arg("tranid"), py::arg("flags") = 0);
+        R"pbdoc(
+        Resume previously suspended global transaction.
+
+        For more details see **tpresume(3)** C API call.
+
+        :raise XatmiException: 
+            | Following error codes may be present:
+            | **TPEINVAL** - Invalid flags passed.
+            | **TPEPROTO** - Invalid operations sequence.
+            | **TPESYSTEM** - System error occurred.
+            | **TPEOS** - Operating system error occurred.
+
+        Parameters
+        ----------
+        tranid : TPTRANID
+            Transaction identifier returned by :func:`.tpsuspend`.
+        flags : int
+            | Bitwise flags of :data:`.TPTXNOOPTIM` and :data:`.TPTXTMSUSPEND`.
+            | default value is **0**.
+
+        Returns
+        -------
+        tid : TPTRANID
+            Suspend transaction identifier
+
+         )pbdoc", py::arg("tranid"), py::arg("flags") = 0);
 
     m.def(
         "tpcommit",
@@ -1549,7 +1618,29 @@ expublic void ndrxpy_register_xatmi(py::module &m)
                 throw xatmi_exception(tperrno);
             }
         },
-        "Routine for committing current transaction", py::arg("flags") = 0);
+        R"pbdoc(
+        Commit global transaction currently associated with given thread.
+
+        For more details see **tpcommit(3)** C API call.
+
+        :raise XatmiException: 
+            | Following error codes may be present:
+            | **TPEINVAL** - Invalid flags passed.
+            | **TPETIME** - Transaction manager timeout.
+            | **TPEABORT** - Global transaction was aborted (due to marking or
+                error error during two phase commit).
+            | **TPEHAZARD** - Partial commit and/or abort.
+            | **TPEHEURISTIC** - Partial commit and/or abort.
+            | **TPEPROTO** - Invalid call sequence.
+            | **TPESYSTEM** - System error occurred.
+            | **TPEOS** - Operating system error occurred.
+
+        Parameters
+        ----------
+        flags : int
+            | Bitwise flags of :data:`.TPTXCOMMITDLOG` default value is **0**.
+
+         )pbdoc", py::arg("flags") = 0);
 
     m.def(
         "tpabort",
@@ -1561,7 +1652,29 @@ expublic void ndrxpy_register_xatmi(py::module &m)
                 throw xatmi_exception(tperrno);
             }
         },
-        "Routine for aborting current transaction", py::arg("flags") = 0);
+        R"pbdoc(
+        Abort global transaction.
+
+        For more details see **tpabort(3)** C API call.
+
+        :raise XatmiException: 
+            | Following error codes may be present:
+            | **TPEINVAL** - Invalid flags passed.
+            | **TPETIME** - Transaction manager timeout.
+            | **TPEABORT** - Global transaction was aborted (due to marking or
+                error error during two phase commit).
+            | **TPEHAZARD** - Partial commit and/or abort.
+            | **TPEHEURISTIC** - Partial commit and/or abort.
+            | **TPEPROTO** - Invalid call sequence.
+            | **TPESYSTEM** - System error occurred.
+            | **TPEOS** - Operating system error occurred.
+
+        Parameters
+        ----------
+        flags : int
+            | RFU, default value is **0**.
+
+         )pbdoc", py::arg("flags") = 0);
 
     m.def(
         "tpgetlev",
@@ -1574,7 +1687,23 @@ expublic void ndrxpy_register_xatmi(py::module &m)
             }
             return py::bool_(rc);
         },
-        "Routine for checking if a transaction is in progress");
+        R"pbdoc(
+        Get global transaction status.
+
+        For more details see **tpgetlev(3)** C API call.
+
+        Parameters
+        ----------
+        flags : int
+            | RFU, default value is **0**.
+
+        Returns
+        -------
+        status : bool
+            Value **False** is returned if correct thread is not part of the global
+            transaction. Value **True** is returned in case if thread is in global
+            transaction.
+         )pbdoc");
 
     m.def(
         "tpopen",
@@ -1585,7 +1714,19 @@ expublic void ndrxpy_register_xatmi(py::module &m)
                 throw xatmi_exception(tperrno);
             }
         },
-        "Open XA Sub-system");
+        R"pbdoc(
+        Open XA sub-system. Function loads necessary drivers and connects to
+        resource manager.
+
+        For more details see **tpopen(3)** C API call.
+
+        :raise XatmiException: 
+            | Following error codes may be present:
+            | **TPERMERR** - Resource manager error.
+            | **TPESYSTEM** - System error occurred.
+            | **TPEOS** - Operating system error occurred.
+
+         )pbdoc");
     m.def(
         "tpclose",
         []()
@@ -1595,7 +1736,19 @@ expublic void ndrxpy_register_xatmi(py::module &m)
                 throw xatmi_exception(tperrno);
             }
         },
-        "Close XA Sub-system");
+        R"pbdoc(
+        Close XA sub-system previously open by :data:`.tpopen`
+
+        For more details see **tpclose(3)** C API call.
+
+        :raise XatmiException: 
+            | Following error codes may be present:
+            | **TPEPROTO** - Thread is in global transaction.
+            | **TPERMERR** - Resource manager error.
+            | **TPESYSTEM** - System error occurred.
+            | **TPEOS** - Operating system error occurred.
+
+         )pbdoc");
     m.def(
         "userlog",
         [](const char *message)

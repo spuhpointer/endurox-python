@@ -483,6 +483,14 @@ Python3 bindings for writing Endurox clients and servers
         tpsetunsol
         tpchkunsol
         tppost
+        tpbegin
+        tpsuspend
+        tpresume
+        tpcommit
+        tpabort
+        tpgetlev
+        tpopen
+        tpclose
         tpexport
         tpimport
         tpenqueue
