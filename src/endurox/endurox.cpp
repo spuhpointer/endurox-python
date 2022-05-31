@@ -470,6 +470,7 @@ Python3 bindings for writing Endurox clients and servers
         tpsetctxt
         tpfreectxt
         tuxgetenv
+        tpgblktime
         tpcall
         tpacall
         tpgetrply

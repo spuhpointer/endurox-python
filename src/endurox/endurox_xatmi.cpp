@@ -1419,8 +1419,28 @@ expublic void ndrxpy_register_xatmi(py::module &m)
             }
             return rc;
         },
-        "Retrieves a previously set, per second or millisecond, blocktime value",
-        py::arg("flags"));
+                 R"pbdoc(
+        Get current XATMI call timeout setting configure for thread.
+            
+        For more details see **tpgblktime(3)** C API call.
+
+        :raise XatmiException:
+            | Following error codes may be present:
+            | **TPEINVAL** - Invalid flags.
+            | **TPESYSTEM** - System error occurred.
+
+        Parameters
+        ----------
+        flags : int
+            | Bitwise flags, may contain :data:`.TPBLK_ALL`, :data:`.TPBLK_NEXT`.
+
+        Returns
+        -------
+        tout : int
+            Current timeout configured for thread. If no timeout is configure
+            value **0** is returned.
+            )pbdoc"
+        , py::arg("flags"));
 
     m.def(
         "tpsblktime",
