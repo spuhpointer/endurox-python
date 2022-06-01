@@ -548,7 +548,7 @@ expublic void ndrxpy_register_ubf(py::module &m)
         Returns
         -------
         fldnm : str
-            | Field name.
+            Field name.
 
             )pbdoc"
         , py::arg("name"));
