@@ -186,7 +186,7 @@ expublic py::object ndrxpy_to_py_ubf(UBFH *fbfr, BFLDLEN buflen = 0)
         }
         case BFLD_PTR:
         {
-            xatmibuf ptrbuf;
+            atmibuf ptrbuf;
             ptrbuf.p = nullptr;
             ptrbuf.pp = reinterpret_cast<char **>(d_ptr);
 
@@ -213,8 +213,8 @@ expublic py::object ndrxpy_to_py_ubf(UBFH *fbfr, BFLDLEN buflen = 0)
  * @param obj 
  * @param b temporary buffer
  */
-static void from_py1_ubf(xatmibuf &buf, BFLDID fieldid, BFLDOCC oc,
-                     py::handle obj, xatmibuf &b)
+static void from_py1_ubf(atmibuf &buf, BFLDID fieldid, BFLDOCC oc,
+                     py::handle obj, atmibuf &b)
 {
     if (obj.is_none())
     {
@@ -331,7 +331,7 @@ static void from_py1_ubf(xatmibuf &buf, BFLDID fieldid, BFLDOCC oc,
                 std::string vname = py::str(vnamed);
 
                 NDRX_STRCPY_SAFE(vf.vname, vname.c_str());
-                xatmibuf vbuf("VIEW", vf.vname);
+                atmibuf vbuf("VIEW", vf.vname);
 
                 vf.data = *vbuf.pp;
                 vf.vflags=0;
@@ -352,7 +352,7 @@ static void from_py1_ubf(xatmibuf &buf, BFLDID fieldid, BFLDOCC oc,
                 NDRX_LOG(log_error, "%s", tmp);
                 throw std::invalid_argument(tmp);
             }
-            xatmibuf tmp = ndrx_from_py(obj.cast<py::object>());
+            atmibuf tmp = ndrx_from_py(obj.cast<py::object>());
             
             buf.mutate([&](UBFH *fbfr)
                     { return Bchg(fbfr, fieldid, oc, reinterpret_cast<char *>(tmp.pp), 0); });
@@ -374,10 +374,10 @@ static void from_py1_ubf(xatmibuf &buf, BFLDID fieldid, BFLDOCC oc,
  * @param obj 
  * @param b 
  */
-expublic void ndrxpy_from_py_ubf(py::dict obj, xatmibuf &b)
+expublic void ndrxpy_from_py_ubf(py::dict obj, atmibuf &b)
 {
     b.reinit("UBF", nullptr, 1024);
-    xatmibuf f;
+    atmibuf f;
 
     for (auto it : obj)
     {
@@ -635,7 +635,7 @@ expublic void ndrxpy_register_ubf(py::module &m)
         :raise UbfException: 
             | Following error codes may be present:
             | **BALIGNERR** - Corrupted UBF buffer.
-            | **BNOTFLD** - Invalid XATMI buffer format, not UBF.
+            | **BNOTFLD** - Invalid ATMI buffer format, not UBF.
             | **BEINVAL** - Invalid arguments passed.
             | **BBADNAME** - Field not found in FD files or UBFDB.
             | **BSYNTAX** - Bad boolean expression syntax
@@ -645,7 +645,7 @@ expublic void ndrxpy_register_ubf(py::module &m)
         Parameters
         ----------
         fbfr : dict
-            XATMI buffer on which to test the expression
+            ATMI buffer on which to test the expression
         expression : str
             Boolean expression
 
@@ -692,7 +692,7 @@ expublic void ndrxpy_register_ubf(py::module &m)
         :raise UbfException: 
             | Following error codes may be present:
             | **BALIGNERR** - Corrupted UBF buffer.
-            | **BNOTFLD** - Invalid XATMI buffer format, not UBF.
+            | **BNOTFLD** - Invalid ATMI buffer format, not UBF.
             | **BEINVAL** - Invalid arguments passed.
             | **BBADNAME** - Field not found in FD files or UBFDB.
             | **BSYNTAX** - Bad boolean expression syntax
@@ -702,7 +702,7 @@ expublic void ndrxpy_register_ubf(py::module &m)
         Parameters
         ----------
         fbfr : dict
-            XATMI buffer on which to test the expression
+            ATMI buffer on which to test the expression
         expression : str
             Boolean expression
 
@@ -735,13 +735,13 @@ expublic void ndrxpy_register_ubf(py::module &m)
 
         :raise UbfException: 
             | Following error codes may be present:
-            | **BALIGNERR** - Invalid XATMI buffer format, not UBF.
+            | **BALIGNERR** - Invalid ATMI buffer format, not UBF.
             | **BNOTFLD** - Not UBF buffer.
 
         Parameters
         ----------
         fbfr : dict
-            XATMI buffer on which to test the expression.
+            ATMI buffer on which to test the expression.
         iop : file
             Output stream in write mode.
             )pbdoc", py::arg("fbfr"),
@@ -765,20 +765,20 @@ expublic void ndrxpy_register_ubf(py::module &m)
 
         :raise UbfException: 
             | Following error codes may be present:
-            | **BALIGNERR** - Invalid XATMI buffer format, not UBF.
+            | **BALIGNERR** - Invalid ATMI buffer format, not UBF.
             | **BNOTFLD** - Not UBF buffer.
 
         Parameters
         ----------
         fbfr : dict
-            XATMI buffer on which to test the expression
+            ATMI buffer on which to test the expression
 
             )pbdoc", py::arg("fbfr"));
     m.def(
         "Bextread",
         [](py::object iop)
         {
-            xatmibuf obuf("UBF", 1024);
+            atmibuf obuf("UBF", 1024);
             int fd = iop.attr("fileno")().cast<py::int_>();
             std::unique_ptr<FILE, decltype(&fclose)> fiop(fdopen(dup(fd), "r"),
                                                           &fclose);
@@ -788,7 +788,7 @@ expublic void ndrxpy_register_ubf(py::module &m)
             return ndrx_to_py(obuf);
         },
         R"pbdoc(
-        Restore XATMI UBF buffer from :func:`.Bfprint` output.
+        Restore ATMI UBF buffer from :func:`.Bfprint` output.
             
         For more details see **Bextread(3)** C API call.
 

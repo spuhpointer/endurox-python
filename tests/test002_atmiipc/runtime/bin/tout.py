@@ -11,7 +11,7 @@ class TestTout(unittest.TestCase):
         self.assertEqual(e.tptoutget(), 5)
         try:
             tperrno, tpurcode, retbuf = e.tpcall("TOUT", { "data":{"T_SHORT_FLD":"10"}})
-        except e.XatmiException as ex:
+        except e.AtmiException as ex:
             self.assertEqual(ex.code,e.TPETIME)
         else:
             self.assertEqual(True,False)
@@ -30,7 +30,7 @@ class TestTout(unittest.TestCase):
 
         try:
             tperrno, tpurcode, retbuf = e.tpcall("TOUT", { "data":{"T_SHORT_FLD":"10"}})
-        except e.XatmiException as ex:
+        except e.AtmiException as ex:
             self.assertEqual(ex.code,e.TPETIME)
         else:
             self.assertEqual(True,False)
@@ -44,7 +44,7 @@ class TestTout(unittest.TestCase):
 
         try:
             tperrno, tpurcode, retbuf = e.tpcall("TOUT", { "data":{"T_SHORT_FLD":"10"}})
-        except e.XatmiException as ex:
+        except e.AtmiException as ex:
             self.assertEqual(ex.code,e.TPETIME)
         else:
             self.assertEqual(True,False)

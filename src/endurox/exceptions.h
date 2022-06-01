@@ -45,20 +45,20 @@
 namespace py = pybind11;
 
 /**
- * XATMI Sub-systme exception
+ * ATMI Sub-systme exception
  */
-struct xatmi_exception : public std::exception
+struct atmi_exception : public std::exception
 {
 private:
     int code_;
     std::string message_;
 
 protected:
-    xatmi_exception(int code, const std::string &message)
+    atmi_exception(int code, const std::string &message)
         : code_(code), message_(message) {}
 
 public:
-    explicit xatmi_exception(int code)
+    explicit atmi_exception(int code)
         : code_(code), message_(tpstrerror(code)) {}
 
     const char *what() const noexcept override { return message_.c_str(); }
@@ -69,11 +69,11 @@ public:
  * TMQ persisten queue related exceptions.
  * returned from tpenqueue(), tpdequeue().
  */
-struct qm_exception : public xatmi_exception
+struct qm_exception : public atmi_exception
 {
 public:
-    explicit qm_exception(int code) : xatmi_exception(code, qmstrerror(code)) {}
-    explicit qm_exception(int code, char *msg) : xatmi_exception(code, msg) {}
+    explicit qm_exception(int code) : atmi_exception(code, qmstrerror(code)) {}
+    explicit qm_exception(int code, char *msg) : atmi_exception(code, msg) {}
 
     static const char *qmstrerror(int code)
     {

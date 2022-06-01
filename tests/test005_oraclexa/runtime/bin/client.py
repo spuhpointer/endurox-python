@@ -70,7 +70,7 @@ class TestOracleXA(unittest.TestCase):
             # do some insert, fails with TPESVCERR as exception is not catched
             try:
                 e.tpcall("DOINSERT", {"data":{"T_STRING_FLD":"HELLO1", "T_LONG_FLD":100}})
-            except e.XatmiException as ex:
+            except e.AtmiException as ex:
                 self.assertEqual(ex.code,e.TPESVCERR)
             else:
                 self.assertEqual(True,False)
@@ -78,7 +78,7 @@ class TestOracleXA(unittest.TestCase):
             # abort-only:
             try:
                 e.tpcommit(0)
-            except e.XatmiException as ex:
+            except e.AtmiException as ex:
                 self.assertEqual(ex.code,e.TPEABORT)
             else:
                 self.assertEqual(True,False)

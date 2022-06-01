@@ -110,18 +110,18 @@ static PyObject *EnduroxException_tp_str(PyObject *selfPtr)
 
 static void register_exceptions(py::module &m)
 {
-    static PyObject *XatmiException =
-        PyErr_NewException(MODULE ".XatmiException", nullptr, nullptr);
-    if (XatmiException)
+    static PyObject *AtmiException =
+        PyErr_NewException(MODULE ".AtmiException", nullptr, nullptr);
+    if (AtmiException)
     {
-        PyTypeObject *as_type = reinterpret_cast<PyTypeObject *>(XatmiException);
+        PyTypeObject *as_type = reinterpret_cast<PyTypeObject *>(AtmiException);
         as_type->tp_str = EnduroxException_tp_str;
         PyObject *descr = PyDescr_NewGetSet(as_type, EnduroxException_getsetters);
         auto dict = py::reinterpret_borrow<py::dict>(as_type->tp_dict);
         dict[py::handle(((PyDescrObject *)(descr))->d_name)] = py::handle(descr);
 
-        Py_XINCREF(XatmiException);
-        m.add_object("XatmiException", py::handle(XatmiException));
+        Py_XINCREF(AtmiException);
+        m.add_object("AtmiException", py::handle(AtmiException));
     }
 
     static PyObject *QmException =
@@ -177,11 +177,11 @@ static void register_exceptions(py::module &m)
       args[0] = e.what();
       args[1] = e.code();
       PyErr_SetObject(QmException, args.ptr());
-    } catch (const xatmi_exception &e) {
+    } catch (const atmi_exception &e) {
       py::tuple args(2);
       args[0] = e.what();
       args[1] = e.code();
-      PyErr_SetObject(XatmiException, args.ptr());
+      PyErr_SetObject(AtmiException, args.ptr());
     } catch (const ubf_exception &e) {
       py::tuple args(2);
       args[0] = e.what();
@@ -241,7 +241,7 @@ PYBIND11_MODULE(endurox, m)
         "Returns the OCI service handle for a given XA connection");
 
     ndrxpy_register_ubf(m);
-    ndrxpy_register_xatmi(m);
+    ndrxpy_register_atmi(m);
     ndrxpy_register_srv(m);
     ndrxpy_register_tpext(m);
     ndrxpy_register_tplog(m);
@@ -266,7 +266,7 @@ PYBIND11_MODULE(endurox, m)
     m.attr("TPLOGQI_EVAL_RETURN") = py::int_(TPLOGQI_EVAL_RETURN);
     m.attr("TPLOGQI_RET_HAVDETAILED") = py::int_(TPLOGQI_RET_HAVDETAILED);
 
-    //XATMI IPC flags:
+    //ATMI IPC flags:
     m.attr("TPNOFLAGS") = py::int_(TPNOFLAGS);
     m.attr("TPNOBLOCK") = py::int_(TPNOBLOCK);
     m.attr("TPSIGRSTRT") = py::int_(TPSIGRSTRT);
@@ -286,7 +286,7 @@ PYBIND11_MODULE(endurox, m)
     m.attr("TPSUCCESS") = py::int_(TPSUCCESS);
     m.attr("TPEXIT") = py::int_(TPEXIT);
     
-    //XATMI errors:
+    //ATMI errors:
     m.attr("TPEABORT") = py::int_(TPEABORT);
     m.attr("TPEBADDESC") = py::int_(TPEBADDESC);
     m.attr("TPEBLOCK") = py::int_(TPEBLOCK);
@@ -539,10 +539,10 @@ This documentation contains only short description of the API calls which mentio
 core functinoality provided by the API. Each API call contains reference to underlaying
 C call which explains in deep details how exactly given function behaves.
 
-XATMI buffer formats
+ATMI buffer formats
 ====================
 
-Core of **XATMI** **IPC** consists of messages being sent between binaries. Message may
+Core of **ATMI** **IPC** consists of messages being sent between binaries. Message may
 encode different type of data. Enduro/X supports following data buffer types:
 
 - | **UBF** (Unified Buffer Format) which is similar to **JSON** or **YAML** buffer format, except
@@ -552,7 +552,7 @@ encode different type of data. Enduro/X supports following data buffer types:
   | *BFLD_LONG* (C long type), *BFLD_FLOAT* (C float type), *BFLD_DOUBLE* (C double type),
   | *BFLD_STRING* (C zero terminated string type), *BFLD_CARRAY* (byte array), *BFLD_VIEW*
   | (C structure record), *BFLD_UBF* (recursive buffer) and *BFLD_PTR* (pointer to another
-  | XATMI buffer).
+  | ATMI buffer).
 - | **STRING** this is plain C string buffer. When using with Python, data is converted
   | from to/from *UTF-8* format.
 - | **CARRAY** byte array buffer.
@@ -560,20 +560,20 @@ encode different type of data. Enduro/X supports following data buffer types:
   | with call-info buffer.
 - | **JSON** this basically is C string buffer, but with indication that it contains JSON
   | formatted data. These buffer may be automatically converted to UBF and vice versa
-  | for certain XATMI server configurations.
+  | for certain ATMI server configurations.
 - | **VIEW** this buffer basically may hold a C structure record.
 
-Following chapters lists XATMI data encoding principles.
+Following chapters lists ATMI data encoding principles.
 
 UBF Data encoding
 -----------------
 
-When building XATMI buffer from Python dictionary, endurox-python library accepts
+When building ATMI buffer from Python dictionary, endurox-python library accepts
 values to be present as list of values, in such case values are loaded into UBF occurrences
 accordingly. value may be presented directly without the list, in such case the value
 is loaded into UBF field occurrence **0**.
 
-When XATMI UBF buffer dictionary is received from Enduro/X, all values are loaded into lists,
+When ATMI UBF buffer dictionary is received from Enduro/X, all values are loaded into lists,
 regardless of did field had several occurrences or just one.
 
 UBF buffer type is selected by following rules:
@@ -643,9 +643,9 @@ Example call to echo service:
             }
         }
 
-Following **exceptions** may be throw, when XATMI buffer is instantiated:
+Following **exceptions** may be throw, when ATMI buffer is instantiated:
 
-- | XatmiException with code: **TPENOENT** - view name in vname is not found. 
+- | AtmiException with code: **TPENOENT** - view name in vname is not found. 
 - | UbfException with code: **BEINVAL** - invalid view field occurrance.
   | **BNOSPACE** - no space in view field.
 
@@ -799,10 +799,10 @@ VIEW buffer type is selected by following rules:
             }
         }
 
-CALL-INFO XATMI buffer association
+CALL-INFO ATMI buffer association
 ----------------------------------
 
-Call-info block is additional UBF buffer that may be linked with Any XATMI buffer 
+Call-info block is additional UBF buffer that may be linked with Any ATMI buffer 
 (except **NULL** buffer). The concept behind with call-info block is similar like
 HTTP headers information, i.e. additional data linked to the message body.
 
@@ -936,7 +936,7 @@ Following :attr:`TPQCTL.diagnostic` (*QmException.code*) codes may be returned:
 TPEVCTL
 -------
 
-Class used to control event subscription for the XATMI servers.
+Class used to control event subscription for the ATMI servers.
 Used by :func:`.tpsubscribe` and :func:`.tpunsubscribe`.
 
 .. py:class:: TPQCTL()
@@ -1024,7 +1024,7 @@ See this const :data:`.TPEVSERVICE`
 
 .. data:: TPEVSERVICE
 
-    Must be present when XATMI server subscribes to event.
+    Must be present when ATMI server subscribes to event.
 
 .. data:: TPEVPERSIST
 

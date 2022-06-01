@@ -92,7 +92,7 @@ struct pytptranid
 
 
 /**
- * @brief Extend the XATMI C struct with python specific fields
+ * @brief Extend the ATMI C struct with python specific fields
  */
 struct pytpsvcinfo: TPSVCINFO
 {
@@ -113,23 +113,23 @@ struct pytpsvcinfo: TPSVCINFO
 };
 
 /**
- * XATMI buffer handling routines
+ * ATMI buffer handling routines
  */
-class xatmibuf
+class atmibuf
 {
 public:
-    xatmibuf();
-    xatmibuf(TPSVCINFO *svcinfo);
-    xatmibuf(const char *type, long len);
-    xatmibuf(const char *type, const char *subtype);
+    atmibuf();
+    atmibuf(TPSVCINFO *svcinfo);
+    atmibuf(const char *type, long len);
+    atmibuf(const char *type, const char *subtype);
     void reinit(const char *type, const char *subtype, long len_);
 
-    xatmibuf(const xatmibuf &) = delete;
-    xatmibuf &operator=(const xatmibuf &) = delete;
+    atmibuf(const atmibuf &) = delete;
+    atmibuf &operator=(const atmibuf &) = delete;
     
-    xatmibuf(xatmibuf &&other);
-    xatmibuf &operator=(xatmibuf &&other);
-    ~xatmibuf();
+    atmibuf(atmibuf &&other);
+    atmibuf &operator=(atmibuf &&other);
+    ~atmibuf();
 
     char *release();
     UBFH **fbfr();
@@ -145,7 +145,7 @@ public:
     void mutate(std::function<int(UBFH *)> f);
 
 private:
-    void swap(xatmibuf &other) noexcept;
+    void swap(atmibuf &other) noexcept;
 };
 
 /**
@@ -366,15 +366,15 @@ struct pytpcontext
 
 extern xao_svc_ctx *xao_svc_ctx_ptr;
 
-extern xatmibuf ndrx_from_py(py::object obj);
-extern py::object ndrx_to_py(xatmibuf &buf);
+extern atmibuf ndrx_from_py(py::object obj);
+extern py::object ndrx_to_py(atmibuf &buf);
 
 //Buffer conversion support:
-extern void ndrxpy_from_py_view(py::dict obj, xatmibuf &b, const char *view);
+extern void ndrxpy_from_py_view(py::dict obj, atmibuf &b, const char *view);
 extern py::object ndrxpy_to_py_view(char *cstruct, char *vname, long size);
 
 extern py::object ndrxpy_to_py_ubf(UBFH *fbfr, BFLDLEN buflen);
-extern void ndrxpy_from_py_ubf(py::dict obj, xatmibuf &b);
+extern void ndrxpy_from_py_ubf(py::dict obj, atmibuf &b);
 
 extern void pytpadvertise(std::string svcname, std::string funcname, const py::object &func);
 extern void ndrxpy_pyrun(py::object svr, std::vector<std::string> args);
@@ -399,7 +399,7 @@ extern pytpreplycd ndrxpy_pytpgetrply(int cd, long flags);
 extern int ndrxpy_pytppost(const std::string eventname, py::object data, long flags);
 extern long ndrxpy_pytpsubscribe(char *eventexpr, char *filter, TPEVCTL *ctl, long flags);
 
-extern void ndrxpy_register_xatmi(py::module &m);
+extern void ndrxpy_register_atmi(py::module &m);
 extern void ndrxpy_register_ubf(py::module &m);
 extern void ndrxpy_register_srv(py::module &m);
 extern void ndrxpy_register_tpext(py::module &m);

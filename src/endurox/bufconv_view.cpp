@@ -193,13 +193,13 @@ out:
 /**
  * @brief Process single view field
  * 
- * @param buf XATMI buffer where to unload the stuff
+ * @param buf ATMI buffer where to unload the stuff
  * @param view view name
  * @param cname view field name
  * @param oc  occurrence to set
  * @param obj puthon dict key entry
  */
-static void from_py1_view(xatmibuf &buf, const char *view, const char *cname, BFLDOCC oc,
+static void from_py1_view(atmibuf &buf, const char *view, const char *cname, BFLDOCC oc,
                      py::handle obj)
 {
 
@@ -313,7 +313,7 @@ static void from_py1_view(xatmibuf &buf, const char *view, const char *cname, BF
  * @param b 
  * @param view VIEW name to process
  */
-expublic void ndrxpy_from_py_view(py::dict obj, xatmibuf &b, const char *view)
+expublic void ndrxpy_from_py_view(py::dict obj, atmibuf &b, const char *view)
 {
 
     NDRX_LOG(log_debug, "into ndrxpy_from_py_view() %p", b.pp);

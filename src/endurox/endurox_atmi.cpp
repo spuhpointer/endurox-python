@@ -1,7 +1,7 @@
 /**
- * @brief Enduro/X Python module - xatmi client/server common
+ * @brief Enduro/X Python module - atmi client/server common
  *
- * @file endurox_xatmi.cpp
+ * @file endurox_atmi.cpp
  */
 /* -----------------------------------------------------------------------------
  * Python module for Enduro/X
@@ -55,8 +55,8 @@
 namespace py = pybind11;
 
 /**
- * @brief export XATMI buffer
- * @param [in] idata XATMI buffer to export
+ * @brief export ATMI buffer
+ * @param [in] idata ATMI buffer to export
  * @param [in] flags flags
  * @return exported buffer (JSON string or base64 string (if TPEX_STRING flag is set))
  */
@@ -70,7 +70,7 @@ expublic py::object ndrxpy_pytpexport(py::object idata, long flags)
     int rc = tpexport(in.p, in.len, &ostr[0], &olen, flags);
     if (rc == -1)
     {
-        throw xatmi_exception(tperrno);
+        throw atmi_exception(tperrno);
     }
 
     if (flags == 0)
@@ -81,21 +81,21 @@ expublic py::object ndrxpy_pytpexport(py::object idata, long flags)
 }
 
 /**
- * @brief import XATMI buffer
+ * @brief import ATMI buffer
  * @param [in] istr input buffer / string
  * @param [in] flags
- * @return XATMI buffer
+ * @return ATMI buffer
  */
 expublic py::object ndrxpy_pytpimport(const std::string istr, long flags)
 {
-    xatmibuf obuf("UBF", istr.size());
+    atmibuf obuf("UBF", istr.size());
 
     long olen = 0;
     int rc = tpimport(const_cast<char *>(istr.c_str()), istr.size(), obuf.pp,
                       &olen, flags);
     if (rc == -1)
     {
-        throw xatmi_exception(tperrno);
+        throw atmi_exception(tperrno);
     }
 
     return ndrx_to_py(obuf);
@@ -104,7 +104,7 @@ expublic py::object ndrxpy_pytpimport(const std::string istr, long flags)
 /**
  * @brief post event 
  * @param [in] eventname name of the event
- * @param [in] data XATMI data to post
+ * @param [in] data ATMI data to post
  * @param [in] flags
  * @return number of postings 
  */
@@ -118,7 +118,7 @@ expublic int ndrxpy_pytppost(const std::string eventname, py::object data, long 
         rc = tppost(const_cast<char *>(eventname.c_str()), *in.pp, in.len, flags);
         if (rc == -1)
         {
-            throw xatmi_exception(tperrno);
+            throw atmi_exception(tperrno);
         }
     }
 
@@ -129,7 +129,7 @@ expublic int ndrxpy_pytppost(const std::string eventname, py::object data, long 
  * @brief Synchronous service call
  * 
  * @param svc service name
- * @param idata dictionary encoded xatmi buffer
+ * @param idata dictionary encoded atmi buffer
  * @param flags any flags
  * @return pytpreply return tuple loaded with tperrno, tpurcode, return buffer
  */
@@ -138,7 +138,7 @@ expublic pytpreply ndrxpy_pytpcall(const char *svc, py::object idata, long flags
 
     auto in = ndrx_from_py(idata);
     int tperrno_saved=0;
-    xatmibuf out("NULL", (long)0);
+    atmibuf out("NULL", (long)0);
     {
         py::gil_scoped_release release;
         int rc = tpcall(const_cast<char *>(svc), *in.pp, in.len, out.pp, &out.len,
@@ -148,7 +148,7 @@ expublic pytpreply ndrxpy_pytpcall(const char *svc, py::object idata, long flags
         {
             if (tperrno_saved != TPESVCFAIL)
             {
-                throw xatmi_exception(tperrno_saved);
+                throw atmi_exception(tperrno_saved);
             }
         }
     }
@@ -161,7 +161,7 @@ expublic pytpreply ndrxpy_pytpcall(const char *svc, py::object idata, long flags
  * @param [in] qspace queue space name
  * @param [in] qname queue name
  * @param [in] ctl controlstruct
- * @param [in] data XATMI object
+ * @param [in] data ATMI object
  * @param [in] flags enqueue flags
  * @return queue control struct
  */
@@ -183,7 +183,7 @@ expublic NDRXPY_TPQCTL ndrxpy_pytpenqueue(const char *qspace, const char *qname,
             {
                 throw qm_exception(ctl->diagnostic);
             }
-            throw xatmi_exception(tperrno);
+            throw atmi_exception(tperrno);
         }
     }
 
@@ -199,13 +199,13 @@ expublic NDRXPY_TPQCTL ndrxpy_pytpenqueue(const char *qspace, const char *qname,
  * @param [in] qname queue name
  * @param [in] ctl queue control struct
  * @param [in] flags flags
- * @return queue control struct, xatmi object
+ * @return queue control struct, atmi object
  */
 expublic std::pair<NDRXPY_TPQCTL, py::object> ndrx_pytpdequeue(const char *qspace,
                                                  const char *qname, NDRXPY_TPQCTL *ctl,
                                                  long flags)
 {
-    xatmibuf out("UBF", 1024);
+    atmibuf out("UBF", 1024);
     {
         ctl->convert_to_base();
         TPQCTL *ctl_c = dynamic_cast<TPQCTL*>(ctl);
@@ -219,7 +219,7 @@ expublic std::pair<NDRXPY_TPQCTL, py::object> ndrx_pytpdequeue(const char *qspac
             {
                 throw qm_exception(ctl->diagnostic, ctl->diagmsg);
             }
-            throw xatmi_exception(tperrno);
+            throw atmi_exception(tperrno);
         }
     }
 
@@ -231,7 +231,7 @@ expublic std::pair<NDRXPY_TPQCTL, py::object> ndrx_pytpdequeue(const char *qspac
 /**
  * @brief async service call
  * @param [in] svc service name
- * @param [in] idata input XATMI buffer
+ * @param [in] idata input ATMI buffer
  * @param [in] flags
  * @return call descriptor
  */
@@ -244,7 +244,7 @@ expublic int ndrxpy_pytpacall(const char *svc, py::object idata, long flags)
     int rc = tpacall(const_cast<char *>(svc), *in.pp, in.len, flags);
     if (rc == -1)
     {
-        throw xatmi_exception(tperrno);
+        throw atmi_exception(tperrno);
     }
     return rc;
 }
@@ -279,7 +279,7 @@ exprivate void ndrxpy_pytpnotify(pyclientid *clientid, py::object idata, long fl
     
     if (rc == -1)
     {
-        throw xatmi_exception(tperrno);
+        throw atmi_exception(tperrno);
     }
 }
 
@@ -303,7 +303,7 @@ exprivate void ndrxpy_pytpbroadcast(const char *lmid, const char *usrname, const
     
     if (rc == -1)
     {
-        throw xatmi_exception(tperrno);
+        throw atmi_exception(tperrno);
     }
 }
 
@@ -316,7 +316,7 @@ exprivate void ndrxpy_pytpbroadcast(const char *lmid, const char *usrname, const
  */
 exprivate void notification_callback (char *data, long len, long flags)
 {
-    xatmibuf b;
+    atmibuf b;
     b.len = len;
     b.p=nullptr;//do not free the master buffer.
     b.pp = &data;
@@ -335,7 +335,7 @@ exprivate void ndrxpy_pytpsetunsol(const py::object &func)
 {
     if (TPUNSOLERR==tpsetunsol(notification_callback))
     {
-        throw xatmi_exception(tperrno);
+        throw atmi_exception(tperrno);
     }
 
     ndrxpy_object_t *obj_ptr = new ndrxpy_object_t();
@@ -354,7 +354,7 @@ exprivate void ndrxpy_pytpsetunsol(const py::object &func)
 /**
  * @brief Connect to conversational service
  * @param [in] svc service name
- * @param [in] idata input XATMI buffer
+ * @param [in] idata input ATMI buffer
  * @param [in] flags
  * @return call descriptor
  */
@@ -367,7 +367,7 @@ static int ndrxpy_pytpconnect(const char *svc, py::object idata, long flags)
     int rc = tpconnect(const_cast<char *>(svc), *in.pp, in.len, flags);
     if (rc == -1)
     {
-        throw xatmi_exception(tperrno);
+        throw atmi_exception(tperrno);
     }
     return rc;
 }
@@ -395,7 +395,7 @@ expublic pytpsendret ndrxpy_pytpsend(int cd, py::object idata, long flags)
         {
             if (TPEEVENT!=tperrno_saved)
             {
-                throw xatmi_exception(tperrno_saved);
+                throw atmi_exception(tperrno_saved);
             }
         }
     }
@@ -408,14 +408,14 @@ expublic pytpsendret ndrxpy_pytpsend(int cd, py::object idata, long flags)
  * 
  * @param cd call descriptor
  * @param flags flags
- * @return tperrno, revent, tpurcode, XATMI buffer
+ * @return tperrno, revent, tpurcode, ATMI buffer
  */
 expublic pytprecvret ndrxpy_pytprecv(int cd, long flags)
 {
     long revent;
     int tperrno_saved;
 
-    xatmibuf out("NULL", 0L);
+    atmibuf out("NULL", 0L);
     {
         py::gil_scoped_release release;
         int rc = tprecv(cd, out.pp, &out.len, flags, &revent);
@@ -425,7 +425,7 @@ expublic pytprecvret ndrxpy_pytprecv(int cd, long flags)
         {
             if (TPEEVENT!=tperrno_saved)
             {
-                throw xatmi_exception(tperrno_saved);
+                throw atmi_exception(tperrno_saved);
             }
         }
     }
@@ -442,7 +442,7 @@ expublic pytprecvret ndrxpy_pytprecv(int cd, long flags)
 expublic pytpreplycd ndrxpy_pytpgetrply(int cd, long flags)
 {
     int tperrno_saved=0;
-    xatmibuf out("UBF", 1024);
+    atmibuf out("UBF", 1024);
     {
         py::gil_scoped_release release;
         int rc = tpgetrply(&cd, out.pp, &out.len, flags);
@@ -452,7 +452,7 @@ expublic pytpreplycd ndrxpy_pytpgetrply(int cd, long flags)
         {
             if (tperrno_saved != TPESVCFAIL)
             {
-                throw xatmi_exception(tperrno_saved);
+                throw atmi_exception(tperrno_saved);
             }
         }
     }
@@ -470,7 +470,7 @@ expublic pytpreply ndrxpy_pytpadmcall(py::object idata, long flags)
 {
     auto in = ndrx_from_py(idata);
     int tperrno_saved=0;
-    xatmibuf out("UBF", 1024);
+    atmibuf out("UBF", 1024);
     {
         py::gil_scoped_release release;
         int rc = tpadmcall(*in.fbfr(), out.fbfr(), flags);
@@ -479,7 +479,7 @@ expublic pytpreply ndrxpy_pytpadmcall(py::object idata, long flags)
         {
             if (tperrno_saved != TPESVCFAIL)
             {
-                throw xatmi_exception(tperrno_saved);
+                throw atmi_exception(tperrno_saved);
             }
         }
     }
@@ -487,11 +487,11 @@ expublic pytpreply ndrxpy_pytpadmcall(py::object idata, long flags)
 }
 
 /**
- * @brief register xatmi common methods
+ * @brief register atmi common methods
  * 
  * @param m Pybind11 module
  */
-expublic void ndrxpy_register_xatmi(py::module &m)
+expublic void ndrxpy_register_atmi(py::module &m)
 {
     // Structures:
     py::class_<pytptranid>(m, "TPTRANID");
@@ -667,7 +667,7 @@ expublic void ndrxpy_register_xatmi(py::module &m)
 
         See **tests/test003_tmq/runtime/bin/tpenqueue.py** for sample code.
 
-        :raise XatmiException: 
+        :raise AtmiException: 
             | Following error codes may be present:
             | **TPEINVAL** - Invalid arguments to function (See C descr).
             | **TPETIME** - Queue space call timeout.
@@ -695,7 +695,7 @@ expublic void ndrxpy_register_xatmi(py::module &m)
         ctl : TPQCTL
             Control structure.
         data : dict
-            Input XATMI data buffer
+            Input ATMI data buffer
         flags : int
             Or'd bit flags: **TPNOTRAN**, **TPSIGRSTRT**, **TPNOCHANGE**, 
             **TPTRANSUSPEND**, **TPNOBLOCK**, **TPNOABORT**. Default flag is **0**.
@@ -726,7 +726,7 @@ expublic void ndrxpy_register_xatmi(py::module &m)
 
         See **tests/test003_tmq/runtime/bin/tpenqueue.py** for sample code.
 
-        :raise XatmiException: 
+        :raise AtmiException: 
             | Following error codes may be present:
             | **TPEINVAL** - Invalid arguments to function (See C descr).
             | **TPENOENT** - Queue space not found (tmqueue process for qspace not started).
@@ -755,7 +755,7 @@ expublic void ndrxpy_register_xatmi(py::module &m)
         ctl : TPQCTL
             Control structure.
         data : dict
-            Input XATMI data buffer
+            Input ATMI data buffer
         flags : int
             Or'd bit flags: **TPNOTRAN**, **TPSIGRSTRT**, **TPNOCHANGE**, 
             **TPNOTIME**, **TPNOBLOCK**. Default flag is **0**.
@@ -765,7 +765,7 @@ expublic void ndrxpy_register_xatmi(py::module &m)
         TPQCTL
             Return control structure (updated with details).
         dict
-            XATMI data buffer.
+            ATMI data buffer.
 
      )pbdoc",
           py::arg("qspace"), py::arg("qname"), py::arg("ctl"),
@@ -790,7 +790,7 @@ expublic void ndrxpy_register_xatmi(py::module &m)
         
         For more details see **tpcall(3)**.
 
-        :raise XatmiException: 
+        :raise AtmiException: 
             | Following error codes may be present:
             | **TPEINVAL** - Invalid arguments to function.
             | **TPEOTYPE** - Output type not allowed.
@@ -809,7 +809,7 @@ expublic void ndrxpy_register_xatmi(py::module &m)
         svc : str
             Service name to call
         idata : dict
-            Input XATMI data buffer
+            Input ATMI data buffer
         flags : int
             Or'd bit flags: **TPNOTRAN**, **TPSIGRSTRT**, **TPNOTIME**, 
             **TPNOCHANGE**, **TPTRANSUSPEND**, **TPNOBLOCK**, **TPNOABORT**.
@@ -821,7 +821,7 @@ expublic void ndrxpy_register_xatmi(py::module &m)
         int
             tpurcode - code passed to **tpreturn(3)** by the server
         dict
-            XATMI buffer returned from the server.
+            ATMI buffer returned from the server.
 
      )pbdoc",
           py::arg("svc"), py::arg("idata"), py::arg("flags") = 0);
@@ -842,7 +842,7 @@ expublic void ndrxpy_register_xatmi(py::module &m)
         
         For more details see **tpacall(3)**.
 
-        :raise XatmiException: 
+        :raise AtmiException: 
             | Following error codes may be present:
             | **TPEINVAL** - Invalid arguments to function.
             | **TPENOENT** - Service not is advertised.
@@ -857,7 +857,7 @@ expublic void ndrxpy_register_xatmi(py::module &m)
         svc : str
             Service name to call
         idata : dict
-            Input XATMI data buffer
+            Input ATMI data buffer
         flags : int
             Or'd bit flags: **TPNOTRAN**, **TPSIGRSTRT**, **TPNOBLOCK**, 
             **TPNOREPLY**, **TPNOTIME**. Default value is **0**.
@@ -885,7 +885,7 @@ expublic void ndrxpy_register_xatmi(py::module &m)
         
         For more details see **tpgetrply(3)** C API call.
 
-        :raise XatmiException: 
+        :raise AtmiException: 
             | Following error codes may be present:
             | **TPEINVAL** - Invalid arguments to function.
             | **TPEBADDESC** - Call descriptor passed in *cd* is not valid, and 
@@ -915,7 +915,7 @@ expublic void ndrxpy_register_xatmi(py::module &m)
         int
             tpurcode - code passed to **tpreturn(3)** by the server
         dict
-            XATMI buffer returned from the server.
+            ATMI buffer returned from the server.
          )pbdoc", 
          py::arg("cd"), py::arg("flags") = 0);
 
@@ -927,7 +927,7 @@ expublic void ndrxpy_register_xatmi(py::module &m)
 
             if (tpcancel(cd) == EXFAIL)
             {
-                throw xatmi_exception(tperrno);
+                throw atmi_exception(tperrno);
             }
         },
         R"pbdoc(
@@ -936,7 +936,7 @@ expublic void ndrxpy_register_xatmi(py::module &m)
         
         For more details see **tpcancel(3)** C API call.
 
-        :raise XatmiException: 
+        :raise AtmiException: 
             | Following error codes may be present:
             | **TPEBADDESC** - *cd* is out of the range of valid values.
             | **TPEINVAL** - Enduro/X is not configured.
@@ -955,11 +955,11 @@ expublic void ndrxpy_register_xatmi(py::module &m)
         R"pbdoc(
         Connect to conversational service. Connection provides half-duplex
         data streaming between client and service/server where data exchange is
-        organized by using :func:`.tpsend` and :func:`.tprecv` XATMI calls.
+        organized by using :func:`.tpsend` and :func:`.tprecv` ATMI calls.
         
         For more details see **tpconnect(3)** C API call.
 
-        :raise XatmiException: 
+        :raise AtmiException: 
             | Following error codes may be present:
             | **TPEINVAL** - Invalid arguments passed to function.
             | **TPENOENT** - *svc* service is not available.
@@ -975,7 +975,7 @@ expublic void ndrxpy_register_xatmi(py::module &m)
         svc : str
             Service name to connect to.
         idata : dict
-            XATMI buffer to send in connection request.
+            ATMI buffer to send in connection request.
         flags : int
             Bitwise or'd **TPNOTRAN**, **TPSIGRSTRT**, **TPNOTIME**, **TPSENDONLY**,
             **TPRECVONLY**.
@@ -999,7 +999,7 @@ expublic void ndrxpy_register_xatmi(py::module &m)
         
         For more details see **tpsend(3)** C API call.
 
-        :raise XatmiException: 
+        :raise AtmiException: 
             | Following error codes may be present:
             | **TPEINVAL** - Invalid call descriptor.
             | **TPETIME** - Queue was blocked and it timeout out.
@@ -1014,7 +1014,7 @@ expublic void ndrxpy_register_xatmi(py::module &m)
         cd : int
             Conversation descriptor.
         idata : dict
-            XATMI buffer to send.
+            ATMI buffer to send.
         flags : int
             Bitwise or'd **TPRECVONLY**, **TPNOBLOCK**, **TPSIGRSTRT**, **TPNOTIME**.
 
@@ -1052,7 +1052,7 @@ expublic void ndrxpy_register_xatmi(py::module &m)
         
         For more details see **tprecv(3)** C API call.
 
-        :raise XatmiException: 
+        :raise AtmiException: 
             | Following error codes may be present:
             | **TPEINVAL** - Invalid call descriptor.
             | **TPETIME** - Queue was blocked and it timeout out.
@@ -1067,7 +1067,7 @@ expublic void ndrxpy_register_xatmi(py::module &m)
         cd : int
             Conversation descriptor.
         idata : dict
-            XATMI buffer to send.
+            ATMI buffer to send.
         flags : int
             Bitwise or'd **TPNOBLOCK**, **TPSIGRSTRT**, **TPNOTIME**.
 
@@ -1085,7 +1085,7 @@ expublic void ndrxpy_register_xatmi(py::module &m)
                 **TPEV_DISCONIMM**, **TPEV_SENDONLY**, **TPEV_SVCERR**, **TPEV_SVCFAIL**,
                 **TPEV_SVCSUCC**.
         dict
-            XATMI buffer send by peer.
+            ATMI buffer send by peer.
          )pbdoc",
           py::arg("cd"), py::arg("flags") = 0);
 
@@ -1097,7 +1097,7 @@ expublic void ndrxpy_register_xatmi(py::module &m)
 
         if (tpdiscon(cd) == EXFAIL)
         {
-            throw xatmi_exception(tperrno);
+            throw atmi_exception(tperrno);
         }
     },
     R"pbdoc(
@@ -1106,7 +1106,7 @@ expublic void ndrxpy_register_xatmi(py::module &m)
         
         For more details see **tpsend(3)** C API call.
 
-        :raise XatmiException: 
+        :raise AtmiException: 
             | Following error codes may be present:
             | **TPEINVAL** - Invalid conversation descriptor.
             | **TPEOS** - Operating system error occurred.
@@ -1150,7 +1150,7 @@ expublic void ndrxpy_register_xatmi(py::module &m)
                 if __name__ == '__main__':
                     e.run(Server(), sys.argv)
 
-        :raise XatmiException: 
+        :raise AtmiException: 
             | Following error codes may be present:
             | **TPEINVAL** - Invalid environment or invalid parameters.
             | **TPENOENT** - Local process queue does not exist.
@@ -1164,7 +1164,7 @@ expublic void ndrxpy_register_xatmi(py::module &m)
         clientid : CLIENTID
             Client ID, as received from service call in *args.cltid*.
         idata : dict
-            XATMI buffer to send.
+            ATMI buffer to send.
         flags : int
             Bitwise or'd **TPNOBLOCK**, **TPSIGRSTRT**, **TPNOTIME**, **TPACK**.
 
@@ -1184,7 +1184,7 @@ expublic void ndrxpy_register_xatmi(py::module &m)
             import endurox as e
             e.tpbroadcast("", "", "python3", {})
 
-        :raise XatmiException: 
+        :raise AtmiException: 
             | Following error codes may be present:
             | **TPEINVAL** - Invalid environment or invalid parameters.
             | **TPESYSTEM** -  System error occurred.
@@ -1201,7 +1201,7 @@ expublic void ndrxpy_register_xatmi(py::module &m)
             Client process binary name. In case of **TPREGEXMATCH** flag several nodes
             may be matched with regexp.
         idata : dict
-            Input XATMI buffer to be delivered to matched processes and nodes.
+            Input ATMI buffer to be delivered to matched processes and nodes.
         flags : int
             Bitwise or'd **TPNOBLOCK**, **TPSIGRSTRT**, **TPNOTIME**, **TPREGEXMATCH**.
 
@@ -1212,9 +1212,9 @@ expublic void ndrxpy_register_xatmi(py::module &m)
     m.def("tpsetunsol", [](const py::object &func) { ndrxpy_pytpsetunsol(func); }, 
         R"pbdoc(
         Set unsolicited message callback handler. Handler receives matched messages posted
-        by :func:`.tpnotify` and :func:`.tpbroadcast`. Note that in handler only limited XATMI
+        by :func:`.tpnotify` and :func:`.tpbroadcast`. Note that in handler only limited ATMI
         processing may be done. See C API descr.
-        Note that callback handler is associated with the XATMI context. If using several
+        Note that callback handler is associated with the ATMI context. If using several
         contexts or threads, each of them shall be initialized.
 
         For more details see **tpsetunsol(3)** C API call.
@@ -1244,7 +1244,7 @@ expublic void ndrxpy_register_xatmi(py::module &m)
             if __name__ == '__main__':
                 unittest.main()
 
-        :raise XatmiException: 
+        :raise AtmiException: 
             | Following error codes may be present:
             | **TPEINVAL** - Invalid environment or invalid parameters.
             | **TPESYSTEM** -  System error occurred.
@@ -1254,7 +1254,7 @@ expublic void ndrxpy_register_xatmi(py::module &m)
         ----------
         func : callbackFunction(data) -> None
             Callback function to be invoked when unsolicited message is received
-            by the process. *data* parameter is standard XATMI buffer.
+            by the process. *data* parameter is standard ATMI buffer.
 
             )pbdoc",
           py::arg("func"));
@@ -1267,7 +1267,7 @@ expublic void ndrxpy_register_xatmi(py::module &m)
             int ret = tpchkunsol();
             if (EXFAIL==ret)
             {
-                throw xatmi_exception(tperrno);
+                throw atmi_exception(tperrno);
             }
             return ret;
         }, 
@@ -1277,7 +1277,7 @@ expublic void ndrxpy_register_xatmi(py::module &m)
 
         For more details see **tpchkunsol(3)** C API call.
 
-        :raise XatmiException: 
+        :raise AtmiException: 
             | Following error codes may be present:
             | **TPESYSTEM** -  System error occurred.
             | **TPEOS** - Operating system error occurred.
@@ -1291,7 +1291,7 @@ expublic void ndrxpy_register_xatmi(py::module &m)
 
     m.def("tpexport", &ndrxpy_pytpexport,
                  R"pbdoc(
-        Export XATMI buffer. **NULL** buffer export is not supported.
+        Export ATMI buffer. **NULL** buffer export is not supported.
 
         .. code-block:: python
             :caption: tpexport example
@@ -1306,7 +1306,7 @@ expublic void ndrxpy_register_xatmi(py::module &m)
 
         For more details see **tpexport(3)** C API call.
 
-        :raise XatmiException: 
+        :raise AtmiException: 
             | Following error codes may be present:
             | **TPEINVAL** - Invalid buffer passed.
             | **TPEOTYPE** -  Invalid input type.
@@ -1316,7 +1316,7 @@ expublic void ndrxpy_register_xatmi(py::module &m)
         Parameters
         ----------
         ibuf : dict
-            | XATMI buffer.
+            | ATMI buffer.
         flags : int
             | Bitwise flags, may contain **TPEX_STRING**. Default is **0**.
 
@@ -1331,7 +1331,7 @@ expublic void ndrxpy_register_xatmi(py::module &m)
 
     m.def("tpimport", &ndrxpy_pytpimport,
                  R"pbdoc(
-        Import previously exported XATMI buffer. If it was exported with :data:`.TPEX_STRING` flag,
+        Import previously exported ATMI buffer. If it was exported with :data:`.TPEX_STRING` flag,
         then this function shall be invoked with this flag too.
 
         .. code-block:: python
@@ -1345,7 +1345,7 @@ expublic void ndrxpy_register_xatmi(py::module &m)
 
         For more details see **tpimport(3)** C API call.
 
-        :raise XatmiException: 
+        :raise AtmiException: 
             | Following error codes may be present:
             | **TPEINVAL** - Invalid parameters.
             | **TPEOTYPE** -  Invalid input type.
@@ -1362,7 +1362,7 @@ expublic void ndrxpy_register_xatmi(py::module &m)
         Returns
         -------
         buf : dict
-            Restored XATMI buffer.
+            Restored ATMI buffer.
             )pbdoc"
           , py::arg("istr"), py::arg("flags") = 0);
 
@@ -1381,7 +1381,7 @@ expublic void ndrxpy_register_xatmi(py::module &m)
             
         For more details see **tppost(3)** C API call.
 
-        :raise XatmiException: 
+        :raise AtmiException: 
             | Following error codes may be present:
             | **TPEINVAL** - Invalid parameters.
             | **TPENOENT** -  Event server (**tpevsrv(3)**) is not started.
@@ -1396,7 +1396,7 @@ expublic void ndrxpy_register_xatmi(py::module &m)
         eventname : str
             | Event name.
         data : dict
-            | XATMI buffer to post.
+            | ATMI buffer to post.
         flags : int
             | Bitwise flags, may contain :data:`.TPNOTRAN`, :data:`.TPNOREPLY`, :data:`.TPSIGRSTRT`, :data:`.TPNOTIME` and :data:`.TPNOBLOCK` 
             | Default is **0**.
@@ -1404,7 +1404,7 @@ expublic void ndrxpy_register_xatmi(py::module &m)
         Returns
         -------
         cnt : int
-            Number of XATMI servers consumed the event.
+            Number of ATMI servers consumed the event.
             )pbdoc"
           , py::arg("eventname"),
           py::arg("data"), py::arg("flags") = 0);
@@ -1416,16 +1416,16 @@ expublic void ndrxpy_register_xatmi(py::module &m)
             int rc = tpgblktime(flags);
             if (rc == -1)
             {
-                throw xatmi_exception(tperrno);
+                throw atmi_exception(tperrno);
             }
             return rc;
         },
         R"pbdoc(
-        Get current XATMI call timeout setting configure for thread.
+        Get current ATMI call timeout setting configure for thread.
             
         For more details see **tpgblktime(3)** C API call.
 
-        :raise XatmiException:
+        :raise AtmiException:
             | Following error codes may be present:
             | **TPEINVAL** - Invalid flags.
             | **TPESYSTEM** - System error occurred.
@@ -1449,16 +1449,16 @@ expublic void ndrxpy_register_xatmi(py::module &m)
         {
             if (tpsblktime(blktime, flags) == -1)
             {
-                throw xatmi_exception(tperrno);
+                throw atmi_exception(tperrno);
             }
         },
         R"pbdoc(
-        Set XATMI call timeout value. Setting affects current thread/XATMI context.
+        Set ATMI call timeout value. Setting affects current thread/ATMI context.
         Process level timeout may be applied by :func:`.tptoutset` function.
             
         For more details see **tpsblktime(3)** C API call.
 
-        :raise XatmiException:
+        :raise AtmiException:
             | Following error codes may be present:
             | **TPEINVAL** - Invalid flags or timeout value.
 
@@ -1484,7 +1484,7 @@ expublic void ndrxpy_register_xatmi(py::module &m)
 
             if (tpinit(&init) == -1)
             {
-                throw xatmi_exception(tperrno);
+                throw atmi_exception(tperrno);
             }
         },
         R"pbdoc(
@@ -1492,7 +1492,7 @@ expublic void ndrxpy_register_xatmi(py::module &m)
         
         For more deatils see C call *tpinit(3)*.
 
-        :raise XatmiException: 
+        :raise AtmiException: 
             | Following error codes may be present:
             | *TPEINVAL* - Unconfigured application,
             | *TPESYSTEM* - Enduro/X System error occurred,
@@ -1513,17 +1513,17 @@ expublic void ndrxpy_register_xatmi(py::module &m)
 
             if (tpterm() == -1)
             {
-                throw xatmi_exception(tperrno);
+                throw atmi_exception(tperrno);
             }
         },
         R"pbdoc(
-        Leaves application, closes XATMI session.
+        Leaves application, closes ATMI session.
         
         For more details see C call *tpterm(3)*.
 
-        :raise XatmiException: 
+        :raise AtmiException: 
             | Following error codes may be present:
-            | *TPEPROTO* - Called from XATMI server (main thread),
+            | *TPEPROTO* - Called from ATMI server (main thread),
             | *TPESYSTEM* - Enduro/X System error occurred,
             | *TPEOS* - Operating system error occurred.
 
@@ -1536,7 +1536,7 @@ expublic void ndrxpy_register_xatmi(py::module &m)
             py::gil_scoped_release release;
             if (tpbegin(timeout, flags) == -1)
             {
-                throw xatmi_exception(tperrno);
+                throw atmi_exception(tperrno);
             }
         },
          R"pbdoc(
@@ -1544,7 +1544,7 @@ expublic void ndrxpy_register_xatmi(py::module &m)
 
         For more details see **tpbegin(3)** C API call.
 
-        :raise XatmiException: 
+        :raise AtmiException: 
             | Following error codes may be present:
             | **TPEINVAL** - Invalid flags passed.
             | **TPETIME** - Transaction manager (**tmsrv(8)**) timeout out.
@@ -1570,7 +1570,7 @@ expublic void ndrxpy_register_xatmi(py::module &m)
             py::gil_scoped_release release;
             if (tpsuspend(&tranid, flags) == -1)
             {
-                throw xatmi_exception(tperrno);
+                throw atmi_exception(tperrno);
             }
             return pytptranid(reinterpret_cast<char *>(&tranid), sizeof(tranid));
         },
@@ -1579,7 +1579,7 @@ expublic void ndrxpy_register_xatmi(py::module &m)
 
         For more details see **tpsuspend(3)** C API call.
 
-        :raise XatmiException: 
+        :raise AtmiException: 
             | Following error codes may be present:
             | **TPEINVAL** - Invalid flags passed.
             | **TPEPROTO** - Invalid operations sequence.
@@ -1613,7 +1613,7 @@ expublic void ndrxpy_register_xatmi(py::module &m)
                                  ),
                          flags) == -1)
             {
-                throw xatmi_exception(tperrno);
+                throw atmi_exception(tperrno);
             }
         },
         R"pbdoc(
@@ -1621,7 +1621,7 @@ expublic void ndrxpy_register_xatmi(py::module &m)
 
         For more details see **tpresume(3)** C API call.
 
-        :raise XatmiException: 
+        :raise AtmiException: 
             | Following error codes may be present:
             | **TPEINVAL** - Invalid flags passed.
             | **TPEPROTO** - Invalid operations sequence.
@@ -1650,7 +1650,7 @@ expublic void ndrxpy_register_xatmi(py::module &m)
             py::gil_scoped_release release;
             if (tpcommit(flags) == -1)
             {
-                throw xatmi_exception(tperrno);
+                throw atmi_exception(tperrno);
             }
         },
         R"pbdoc(
@@ -1658,7 +1658,7 @@ expublic void ndrxpy_register_xatmi(py::module &m)
 
         For more details see **tpcommit(3)** C API call.
 
-        :raise XatmiException: 
+        :raise AtmiException: 
             | Following error codes may be present:
             | **TPEINVAL** - Invalid flags passed.
             | **TPETIME** - Transaction manager timeout.
@@ -1684,7 +1684,7 @@ expublic void ndrxpy_register_xatmi(py::module &m)
             py::gil_scoped_release release;
             if (tpabort(flags) == -1)
             {
-                throw xatmi_exception(tperrno);
+                throw atmi_exception(tperrno);
             }
         },
         R"pbdoc(
@@ -1692,7 +1692,7 @@ expublic void ndrxpy_register_xatmi(py::module &m)
 
         For more details see **tpabort(3)** C API call.
 
-        :raise XatmiException: 
+        :raise AtmiException: 
             | Following error codes may be present:
             | **TPEINVAL** - Invalid flags passed.
             | **TPETIME** - Transaction manager timeout.
@@ -1718,7 +1718,7 @@ expublic void ndrxpy_register_xatmi(py::module &m)
             int rc;
             if ((rc = tpgetlev()) == -1)
             {
-                throw xatmi_exception(tperrno);
+                throw atmi_exception(tperrno);
             }
             return py::bool_(rc);
         },
@@ -1746,7 +1746,7 @@ expublic void ndrxpy_register_xatmi(py::module &m)
         {
             if (EXFAIL==tpopen())
             {
-                throw xatmi_exception(tperrno);
+                throw atmi_exception(tperrno);
             }
         },
         R"pbdoc(
@@ -1755,7 +1755,7 @@ expublic void ndrxpy_register_xatmi(py::module &m)
 
         For more details see **tpopen(3)** C API call.
 
-        :raise XatmiException: 
+        :raise AtmiException: 
             | Following error codes may be present:
             | **TPERMERR** - Resource manager error.
             | **TPESYSTEM** - System error occurred.
@@ -1768,7 +1768,7 @@ expublic void ndrxpy_register_xatmi(py::module &m)
         {
             if (EXFAIL==tpclose())
             {
-                throw xatmi_exception(tperrno);
+                throw atmi_exception(tperrno);
             }
         },
         R"pbdoc(
@@ -1776,7 +1776,7 @@ expublic void ndrxpy_register_xatmi(py::module &m)
 
         For more details see **tpclose(3)** C API call.
 
-        :raise XatmiException: 
+        :raise AtmiException: 
             | Following error codes may be present:
             | **TPEPROTO** - Thread is in global transaction.
             | **TPERMERR** - Resource manager error.
@@ -1814,7 +1814,7 @@ expublic void ndrxpy_register_xatmi(py::module &m)
                 if (EXSUCCEED!=tpencrypt(const_cast<char *>(val.data()),
                                     val.size(), tmp.buf, &tmp.size, flags))
                 {
-                    throw xatmi_exception(tperrno);
+                    throw atmi_exception(tperrno);
                 }
             }
 
@@ -1825,7 +1825,7 @@ expublic void ndrxpy_register_xatmi(py::module &m)
 
         For more details see **tpencrypt(3)** C API call.
 
-        :raise XatmiException:
+        :raise AtmiException:
             | Following error codes may be present:
             | **TPEINVAL** - Invalid input data.
 
@@ -1871,7 +1871,7 @@ expublic void ndrxpy_register_xatmi(py::module &m)
             
                 if (EXSUCCEED!=tpencrypt(ptr_val, len, tmp.buf, &tmp.size, flags|TPEX_STRING))
                 {
-                    throw xatmi_exception(tperrno);
+                    throw atmi_exception(tperrno);
                 }
             }
 
@@ -1882,7 +1882,7 @@ expublic void ndrxpy_register_xatmi(py::module &m)
 
         For more details see **tpencrypt(3)** C API call.
 
-        :raise XatmiException:
+        :raise AtmiException:
             | Following error codes may be present:
             | **TPEINVAL** - Invalid input data.
 
@@ -1922,7 +1922,7 @@ expublic void ndrxpy_register_xatmi(py::module &m)
                 if (EXSUCCEED!=tpdecrypt(const_cast<char *>(val.data()),
                                     val.size(), tmp.buf, &tmp.size, flags))
                 {
-                    throw xatmi_exception(tperrno);
+                    throw atmi_exception(tperrno);
                 }
             }
             return py::bytes(tmp.buf, tmp.size);
@@ -1932,7 +1932,7 @@ expublic void ndrxpy_register_xatmi(py::module &m)
 
         For more details see **tpdecrypt(3)** C API call.
 
-        :raise XatmiException:
+        :raise AtmiException:
             | Following error codes may be present:
             | **TPEINVAL** - Invalid input data.
             | **TPEOS** - System error occurred.
@@ -1973,7 +1973,7 @@ expublic void ndrxpy_register_xatmi(py::module &m)
             
                 if (EXSUCCEED!=tpdecrypt(ptr_val, len, tmp.buf, &tmp.size, flags|TPEX_STRING))
                 {
-                    throw xatmi_exception(tperrno);
+                    throw atmi_exception(tperrno);
                 }
             }
 
@@ -1984,7 +1984,7 @@ expublic void ndrxpy_register_xatmi(py::module &m)
 
         For more details see **tpdecrypt(3)** C API call.
 
-        :raise XatmiException:
+        :raise AtmiException:
             | Following error codes may be present:
             | **TPEINVAL** - Invalid input data.
             | **TPEOS** - System error occurred.
@@ -2038,7 +2038,7 @@ expublic void ndrxpy_register_xatmi(py::module &m)
             return pytpcontext(&ctxt);
         },
         R"pbdoc(
-        Create new XATMI Context.
+        Create new ATMI Context.
 
         For more details see **tpnewctxt(3)** C API call.
 
@@ -2052,7 +2052,7 @@ expublic void ndrxpy_register_xatmi(py::module &m)
         Returns
         -------
         context : TPCONTEXT_T
-            | XATMI Context handle.
+            | ATMI Context handle.
 
          )pbdoc",
         py::arg("auto_destroy"), py::arg("auto_set"));
@@ -2064,13 +2064,13 @@ expublic void ndrxpy_register_xatmi(py::module &m)
             TPCONTEXT_T ctxt;
             if (EXFAIL==tpgetctxt(&ctxt, flags))
             {
-                throw xatmi_exception(tperrno);
+                throw atmi_exception(tperrno);
             }
 
             return pytpcontext(&ctxt);
         },
         R"pbdoc(
-        Retrieve current XATMI context handle and put current thread
+        Retrieve current ATMI context handle and put current thread
         in **TPNULLCONTEXT** context.
 
         For more details see **tpgetctxt(3)** C API call.
@@ -2083,7 +2083,7 @@ expublic void ndrxpy_register_xatmi(py::module &m)
         Returns
         -------
         context : TPCONTEXT_T
-            | XATMI Context handle.
+            | ATMI Context handle.
 
          )pbdoc",
         py::arg("flags")=0);
@@ -2096,16 +2096,16 @@ expublic void ndrxpy_register_xatmi(py::module &m)
             context->getCtxt(&ctxt);
             if (EXSUCCEED!=tpsetctxt(ctxt, flags))
             {
-                throw xatmi_exception(tperrno);
+                throw atmi_exception(tperrno);
             }
         },
         R"pbdoc(
-        Set current XATMI context from handle received from :func:`.tpgetctxt`
+        Set current ATMI context from handle received from :func:`.tpgetctxt`
         or :func:`.tpnewctxt`.
 
         For more details see **tpsetctxt(3)** C API call.
 
-        :raise XatmiException:
+        :raise AtmiException:
             | Following error codes may be present:
             | **TPENOENT** - Invalid context data.
             | **TPESYSTEM** - System error occurred.
@@ -2126,15 +2126,15 @@ expublic void ndrxpy_register_xatmi(py::module &m)
         {
             if (EXSUCCEED!=tpsetctxt(TPNULLCONTEXT, flags))
             {
-                throw xatmi_exception(tperrno);
+                throw atmi_exception(tperrno);
             }
         },
         R"pbdoc(
-        Set **TPNULLCONTEXT**. Removes given thread from any XATMI context.
+        Set **TPNULLCONTEXT**. Removes given thread from any ATMI context.
 
         For more details see **tpsetctxt(3)** C API call.
 
-        :raise XatmiException:
+        :raise AtmiException:
             | Following error codes may be present:
             | **TPESYSTEM** - System error occurred.
 
@@ -2158,11 +2158,11 @@ expublic void ndrxpy_register_xatmi(py::module &m)
             tpfreectxt(ctxt);
         },
         R"pbdoc(
-        Free XATMI context.
+        Free ATMI context.
 
         For more details see **tpfreectxt(3)** C API call.
 
-        :raise XatmiException:
+        :raise AtmiException:
             | Following error codes may be present:
             | **TPESYSTEM** - System error occurred.
             | **TPEOS** - Operating System error occurred.
@@ -2170,7 +2170,7 @@ expublic void ndrxpy_register_xatmi(py::module &m)
         Parameters
         ----------
         context : int
-            | XATMI context read by :func:`.tpgetctxt` or :func:`.tpnewctxt`
+            | ATMI context read by :func:`.tpgetctxt` or :func:`.tpnewctxt`
          )pbdoc",
         py::arg("context"));
 
@@ -2185,7 +2185,7 @@ expublic void ndrxpy_register_xatmi(py::module &m)
 
         For more details see C call *tpgetnodeid(3)*.
 
-        :raise XatmiException:
+        :raise AtmiException:
             | Following error codes may be present:
             | **TPESYSTEM** - System error occurred.
             | **TPEOS** - Operating System error occurred.
@@ -2211,7 +2211,7 @@ expublic void ndrxpy_register_xatmi(py::module &m)
         Returns
         -------
         prio : int
-            | Last XATMI service call priority.
+            | Last ATMI service call priority.
      )pbdoc");
 
     m.def(
@@ -2220,11 +2220,11 @@ expublic void ndrxpy_register_xatmi(py::module &m)
         {
             if (EXSUCCEED!=tpsprio(prio, flags))
             {
-                throw xatmi_exception(tperrno);
+                throw atmi_exception(tperrno);
             }
         },
         R"pbdoc(
-        Set priority for next XATMI service call. *prio* can be absolute value
+        Set priority for next ATMI service call. *prio* can be absolute value
         in such case it must be in range of **1..100** (if flag **TPABSOLUTE**
         is used). In relative mode, priority range must be in range of *-100..100*.
         Default mode for *flags* (value **0**) is relative mode.
@@ -2234,7 +2234,7 @@ expublic void ndrxpy_register_xatmi(py::module &m)
 
         For more details see C call *tpsprio(3)*.
 
-        :raise XatmiException:
+        :raise AtmiException:
             | Following error codes may be present:
             | **TPEINVAL** - *prio* is out of range.
 
@@ -2253,7 +2253,7 @@ expublic void ndrxpy_register_xatmi(py::module &m)
             int ret;
             if (EXFAIL==(ret=tpscmt(flags)))
             {
-                throw xatmi_exception(tperrno);
+                throw atmi_exception(tperrno);
             }
             return ret;
         },
@@ -2276,7 +2276,7 @@ expublic void ndrxpy_register_xatmi(py::module &m)
             return tptoutget();
         },
         R"pbdoc(
-        Return current XATMI level timeout setting.
+        Return current ATMI level timeout setting.
 
         For more details see C call *toutget(3)*.
 
@@ -2293,16 +2293,16 @@ expublic void ndrxpy_register_xatmi(py::module &m)
         {
             if (EXSUCCEED!=tptoutset(tout))
             {
-                throw xatmi_exception(tperrno);
+                throw atmi_exception(tperrno);
             }
         },
         R"pbdoc(
-        Set process level XATMI call timeout.
+        Set process level ATMI call timeout.
         Setting overrides *NDRX_TOUT* environment setting.
 
         For more details see C call *tptoutset(3)*.
 
-        :raise XatmiException:
+        :raise AtmiException:
             | Following error codes may be present:
             | **TPEINVAL** - value **0** as passed in *tout*.
 

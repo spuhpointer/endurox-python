@@ -40,7 +40,7 @@ class TestTpcall(unittest.TestCase):
         while w.get_delta_sec() < u.test_duratation():
             try:
                 tperrno, tpurcode, retbuf = e.tpcall("NOSVC", { "data":{"T_STRING_FLD":"Hi Jim"}})
-            except e.XatmiException as ex:
+            except e.AtmiException as ex:
                 self.assertEqual(ex.code,e.TPENOENT)
             else:
                 self.assertEqual(True,False)

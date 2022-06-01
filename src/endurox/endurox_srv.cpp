@@ -1,5 +1,5 @@
 /**
- * @brief Enduro/X Python module - xatmi server routines
+ * @brief Enduro/X Python module - atmi server routines
  *
  * @file endurox_srv.cpp
  */
@@ -165,7 +165,7 @@ void tpsvrthrdone()
 /**
  * @brief Server dispatch function
  * 
- * @param svcinfo standard XATMI call descriptor
+ * @param svcinfo standard ATMI call descriptor
  */
 void PY(TPSVCINFO *svcinfo)
 {
@@ -173,7 +173,7 @@ void PY(TPSVCINFO *svcinfo)
     try
     {
         py::gil_scoped_acquire acquire;
-        auto ibuf=xatmibuf(svcinfo);
+        auto ibuf=atmibuf(svcinfo);
         auto idata = ndrx_to_py(ibuf);
 
         pytpsvcinfo info(svcinfo);
@@ -205,7 +205,7 @@ expublic void pytpadvertise(std::string svcname, std::string funcname, const py:
     if (tpadvertise_full(const_cast<char *>(svcname.c_str()), PY, 
         const_cast<char *>(funcname.c_str())) == -1)
     {
-        throw xatmi_exception(tperrno);
+        throw atmi_exception(tperrno);
     }
 
     //Add name mapping to hashmap
@@ -225,7 +225,7 @@ expublic void ndrxpy_pytpunadvertise(const char *svcname)
 {
     if (EXFAIL==tpunadvertise(const_cast<char *>(svcname)))
     {
-        throw xatmi_exception(tperrno);
+        throw atmi_exception(tperrno);
     }
 
     auto it = M_dispmap.find(svcname);
@@ -250,7 +250,7 @@ exprivate struct pytpsrvctxdata ndrxpy_tpsrvgetctxdata(void)
 
         if (NULL==(buf=tpsrvgetctxdata2(NULL, &len)))
         {
-            throw xatmi_exception(tperrno);
+            throw atmi_exception(tperrno);
         }
     }
 
@@ -274,7 +274,7 @@ exprivate void ndrxpy_tpsrvsetctxdata(struct pytpsrvctxdata* ctxt, long flags)
 
     if (EXSUCCEED!=tpsrvsetctxdata (const_cast<char *>(val.data()), flags))
     {
-        throw xatmi_exception(tperrno);
+        throw atmi_exception(tperrno);
     }
 
 }
@@ -295,7 +295,7 @@ expublic long ndrxpy_pytpsubscribe(char *eventexpr, char *filter, TPEVCTL *ctl, 
     long rc = tpsubscribe (eventexpr, filter, ctl, flags);
     if (rc == -1)
     {
-        throw xatmi_exception(tperrno);
+        throw atmi_exception(tperrno);
     }
     return rc;
 }
@@ -316,7 +316,7 @@ expublic long ndrxpy_pytpunsubscribe(long subscription, long flags)
     long rc = tpunsubscribe (subscription, flags);
     if (rc == -1)
     {
-        throw xatmi_exception(tperrno);
+        throw atmi_exception(tperrno);
     }
     return rc;
 }
@@ -336,7 +336,7 @@ static struct tmdsptchtbl_t _tmdsptchtbl[] = {
 expublic xao_svc_ctx *xao_svc_ctx_ptr;
 
 /**
- * @brief Enduro/X XATMI server main loop entry
+ * @brief Enduro/X ATMI server main loop entry
  * 
  * @param svr Server object
  * @param args cli args
@@ -382,7 +382,7 @@ expublic void ndrxpy_pyrun(py::object svr, std::vector<std::string> args)
     }
 }
 /**
- * @brief Register XATMI server specific functions
+ * @brief Register ATMI server specific functions
  * 
  * @param m Pybind11 module handle
  */
@@ -411,11 +411,11 @@ expublic void ndrxpy_register_srv(py::module &m)
         R"pbdoc(
         Routine for advertising a service name.
 
-        This function applies to XATMI servers only.
+        This function applies to ATMI servers only.
 
         For more details see C call **tpadvertise(3)**.
 
-        :raise XatmiException:
+        :raise AtmiException:
             | Following error codes may be present:
             | **TPEINVAL** - Service name empty or too long (longer than **MAXTIDENT**)
             | **TPELIMIT** - More than 48 services attempted to advertise by the script.
@@ -451,17 +451,17 @@ expublic void ndrxpy_register_srv(py::module &m)
                     name2: str
 
         where bitwise *flags* is set to: **TPEVSERVICE** - call service (this must be always set
-        for XATMI server). **TPEVPERSIST** is set to not to remove service from event broker
+        for ATMI server). **TPEVPERSIST** is set to not to remove service from event broker
         in case if service failed.
 
         Service name to which to deliver event notification shall be set in *name1* field.
         Object may be constructed only by the TPEVCTL(flags, name1, name2).
 
-        This function applies to XATMI servers only.
+        This function applies to ATMI servers only.
 
         For more details see **tpsubscribe(3)** C API call.
 
-        :raise XatmiException:
+        :raise AtmiException:
             | Following error codes may be present:
             | **TPEINVAL** - Service name empty or too long (longer than **MAXTIDENT**)
             | **TPELIMIT** - More than 48 services attempted to advertise by the script.
@@ -492,11 +492,11 @@ expublic void ndrxpy_register_srv(py::module &m)
         R"pbdoc(
         Unsubscribe from event.
 
-        This function applies to XATMI servers only.
+        This function applies to ATMI servers only.
 
         For more details see **tpsubscribe(3)** C API call.
 
-        :raise XatmiException:
+        :raise AtmiException:
             | Following error codes may be present:
             | **TPEINVAL** - Invalid subscription id was passed.
             | **TPENOENT** - Event server **tpevsrv(5)** is not available.
@@ -528,7 +528,7 @@ expublic void ndrxpy_register_srv(py::module &m)
     //Server contexting:
     m.def("tpsrvgetctxdata", &ndrxpy_tpsrvgetctxdata, 
         R"pbdoc(
-        Retrieve XATMI server context data. this function is used for cases
+        Retrieve ATMI server context data. this function is used for cases
         when server multi-threading is managed by the user software. The other
         use of this function maybe related with architectures where immediate
         response to the client process is not required, but next service request
@@ -538,11 +538,11 @@ expublic void ndrxpy_register_srv(py::module &m)
         :meth:`endurox.tpcontinue` call (i.e. tpreturn or tpforward
         must not be used).
 
-        This function applies to XATMI servers only.
+        This function applies to ATMI servers only.
 
         For more details see **tpsrvgetctxdata(3)** C API call.
 
-        :raise XatmiException:
+        :raise AtmiException:
             | Following error codes may be present:
             | **TPEINVAL** - Invalid subscription id was passed.
             | **TPEPROTO** - Global transaction was started and it was marked for abort-only, 
@@ -555,7 +555,7 @@ expublic void ndrxpy_register_srv(py::module &m)
         Returns
         -------
         PyTpSrvCtxtData
-            XATMI service current request context data.
+            ATMI service current request context data.
 
         )pbdoc");
 
@@ -564,15 +564,15 @@ expublic void ndrxpy_register_srv(py::module &m)
     //thread context always.
     m.def("tpsrvsetctxdata", &ndrxpy_tpsrvsetctxdata, 
         R"pbdoc(
-        Restore XATMI context data, previously captured by tpsrvgetctxdata() in XATMI service
+        Restore ATMI context data, previously captured by tpsrvgetctxdata() in ATMI service
         main thread. If the service was in global transaction, the transaction is resumed
         in current thread.
 
-        This function applies to XATMI servers only.
+        This function applies to ATMI servers only.
 
         For more details see **tpsrvsetctxdata(3)** C API call.
 
-        :raise XatmiException:
+        :raise AtmiException:
             | Following error codes may be present:
             | **TPEPROTO** - Global transaction is started in current thread.
             | **TPESYSTEM** - System failure, see logs.
@@ -581,7 +581,7 @@ expublic void ndrxpy_register_srv(py::module &m)
         Parameters
         ----------
         ctxt : PyTpSrvCtxtData
-            XATMI service context returned from tpsrvsetctxdata() function.
+            ATMI service context returned from tpsrvsetctxdata() function.
         flags : int
             Reserved for future use, shall be set to **0** which is default value.
         )pbdoc",
@@ -589,8 +589,8 @@ expublic void ndrxpy_register_srv(py::module &m)
 
     m.def("tpcontinue", [](void)
         { tpcontinue(); },         R"pbdoc(
-        Continue XATMI service processing with next request, without tpreturn() or tpforward().
-        This function shall be invoked when XATMI service call context has been captured by
+        Continue ATMI service processing with next request, without tpreturn() or tpforward().
+        This function shall be invoked when ATMI service call context has been captured by
         tpsrvgetctxdata().
         )pbdoc");
 
@@ -600,11 +600,11 @@ expublic void ndrxpy_register_srv(py::module &m)
         R"pbdoc(
         Unadvertise service.
 
-        This function applies to XATMI servers only.
+        This function applies to ATMI servers only.
 
         For more details see C call **tpunadvertise(3)**.
 
-        :raise XatmiException:
+        :raise AtmiException:
             | Following error codes may be present:
             | **TPENOENT** - Service not advertised.
             | **TPEOS** - System error.
@@ -620,12 +620,12 @@ expublic void ndrxpy_register_srv(py::module &m)
     m.def("run", &ndrxpy_pyrun, 
         R"pbdoc(
 
-        Run Enduro/X XATMI server process. This transfer the control to XATMI server
+        Run Enduro/X ATMI server process. This transfer the control to ATMI server
         main loop.
 
         .. code-block:: python
-            :caption: XATMI Server
-            :name: XATMI Server
+            :caption: ATMI Server
+            :name: ATMI Server
 
                 import endurox as e
 
@@ -651,7 +651,7 @@ expublic void ndrxpy_register_srv(py::module &m)
                     def tpsvrdone(self):
                         e.userlog('Server shutdown')
 
-                    # XATMI Service:
+                    # ATMI Service:
                     def SERVICE1(self, args):
                         return e.tpreturn(e.TPSUCCESS, 0, args.data)
 
@@ -665,8 +665,8 @@ expublic void ndrxpy_register_srv(py::module &m)
         event subscriptions, configure pollers, etc. 
         At :py:meth:`Server.tpsvrdone()` shutdown cleanups shall be performed.
 
-        In case if XATMI service code failed, caller receives **TPESVCERR** error,
-        the error is logged to ulog and XATMI servers main loop continues until
+        In case if ATMI service code failed, caller receives **TPESVCERR** error,
+        the error is logged to ulog and ATMI servers main loop continues until
         shutdown is received (e.g. xadmin stop -y).
 
         For more details see **tpsvrinit(3)**, **tpsvrdone(3)**, **tpservice(3)**,
@@ -677,11 +677,11 @@ expublic void ndrxpy_register_srv(py::module &m)
 
     m.def("tpreturn", &ndrxpy_pytpreturn, 
         R"pbdoc(
-        Return from XATMI service call. Any XATMI processing after this call
-        shall not be performed, i.e. shall last operation in the XATMI service
+        Return from ATMI service call. Any ATMI processing after this call
+        shall not be performed, i.e. shall last operation in the ATMI service
         processing.
 
-        This function applies to XATMI servers only.
+        This function applies to ATMI servers only.
         
         For more deatils see *tpreturn(3)* C API call.
 
@@ -689,24 +689,24 @@ expublic void ndrxpy_register_srv(py::module &m)
         ----------
         rval : int
             Return value **TPSUCCESS** for success, **TPFAIL** for returning error
-            **TPEXIT** for returning error and restarting the XATMI server process.
+            **TPEXIT** for returning error and restarting the ATMI server process.
         rcode : int
             User return code. If not used, use value **0**.
         data : dict
-            XATMI buffer returned from the service
+            ATMI buffer returned from the service
         flags : int
             Or'd flags **TPSOFTTIMEOUT** for simulating **TPETIME** error to caller.
-            **TPSOFTERR** return any XATMI call error, which is set in *rval* param.
+            **TPSOFTERR** return any ATMI call error, which is set in *rval* param.
 	    Default value is **0**.
         )pbdoc",
           py::arg("rval"), py::arg("rcode"), py::arg("data"),
           py::arg("flags") = 0);
     m.def("tpforward", &ndrxpy_pytpforward,
           R"pbdoc(
-        Forward control to other service. This shall be last XATMI call
+        Forward control to other service. This shall be last ATMI call
         for the service routine.
 
-        This function applies to XATMI servers only.
+        This function applies to ATMI servers only.
         
         For more details see *tpforward(3)* C API call.
 
@@ -715,7 +715,7 @@ expublic void ndrxpy_register_srv(py::module &m)
         svc : str
             Name of the target service.
         data : dict
-            XATMI buffer returned from the service
+            ATMI buffer returned from the service
         flags : int
             RFU, shall be set to **0**.
         )pbdoc",
@@ -726,11 +726,11 @@ expublic void ndrxpy_register_srv(py::module &m)
         { tpexit(); },
         R"pbdoc(
         Restart after return or terminate immediately (if running from other 
-        thread than main). In case if called from XATMI server main thread
+        thread than main). In case if called from ATMI server main thread
         server exists after the service routine returns (i.e. after the 
         tpreturn() or tpforward() called). 
 
-        This function applies to XATMI servers only.
+        This function applies to ATMI servers only.
         
         For more details see *tpexit(3)* C API call.
 

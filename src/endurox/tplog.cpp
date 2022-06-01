@@ -54,7 +54,7 @@
 namespace py = pybind11;
 
 /**
- * @brief Register XATMI logging api
+ * @brief Register ATMI logging api
  * 
  * @param m Pybind11 module handle
  */
@@ -252,7 +252,7 @@ expublic void ndrxpy_register_tplog(py::module &m)
         [](py::object data, const char * filename, const char * filesvc)
         {
 
-            xatmibuf in;
+            atmibuf in;
 
             if (!py::isinstance<py::none>(data))
             {
@@ -277,7 +277,7 @@ expublic void ndrxpy_register_tplog(py::module &m)
                 {
                     // In case if buffer changed..
                     in.p=*in.pp;
-                    throw xatmi_exception(tperrno);   
+                    throw atmi_exception(tperrno);   
                 }
                 // In case if buffer changed..
                 in.p=*in.pp;
@@ -309,7 +309,7 @@ expublic void ndrxpy_register_tplog(py::module &m)
                 py::gil_scoped_release release;
                 if (EXSUCCEED!=tploggetbufreqfile(*in.pp, filename, sizeof(filename)))
                 {
-                    throw xatmi_exception(tperrno); 
+                    throw atmi_exception(tperrno); 
                 }
             }
             return py::str(filename);
@@ -339,7 +339,7 @@ expublic void ndrxpy_register_tplog(py::module &m)
                 py::gil_scoped_release release;
                 if (EXSUCCEED!=tplogdelbufreqfile(*in.pp))
                 {
-                        throw xatmi_exception(tperrno);
+                        throw atmi_exception(tperrno);
                 }
             }
 

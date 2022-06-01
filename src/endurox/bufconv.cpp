@@ -63,13 +63,13 @@
 namespace py = pybind11;
 
 /**
- * @brief This will add all XATMI related stuff under the {"data":<XATMI data...>}
+ * @brief This will add all ATMI related stuff under the {"data":<ATMI data...>}
  *  TODO: Free incoming UBF buffer (somehere marking shall be put)
- * @param buf XATMI buffer to conver to Python
- * @param is_master is master buffer (from xatmi?)
+ * @param buf ATMI buffer to conver to Python
+ * @param is_master is master buffer (from atmi?)
  * @return python object (dict)
  */
-expublic py::object ndrx_to_py(xatmibuf &buf)
+expublic py::object ndrx_to_py(atmibuf &buf)
 {
     char type[8]={EXEOS};
     char subtype[16]={EXEOS};
@@ -122,7 +122,7 @@ expublic py::object ndrx_to_py(xatmibuf &buf)
     }
 
     // attach call info, if have any.
-    xatmibuf cibuf;
+    atmibuf cibuf;
     if (strcmp(type, "NULL") != 0)
     {
         ret = tpgetcallinfo(*buf.pp, reinterpret_cast<UBFH **>(cibuf.pp), TPCI_NOEOFERR);
@@ -135,7 +135,7 @@ expublic py::object ndrx_to_py(xatmibuf &buf)
         else if (EXFAIL==ret)
         {
             NDRX_LOG(log_debug, "Error checking tpgetcallinfo()");
-            throw xatmi_exception(tperrno);
+            throw atmi_exception(tperrno);
         }
     }
 
@@ -148,11 +148,11 @@ expublic py::object ndrx_to_py(xatmibuf &buf)
  * @param dict dictionary used for call
  * @param buf prepared ATMI buffer
  */
-exprivate void set_callinfo(py::dict & dict, xatmibuf &buf)
+exprivate void set_callinfo(py::dict & dict, atmibuf &buf)
 {
     if (dict.contains(NDRXPY_DATA_CALLINFO))
     {
-        xatmibuf cibuf;
+        atmibuf cibuf;
         auto cibufdata = dict[NDRXPY_DATA_CALLINFO];
 
         NDRX_LOG(log_debug, "Setting call info");
@@ -173,7 +173,7 @@ exprivate void set_callinfo(py::dict & dict, xatmibuf &buf)
 
         if (EXSUCCEED!=tpsetcallinfo(*buf.pp, *cibuf.fbfr(), 0))
         {
-            throw xatmi_exception(tperrno);
+            throw atmi_exception(tperrno);
         }
     }
 }
@@ -181,18 +181,18 @@ exprivate void set_callinfo(py::dict & dict, xatmibuf &buf)
 /**
  * @brief Must be dict with "data" key. So valid buffer is:
  * 
- * {"data":<XATMI_BUFFER>, "buftype":"UBF|VIEW|STRING|JSON|CARRAY|NULL", "subtype":"<VIEW_TYPE>", ["callinfo":{<UBF_DATA>}]}
+ * {"data":<ATMI_BUFFER>, "buftype":"UBF|VIEW|STRING|JSON|CARRAY|NULL", "subtype":"<VIEW_TYPE>", ["callinfo":{<UBF_DATA>}]}
  * 
  * For NULL buffers, data field is not present.
  * 
  * @param obj Pyton object
- * @return converted XATMI buffer
+ * @return converted ATMI buffer
  */
-expublic xatmibuf ndrx_from_py(py::object obj)
+expublic atmibuf ndrx_from_py(py::object obj)
 {
     std::string buftype = "";
     std::string subtype = "";
-    xatmibuf buf;
+    atmibuf buf;
 
     NDRX_LOG(log_debug, "Into ndrx_from_py()");
 
@@ -234,7 +234,7 @@ expublic xatmibuf ndrx_from_py(py::object obj)
 
         std::string s = py::str(data);
 
-        buf = xatmibuf("JSON", s.size() + 1);
+        buf = atmibuf("JSON", s.size() + 1);
         strcpy(*buf.pp, s.c_str());
     }
     else if (buftype=="VIEW")
@@ -244,7 +244,7 @@ expublic xatmibuf ndrx_from_py(py::object obj)
             throw std::invalid_argument("subtype expected for VIEW buffer");
         }
 
-        buf = xatmibuf("VIEW", subtype.c_str());
+        buf = atmibuf("VIEW", subtype.c_str());
 
         ndrxpy_from_py_view(static_cast<py::dict>(data), buf, subtype.c_str());
     }
@@ -256,7 +256,7 @@ expublic xatmibuf ndrx_from_py(py::object obj)
                 "expected CARRAY buftype, got: "+buftype);
         }
         
-        buf = xatmibuf("CARRAY", PyBytes_Size(data.ptr()));
+        buf = atmibuf("CARRAY", PyBytes_Size(data.ptr()));
         memcpy(*buf.pp, PyBytes_AsString(data.ptr()), PyBytes_Size(data.ptr()));
     }
     else if (py::isinstance<py::str>(data))
@@ -268,13 +268,13 @@ expublic xatmibuf ndrx_from_py(py::object obj)
         }
 
         std::string s = py::str(data);
-        buf = xatmibuf("STRING", s.size() + 1);
+        buf = atmibuf("STRING", s.size() + 1);
         strcpy(*buf.pp, s.c_str());
     }
     else if (!dict.contains(NDRXPY_DATA_DATA))
     {
         NDRX_LOG(log_debug, "Converting out NULL buffer");
-        buf = xatmibuf("NULL", 1024);
+        buf = atmibuf("NULL", 1024);
     }
     else if (py::isinstance<py::dict>(data))
     {
@@ -288,7 +288,7 @@ expublic xatmibuf ndrx_from_py(py::object obj)
             throw std::invalid_argument("For dict data "
                 "expected UBF buftype, got: "+buftype);
         }
-        buf = xatmibuf("UBF", 1024);
+        buf = atmibuf("UBF", 1024);
         ndrxpy_from_py_ubf(static_cast<py::dict>(data), buf);
     }
     else

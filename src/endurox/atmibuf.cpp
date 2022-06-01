@@ -64,9 +64,9 @@
 namespace py = pybind11;
 
 
-xatmibuf::xatmibuf() : pp(&p), len(0), p(nullptr) {}
+atmibuf::atmibuf() : pp(&p), len(0), p(nullptr) {}
 
-xatmibuf::xatmibuf(TPSVCINFO *svcinfo)
+atmibuf::atmibuf(TPSVCINFO *svcinfo)
     : pp(&p), len(svcinfo->len), p(svcinfo->data) {}
 
 /**
@@ -75,12 +75,12 @@ xatmibuf::xatmibuf(TPSVCINFO *svcinfo)
  * @param type 
  * @param subtype 
  */
-xatmibuf::xatmibuf(const char *type, const char *subtype) : pp(&p), len(len), p(nullptr)
+atmibuf::atmibuf(const char *type, const char *subtype) : pp(&p), len(len), p(nullptr)
 {
     reinit(type, subtype, 1024);
 }
 
-xatmibuf::xatmibuf(const char *type, long len) : pp(&p), len(len), p(nullptr)
+atmibuf::atmibuf(const char *type, long len) : pp(&p), len(len), p(nullptr)
 {
     reinit(type, nullptr, len);
 }
@@ -89,11 +89,11 @@ xatmibuf::xatmibuf(const char *type, long len) : pp(&p), len(len), p(nullptr)
 /**
  * @brief Allocate / reallocate
  * 
- * @param type XATMI type
- * @param subtype XATMI sub-type
+ * @param type ATMI type
+ * @param subtype ATMI sub-type
  * @param len_ len (where required)
  */
-void xatmibuf::reinit(const char *type, const char *subtype, long len_)
+void atmibuf::reinit(const char *type, const char *subtype, long len_)
 {    
     //Free up ptr if have any
     if (nullptr==*pp)
@@ -104,7 +104,7 @@ void xatmibuf::reinit(const char *type, const char *subtype, long len_)
         if (*pp == nullptr && 0!=strcmp(type, "NULL"))
         {
             NDRX_LOG(log_error, "Failed to realloc: %s", tpstrerror(tperrno));
-            throw xatmi_exception(tperrno);
+            throw atmi_exception(tperrno);
         }
     }
     else
@@ -117,13 +117,13 @@ void xatmibuf::reinit(const char *type, const char *subtype, long len_)
     }
 }
 
-/* xatmibuf::xatmibuf(xatmibuf &&other) : xatmibuf() ? */
-xatmibuf::xatmibuf(xatmibuf &&other) : xatmibuf()
+/* atmibuf::atmibuf(atmibuf &&other) : atmibuf() ? */
+atmibuf::atmibuf(atmibuf &&other) : atmibuf()
 {
     swap(other);
 }
 
-xatmibuf &xatmibuf::operator=(xatmibuf &&other)
+atmibuf &atmibuf::operator=(atmibuf &&other)
 {
     swap(other);
     return *this;
@@ -137,7 +137,7 @@ extern "C" {
  * @brief Standard destructor
  * 
  */
-xatmibuf::~xatmibuf()
+atmibuf::~atmibuf()
 {
     if (p != nullptr)
     {
@@ -146,11 +146,11 @@ xatmibuf::~xatmibuf()
 }
 
 /**
- * @release the buffer (do not destruct, as XATMI already freed)
+ * @release the buffer (do not destruct, as ATMI already freed)
  * 
  * @return char* 
  */
-char *xatmibuf::release()
+char *atmibuf::release()
 {
     char *ret = p;
 
@@ -159,9 +159,9 @@ char *xatmibuf::release()
     return ret;
 }
 
-UBFH **xatmibuf::fbfr() { return reinterpret_cast<UBFH **>(pp); }
+UBFH **atmibuf::fbfr() { return reinterpret_cast<UBFH **>(pp); }
 
-void xatmibuf::mutate(std::function<int(UBFH *)> f)
+void atmibuf::mutate(std::function<int(UBFH *)> f)
 {
     while (true)
     {
@@ -185,7 +185,7 @@ void xatmibuf::mutate(std::function<int(UBFH *)> f)
     }
 }
 
-void xatmibuf::swap(xatmibuf &other) noexcept
+void atmibuf::swap(atmibuf &other) noexcept
 {
     std::swap(p, other.p);
     std::swap(len, other.len);

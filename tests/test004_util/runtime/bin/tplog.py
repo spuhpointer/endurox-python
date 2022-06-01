@@ -65,7 +65,7 @@ class TestTplog(unittest.TestCase):
         self.assertEqual(e.tploggetbufreqfile(out), filename)
         out = e.tplogdelbufreqfile(out)
 
-        with self.assertRaises(e.XatmiException):
+        with self.assertRaises(e.AtmiException):
             e.tploggetbufreqfile(out)
 
         e.tplog_error("HELLO ERROR")

@@ -1,5 +1,5 @@
 /**
- * @brief XATMI Server extensions
+ * @brief ATMI Server extensions
  *
  * @file tpext.cpp
  */
@@ -106,7 +106,7 @@ exprivate void ndrxpy_tpext_addb4pollcb (const py::object &func)
 
     if (EXSUCCEED!=tpext_addb4pollcb(ndrxpy_b4pollcb_callback))
     {
-        throw xatmi_exception(tperrno);
+        throw atmi_exception(tperrno);
     }
 }
 
@@ -141,7 +141,7 @@ exprivate void ndrxpy_tpext_addperiodcb (int secs, const py::object &func)
 
     if (EXSUCCEED!=tpext_addperiodcb(secs, ndrxpy_addperiodcb_callback))
     {
-        throw xatmi_exception(tperrno);
+        throw atmi_exception(tperrno);
     }
 }
 
@@ -177,7 +177,7 @@ exprivate void ndrxpy_tpext_addpollerfd (int fd, uint32_t events, const py::obje
 
     if (EXSUCCEED!=tpext_addpollerfd(fd, events, NULL, ndrxpy_pollevent_cb))
     {
-        throw xatmi_exception(tperrno);
+        throw atmi_exception(tperrno);
     }
 
     M_fdmap[fd] = obj;
@@ -198,12 +198,12 @@ exprivate void ndrxpy_tpext_delpollerfd(int fd)
 
     if (EXSUCCEED!=tpext_delpollerfd(fd))
     {
-        throw xatmi_exception(tperrno);
+        throw atmi_exception(tperrno);
     }
 }
 
 /**
- * @brief Register XATMI server extensions
+ * @brief Register ATMI server extensions
  * 
  * @param m Pybind11 module handle
  */
@@ -220,7 +220,7 @@ expublic void ndrxpy_register_tpext(py::module &m)
         {   
             if (EXSUCCEED!=tpext_delb4pollcb())
             {
-                throw xatmi_exception(tperrno);
+                throw atmi_exception(tperrno);
             }
 
             //Reset handler...
@@ -240,7 +240,7 @@ expublic void ndrxpy_register_tpext(py::module &m)
         {   
             if (EXSUCCEED!=tpext_delperiodcb())
             {
-                throw xatmi_exception(tperrno);
+                throw atmi_exception(tperrno);
             }
 
             //Reset handler...
@@ -252,14 +252,14 @@ expublic void ndrxpy_register_tpext(py::module &m)
      m.def(
         "tpext_addpollerfd", [](int fd, uint32_t events, const py::object ptr1, const py::object &func)
         { ndrxpy_tpext_addpollerfd(fd, events, ptr1, func); },
-        "Add file descriptor to xatmi server polling", 
+        "Add file descriptor to atmi server polling", 
         py::arg("fd"), py::arg("events"), py::arg("ptr1"), py::arg("func"));
 
 
      m.def(
         "tpext_delpollerfd", [](int fd)
         { ndrxpy_tpext_delpollerfd(fd); },
-        "Delete file descriptor from XATMI poller", 
+        "Delete file descriptor from ATMI poller", 
         py::arg("fd"));
 }
 
