@@ -59,8 +59,9 @@
  */
 typedef struct
 {
-    long version;    /**< record version                                */
-    void *xaoSvcCtx;    /**< xaoSvcCtx handle,                          */
+    unsigned int magic; /**< magic number of the record                    */
+    long version;       /**< record version                                */
+    void *xaoSvcCtx;    /**< xaoSvcCtx handle,                             */
     
 } ndrx_ora_tpgetconn_t;
 
@@ -212,6 +213,13 @@ PYBIND11_MODULE(endurox, m)
 
                 if (nullptr!=detail)
                 {
+                    if (detail->magic!=0x1fca8e4c)
+                    {
+                        NDRX_LOG(log_error, "Invalid ora lib magic [%x] expected [%x]",
+                            detail->magic, 0x1fca8e4c);
+                        throw std::runtime_error("Invalid tpgetconn() magic");
+                    }
+
                     if (detail->version<1)
                     {
                         throw std::runtime_error("Expected tpgetconn() version >=1");
