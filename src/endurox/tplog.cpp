@@ -74,7 +74,17 @@ expublic void ndrxpy_register_tplog(py::module &m)
             py::gil_scoped_release release;
             tplog(log_debug, const_cast<char *>(message));
         },
-        "Print debug log message", py::arg("message"));
+        R"pbdoc(
+        Print debug message to log file. Debug is logged as level **5**.
+
+        For more details see **tplog(3)** C API call
+
+        Parameters
+        ----------
+        message : str
+            Debug message to print.
+        )pbdoc"
+        , py::arg("message"));
 
     m.def(
         "tplog_info",
@@ -83,7 +93,17 @@ expublic void ndrxpy_register_tplog(py::module &m)
             py::gil_scoped_release release;
             tplog(log_info, const_cast<char *>(message));
         },
-        "Print debug log message", py::arg("message"));
+        R"pbdoc(
+        Print info message to log file. Info is logged as level **4**.
+
+        For more details see **tplog(3)** C API call
+
+        Parameters
+        ----------
+        message : str
+            Info message to print.
+        )pbdoc"
+        , py::arg("message"));
 
     m.def(
         "tplog_warn",
@@ -92,7 +112,16 @@ expublic void ndrxpy_register_tplog(py::module &m)
             py::gil_scoped_release release;
             tplog(log_error, const_cast<char *>(message));
         },
-        "Print warning log message", py::arg("message"));
+        R"pbdoc(
+        Print warning message to log file. Info is logged as level **3**.
+
+        For more details see **tplog(3)** C API call
+
+        Parameters
+        ----------
+        message : str
+            Warning message to print.
+        )pbdoc", py::arg("message"));
 
     m.def(
         "tplog_error",
@@ -101,7 +130,16 @@ expublic void ndrxpy_register_tplog(py::module &m)
             py::gil_scoped_release release;
             tplog(log_error, const_cast<char *>(message));
         },
-        "Print error log message", py::arg("message"));
+        R"pbdoc(
+        Print error message to log file. Info is logged as level **2**.
+
+        For more details see **tplog(3)** C API call
+
+        Parameters
+        ----------
+        message : str
+            Error message to print.
+        )pbdoc", py::arg("message"));
 
     m.def(
         "tplog_always",
@@ -110,7 +148,16 @@ expublic void ndrxpy_register_tplog(py::module &m)
             py::gil_scoped_release release;
             tplog(log_error, const_cast<char *>(message));
         },
-        "Print fatal log message", py::arg("message"));
+        R"pbdoc(
+        Print fatal message to log file. Fatal/always is logged as level **1**.
+
+        For more details see **tplog(3)** C API call
+
+        Parameters
+        ----------
+        message : str
+            Fatal message to print.
+        )pbdoc", py::arg("message"));
 
     m.def(
         "tplog",
@@ -119,7 +166,20 @@ expublic void ndrxpy_register_tplog(py::module &m)
             py::gil_scoped_release release;
             tplog(lev, const_cast<char *>(message));
         },
-        "Print log message with specified level", py::arg("lev"), py::arg("message"));
+        R"pbdoc(
+        Print logfile message with specified level.
+
+        For more details see **tplog(3)** C API call
+
+        Parameters
+        ----------
+        lev : int
+            Log level with consts: :data:`.log_dump`, :data:`.log_debug`,
+            :data:`.log_info`, :data:`.log_warn`, :data:`.log_error`, :data:`.log_always`
+            or specify the number (1..6).
+        message : str
+            Message to log.
+        )pbdoc", py::arg("lev"), py::arg("message"));
 
     m.def(
         "tplogconfig",
@@ -129,10 +189,47 @@ expublic void ndrxpy_register_tplog(py::module &m)
             if (EXSUCCEED!=tplogconfig(logger, lev, const_cast<char *>(debug_string), 
                 const_cast<char *>(module), const_cast<char *>(new_file)))
             {
-                throw xatmi_exception(tperrno);
+                throw nstd_exception(Nerror);
             }
         },
-        "Configure logger", py::arg("logger"), py::arg("lev"), 
+        R"pbdoc(
+        Configure Enduro/X logger.
+
+        .. code-block:: python
+            :caption: tplogconfig example
+            :name: tplogconfig-example
+
+                import endurox as e
+                e.tplogconfig(e.LOG_FACILITY_TP, -1, "tp=4", "", "/dev/stdout")
+                e.tplog_info("Test")
+                e.tplog_debug("Test Debug")
+                # would print to stdout:
+                # t:USER:4:d190fd96:29754:7f35f54f2740:000:20220601:160215386056:tplog       :/tplog.c:0582:Test
+                
+        For more details see **tplogconfig(3)** C API call.
+
+        :raise NstdException: 
+            | Following error codes may be present:
+            | **NEFORMAT** - Debug string format error.
+            | **NESYSTEM** - System error.
+
+        Parameters
+        ----------
+        logger : int
+            Bitwise flags for logger/topic identification:
+            :data:`.LOG_FACILITY_NDRX`, :data:`.LOG_FACILITY_UBF`, :data:`.LOG_FACILITY_TP`
+            :data:`.LOG_FACILITY_TP_THREAD`, :data:`.LOG_FACILITY_TP_REQUEST`, :data:`.LOG_FACILITY_NDRX_THREAD`
+            :data:`.LOG_FACILITY_UBF_THREAD`, :data:`.LOG_FACILITY_NDRX_REQUEST`, :data:`.LOG_FACILITY_UBF_REQUEST`
+        lev: int
+            Level to set. Use **-1** to ignore this setting.
+        debug_string : str
+            Debug string according to **ndrxdebug.conf(5)**.
+        module : str
+            Module name. Use empty string if not changing.
+        new_file : str
+            New logfile name. Use empty string if not changing.
+
+         )pbdoc", py::arg("logger"), py::arg("lev"), 
         py::arg("debug_string"), py::arg("module"), py::arg("new_file"));
 
     m.def(
