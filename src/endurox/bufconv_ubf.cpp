@@ -429,7 +429,7 @@ expublic void ndrxpy_register_ubf(py::module &m)
         Parameters
         ----------
         fieldid : int
-            | Compiled UBF field id.
+            Compiled UBF field id.
 
         Returns
         -------
@@ -451,12 +451,12 @@ expublic void ndrxpy_register_ubf(py::module &m)
         Parameters
         ----------
         fieldid : int
-            | Compiled field id.
+            Compiled field id.
 
         Returns
         -------
         type : int
-            | Field number as defined in FD file.
+            Field number as defined in FD file.
 
             )pbdoc", py::arg("fieldid"));
     m.def(
@@ -476,12 +476,12 @@ expublic void ndrxpy_register_ubf(py::module &m)
             | :data:`.BFLD_DOUBLE`, :data:`.BFLD_STRING`, :data:`.BFLD_CARRAY`,
             | :data:`.BFLD_PTR`, :data:`.BFLD_UBF`, :data:`.BFLD_VIEW`
         num : int
-            | Field number.
+            Field number.
 
         Returns
         -------
         fldid : int
-            | Compiled field id.
+            Compiled field id.
 
             )pbdoc"
         , py::arg("type"), py::arg("num"));
@@ -510,12 +510,12 @@ expublic void ndrxpy_register_ubf(py::module &m)
         Parameters
         ----------
         fieldid : int
-            | Field number.
+            Field number.
 
         Returns
         -------
         fldnm : str
-            | Field name.
+            Field name.
 
             )pbdoc"
         , py::arg("fieldid"));
@@ -580,7 +580,7 @@ expublic void ndrxpy_register_ubf(py::module &m)
                 
                 f = open("output.txt", "w")
                 endurox.Bboolpr("(1==1) && T_FLD_STRING=='ABC'", f)
-                f.close
+                f.close()
             
         For more details see **Bboolpr(3)** C API call.
 
@@ -593,9 +593,9 @@ expublic void ndrxpy_register_ubf(py::module &m)
         Parameters
         ----------
         expression : str
-            | Enduro/X UBF boolean expression (full text)
+            Enduro/X UBF boolean expression (full text)
         iop : file
-            | Output file (shall be in write mode)
+            Output file (shall be in write mode)
 
             )pbdoc",
             py::arg("expression"), py::arg("iop"));
@@ -618,7 +618,43 @@ expublic void ndrxpy_register_ubf(py::module &m)
             }
             return rc == 1;
         },
-        "Evaluates buffer against expression", py::arg("fbfr"),
+        R"pbdoc(
+        Evaluate Boolean expression on given UBF buffer.
+
+        .. code-block:: python
+            :caption: Bboolev example
+            :name: Bboolev-example
+
+                import endurox
+                
+                print(endurox.Bboolev({"data":{"T_STRING_FLD":"ABC"}}, "T_STRING_FLD=='ABC'"))
+                # will print True
+            
+        For more details see **Bboolev(3)** C API call.
+
+        :raise UbfException: 
+            | Following error codes may be present:
+            | **BALIGNERR** - Corrupted UBF buffer.
+            | **BNOTFLD** - Invalid XATMI buffer format, not UBF.
+            | **BEINVAL** - Invalid arguments passed.
+            | **BBADNAME** - Field not found in FD files or UBFDB.
+            | **BSYNTAX** - Bad boolean expression syntax
+            | **BFTOPEN** - Unable to open field tables.
+            | **BEBADOP** - Operation not supported on given field types.
+
+        Parameters
+        ----------
+        fbfr : dict
+            XATMI buffer on which to test the expression
+        expression : str
+            Boolean expression
+
+        Returns
+        -------
+        ret : bool
+            Result true (matches) or false (buffer not matches expression).
+
+            )pbdoc", py::arg("fbfr"),
         py::arg("expression"));
 
     m.def(
@@ -639,7 +675,43 @@ expublic void ndrxpy_register_ubf(py::module &m)
             }
             return rc;
         },
-        "Returns value of expression as a double", py::arg("fbfr"),
+        R"pbdoc(
+        Evaluate Boolean expression as float number on given UBF buffer.
+
+        .. code-block:: python
+            :caption: Bfloatev example
+            :name: Bfloatev-example
+
+                import endurox
+                
+                print(endurox.Bfloatev({"data":{"T_STRING_FLD":"99", "T_SHORT_FLD":2}}, "T_STRING_FLD-T_SHORT_FLD"))
+                # will print 97.0
+            
+        For more details see **Bfloatev(3)** C API call.
+
+        :raise UbfException: 
+            | Following error codes may be present:
+            | **BALIGNERR** - Corrupted UBF buffer.
+            | **BNOTFLD** - Invalid XATMI buffer format, not UBF.
+            | **BEINVAL** - Invalid arguments passed.
+            | **BBADNAME** - Field not found in FD files or UBFDB.
+            | **BSYNTAX** - Bad boolean expression syntax
+            | **BFTOPEN** - Unable to open field tables.
+            | **BEBADOP** - Operation not supported on given field types.
+
+        Parameters
+        ----------
+        fbfr : dict
+            XATMI buffer on which to test the expression
+        expression : str
+            Boolean expression
+
+        Returns
+        -------
+        ret : float
+            Returns result as float.
+
+            )pbdoc", py::arg("fbfr"),
         py::arg("expression"));
 
     m.def(
@@ -656,7 +728,23 @@ expublic void ndrxpy_register_ubf(py::module &m)
                 throw ubf_exception(Berror);
             }
         },
-        "Prints fielded buffer to specified stream", py::arg("fbfr"),
+        R"pbdoc(
+        Print UBF buffer to specified stream.
+            
+        For more details see **Bfprint(3)** C API call.
+
+        :raise UbfException: 
+            | Following error codes may be present:
+            | **BALIGNERR** - Invalid XATMI buffer format, not UBF.
+            | **BNOTFLD** - Not UBF buffer.
+
+        Parameters
+        ----------
+        fbfr : dict
+            XATMI buffer on which to test the expression.
+        iop : file
+            Output stream in write mode.
+            )pbdoc", py::arg("fbfr"),
         py::arg("iop"));
 
     m.def(
@@ -670,8 +758,22 @@ expublic void ndrxpy_register_ubf(py::module &m)
                 throw ubf_exception(Berror);
             }
         },
-        "Prints UBF buffer to specified stream", py::arg("fbfr"));
+        R"pbdoc(
+        Print UBF buffer to stdout.
+            
+        For more details see **Bprint(3)** C API call.
 
+        :raise UbfException: 
+            | Following error codes may be present:
+            | **BALIGNERR** - Invalid XATMI buffer format, not UBF.
+            | **BNOTFLD** - Not UBF buffer.
+
+        Parameters
+        ----------
+        fbfr : dict
+            XATMI buffer on which to test the expression
+
+            )pbdoc", py::arg("fbfr"));
     m.def(
         "Bextread",
         [](py::object iop)
@@ -685,8 +787,30 @@ expublic void ndrxpy_register_ubf(py::module &m)
                         { return Bextread(fbfr, fiop.get()); });
             return ndrx_to_py(obuf);
         },
-        "Builds fielded buffer from printed format", py::arg("iop"));
+        R"pbdoc(
+        Restore XATMI UBF buffer from :func:`.Bfprint` output.
+            
+        For more details see **Bextread(3)** C API call.
 
+        :raise UbfException: 
+            | Following error codes may be present:
+            | **BALIGNERR** - Corrupted output buffer (internal error).
+            | **BNOTFLD** - Corrupted output buffer (internal error).
+            | **BEINVAL** - Invalid input file.
+            | **BSYNTAX** - Input file syntax error.
+            | **BBADNAME** - Field not found in UBF field tables.
+            | **BBADVIEW** - View not found.
+
+        Parameters
+        ----------
+        iop : file
+            Input stream in read mode.
+
+        Returns
+        -------
+        ret : dict
+            Restored UBF buffer.
+            )pbdoc", py::arg("iop"));
 }
 
 /* vim: set ts=4 sw=4 et smartindent: */

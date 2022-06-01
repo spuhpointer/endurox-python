@@ -518,6 +518,11 @@ Python3 bindings for writing Endurox clients and servers
         Bfname
         Bfldid
         Bboolpr
+        Bboolev
+        Bfloatev
+        Bfprint
+        Bprint
+        Bextread
 
 How to read this documentation
 ==============================
