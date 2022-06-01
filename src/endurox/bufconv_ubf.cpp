@@ -421,15 +421,70 @@ expublic void ndrxpy_register_ubf(py::module &m)
     m.def(
         "Bfldtype", [](BFLDID fieldid)
         { return Bfldtype(fieldid); },
-        "Maps field identifier to field type", py::arg("fieldid"));
+        R"pbdoc(
+        Return UBF field type by given field id.
+            
+        For more details see **Bfldtype(3)** C API call.
+
+        Parameters
+        ----------
+        fieldid : int
+            | Compiled UBF field id.
+
+        Returns
+        -------
+        type : int
+            | One of :data:`.BFLD_SHORT`, :data:`.BFLD_LONG`, :data:`.BFLD_FLOAT`
+            | :data:`.BFLD_DOUBLE`, :data:`.BFLD_STRING`, :data:`.BFLD_CARRAY`,
+            | :data:`.BFLD_PTR`, :data:`.BFLD_UBF`, :data:`.BFLD_VIEW`
+
+            )pbdoc"
+        , py::arg("fieldid"));
     m.def(
         "Bfldno", [](BFLDID fieldid)
         { return Bfldno(fieldid); },
-        "Maps field identifier to field number", py::arg("fieldid"));
+        R"pbdoc(
+        Return field number from compiled field id.
+            
+        For more details see **Bfldno(3)** C API call.
+
+        Parameters
+        ----------
+        fieldid : int
+            | Compiled field id.
+
+        Returns
+        -------
+        type : int
+            | Field number as defined in FD file.
+
+            )pbdoc", py::arg("fieldid"));
     m.def(
         "Bmkfldid", [](int type, BFLDID num)
         { return Bmkfldid(type, num); },
-        "Makes a field identifier", py::arg("type"), py::arg("num"));
+        R"pbdoc(
+        Create field identifier (compiled id) from field type and
+        field number.
+            
+        For more details see **Bmkfldid(3)** C API call.
+
+        Parameters
+        ----------
+        type : type
+            | Field type, one of: :data:`.BFLD_CHAR`,
+            | :data:`.BFLD_SHORT`, :data:`.BFLD_LONG`, :data:`.BFLD_FLOAT`
+            | :data:`.BFLD_DOUBLE`, :data:`.BFLD_STRING`, :data:`.BFLD_CARRAY`,
+            | :data:`.BFLD_PTR`, :data:`.BFLD_UBF`, :data:`.BFLD_VIEW`
+        num : int
+            | Field number.
+
+        Returns
+        -------
+        fldid : int
+            | Compiled field id.
+
+            )pbdoc"
+        , py::arg("type"), py::arg("num"));
 
     m.def(
         "Bfname",
@@ -442,9 +497,30 @@ expublic void ndrxpy_register_ubf(py::module &m)
             }
             return name;
         },
-        "Maps field identifier to field name", py::arg("fieldid"));
+        R"pbdoc(
+        Get field name from compiled field id.
+            
+        For more details see **Bfname(3)** C API call.
+
+        :raise UbfException: 
+            | Following error codes may be present:
+            | **BBADFLD** - Field not found in FD files or UBFDB.
+            | **BFTOPEN** - Unable to open field tables.
+
+        Parameters
+        ----------
+        fieldid : int
+            | Field number.
+
+        Returns
+        -------
+        fldnm : str
+            | Field name.
+
+            )pbdoc"
+        , py::arg("fieldid"));
     m.def(
-        "BFLDID",
+        "Bfldid",
         [](const char *name)
         {
             auto id = Bfldid(const_cast<char *>(name));
@@ -454,7 +530,28 @@ expublic void ndrxpy_register_ubf(py::module &m)
             }
             return id;
         },
-        "Maps field name to field identifier", py::arg("name"));
+        R"pbdoc(
+        Get field name from compiled field id.
+            
+        For more details see **Bfldid(3)** C API call.
+
+        :raise UbfException: 
+            | Following error codes may be present:
+            | **BBADNAME** - Field not found in FD files or UBFDB.
+            | **BFTOPEN** - Unable to open field tables.
+
+        Parameters
+        ----------
+        fieldid : int
+            | Field number.
+
+        Returns
+        -------
+        fldnm : str
+            Field name.
+
+            )pbdoc"
+        , py::arg("name"));
 
     m.def(
         "Bboolpr",
@@ -472,8 +569,36 @@ expublic void ndrxpy_register_ubf(py::module &m)
                                                           &fclose);
             Bboolpr(guard.get(), fiop.get());
         },
-        "Print Boolean expression as parsed", py::arg("expression"),
-        py::arg("iop"));
+        R"pbdoc(
+        Compile and print boolean expression to file descriptor.
+
+        .. code-block:: python
+            :caption: Bboolpr example
+            :name: Bboolpr-example
+
+                import endurox
+                
+                f = open("output.txt", "w")
+                endurox.Bboolpr("(1==1) && T_FLD_STRING=='ABC'", f)
+                f.close
+            
+        For more details see **Bboolpr(3)** C API call.
+
+        :raise UbfException: 
+            | Following error codes may be present:
+            | **BBADNAME** - Field not found in FD files or UBFDB.
+            | **BSYNTAX** - Bad boolean expression syntax
+            | **BFTOPEN** - Unable to open field tables.
+
+        Parameters
+        ----------
+        expression : str
+            | Enduro/X UBF boolean expression (full text)
+        iop : file
+            | Output file (shall be in write mode)
+
+            )pbdoc",
+            py::arg("expression"), py::arg("iop"));
 
     m.def(
         "Bboolev",

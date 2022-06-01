@@ -1420,8 +1420,28 @@ expublic void ndrxpy_register_xatmi(py::module &m)
             }
             return rc;
         },
-        "Retrieves a previously set, per second or millisecond, blocktime value",
-        py::arg("flags"));
+        R"pbdoc(
+        Get current XATMI call timeout setting configure for thread.
+            
+        For more details see **tpgblktime(3)** C API call.
+
+        :raise XatmiException:
+            | Following error codes may be present:
+            | **TPEINVAL** - Invalid flags.
+            | **TPESYSTEM** - System error occurred.
+
+        Parameters
+        ----------
+        flags : int
+            | Bitwise flags, may contain :data:`.TPBLK_ALL`, :data:`.TPBLK_NEXT`.
+
+        Returns
+        -------
+        tout : int
+            Current timeout configured for thread. If no timeout is configure
+            value **0** is returned.
+            )pbdoc"
+        , py::arg("flags"));
 
     m.def(
         "tpsblktime",
@@ -1432,9 +1452,24 @@ expublic void ndrxpy_register_xatmi(py::module &m)
                 throw xatmi_exception(tperrno);
             }
         },
-        "Routine for setting blocktime in seconds or milliseconds for the next "
-        "service call or for all service calls",
-        py::arg("blktime"), py::arg("flags"));
+        R"pbdoc(
+        Set XATMI call timeout value. Setting affects current thread/XATMI context.
+        Process level timeout may be applied by :func:`.tptoutset` function.
+            
+        For more details see **tpsblktime(3)** C API call.
+
+        :raise XatmiException:
+            | Following error codes may be present:
+            | **TPEINVAL** - Invalid flags or timeout value.
+
+        Parameters
+        ----------
+        blktime : int
+            | Timeout value in seconds.
+        flags : int
+            | :data:`.TPBLK_ALL` or :data:`TPBLK_NEXT`.
+            )pbdoc"
+        , py::arg("blktime"), py::arg("flags"));
 
     m.def(
         "tpinit",
