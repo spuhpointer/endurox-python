@@ -468,6 +468,7 @@ Python3 bindings for writing Endurox clients and servers
         :toctree: _generate
 
         tplogconfig
+        tplogqinfo
         tpinit
         tptoutset
         tptoutget

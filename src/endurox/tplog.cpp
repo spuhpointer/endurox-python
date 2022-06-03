@@ -245,7 +245,63 @@ expublic void ndrxpy_register_tplog(py::module &m)
 
             return ret;
         },
-        "Get logger info", py::arg("lev"), py::arg("flags"));
+        R"pbdoc(
+        Query logger information.
+
+        .. code-block:: python
+            :caption: tplogqinfo example
+            :name: tplogqinfo-example
+
+                import endurox as e
+                e.tplogconfig(e.LOG_FACILITY_TP, -1, "tp=4", "", "/dev/stdout")
+                info = e.tplogqinfo(4, e.TPLOGQI_GET_TP)
+
+                if info & 0x0000ffff == e.LOG_FACILITY_TP:
+                    e.tplog_info("LOG_FACILITY_TP Matched")
+                
+                if info >> 24 == 4:
+                    e.tplog_info("Log level 4 matched")
+
+                info = e.tplogqinfo(5, e.TPLOGQI_GET_TP)
+
+                if info == 0:
+                    e.tplog_info("Not logging level 5")
+
+                # Above would print:
+                # t:USER:4:c9e5ad48:23764:7fc434fdd740:000:20220603:232144217247:tplog       :/tplog.c:0582:LOG_FACILITY_TP Matched
+                # t:USER:4:c9e5ad48:23764:7fc434fdd740:000:20220603:232144217275:tplog       :/tplog.c:0582:Log level 4 matched
+                # t:USER:4:c9e5ad48:23764:7fc434fdd740:000:20220603:232144217288:tplog       :/tplog.c:0582:Not logging level 5
+                
+        For more details see **tplogqinfo(3)** C API call.
+
+        :raise NstdException: 
+            | Following error codes may be present:
+            | **NEINVAL** - Invalid logger flag.
+
+        Parameters
+        ----------
+        lev: int
+            Check request log level. If given level is higher than configured, value **0** is returned
+            by the function. Unless :data:`.TPLOGQI_EVAL_RETURN` flag is passed, in such case lev does not
+            affect the result of the function.
+        flags : int
+            One of the following flag (exclusive) :data:`.TPLOGQI_GET_NDRX`, :data:`TPLOGQI_GET_UBF` or 
+            :data:`.TPLOGQI_GET_TP`. The previous flag may be bitwise or'd with :data:`.TPLOGQI_EVAL_RETURN`
+            and :data:`.TPLOGQI_EVAL_DETAILED`
+
+        Returns
+        -------
+        ret : int
+            Bit flags of currently active logger (one of) according to input *flags*:
+            :data:`.LOG_FACILITY_NDRX`, :data:`.LOG_FACILITY_UBF`, :data:`.LOG_FACILITY_TP`, 
+            :data:`.LOG_FACILITY_TP_THREAD`, :data:`.LOG_FACILITY_TP_REQUEST`, :data:`.LOG_FACILITY_NDRX_THREAD`,
+            :data:`.LOG_FACILITY_UBF_THREAD`, :data:`.LOG_FACILITY_NDRX_REQUEST`, :data:`.LOG_FACILITY_UBF_REQUEST`.
+            Additionally flag :data:`.TPLOGQI_RET_HAVDETAILED` may be present.
+            Byte 4 in return value (according to mask **0xff000000**) contains currently active log level.
+            The return value *ret* may be set to **0** in case if *lev* argument indicated higher log level
+            than currently used and *flags* did not contain flag :data:`.TPLOGQI_EVAL_RETURN`.  
+
+         )pbdoc", py::arg("lev"), py::arg("flags"));
 
     m.def(
         "tplogsetreqfile",
