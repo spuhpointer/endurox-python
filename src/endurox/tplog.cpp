@@ -342,7 +342,55 @@ expublic void ndrxpy_register_tplog(py::module &m)
             //Return python object... (in case if one was passed in...)
             return ndrx_to_py(in);
         },
-        "Redirect logger to request file extracted from buffer, filename or file name service", 
+        R"pbdoc(
+        Redirect logger to request file extracted from buffer, filename or file name service.
+        Note that in case if :data:`.TPESVCFAIL` error is received, exception is thrown
+        and if *data* buffer was modified by the service, modification is lost.
+        The new log file name must be present in one of the arguments. For full details
+        see the C API call.
+
+        .. code-block:: python
+            :caption: tplogsetreqfile example
+            :name: tplogsetreqfile-example
+
+                import endurox as e
+                e.tplogsetreqfile(None, "/tmp/req_1111", None)
+                # would print to "/tmp/req_1111"
+                e.tplog_info("OK")
+                e.tplogclosereqfile()
+                
+        For more details see **tplogsetreqfile(3)** C API call.
+
+        :raise AtmiException: 
+            | Following error codes may be present:
+            | **TPEINVAL** - Invalid parameters.
+            | **TPENOENT** - *filesvc* is not available.
+            | **TPETIME** - *filesvc* timed out.
+            | **TPESVCFAIL** - *filesvc* failed.
+            | **TPESVCERR**- *filesvc* crashed.
+            | **TPESYSTEM** - System error.
+            | **TPEOS** - Operating system error.
+
+        Parameters
+        ----------
+        data: dict
+            UBF buffer, where to search for **EX_NREQLOGFILE** field. Or if field is not found
+            this buffer is used to call *filesvc*. Parameter is conditional.May use :data:`None` or 
+            empty string if not present.
+        filename : str
+            New request file name. Parameter is conditional. May use :data:`None` or 
+            empty string if not present.
+        filesvc : str
+            Service name to request. Parameter is conditional. And can use :data:`None`
+            or empty string if not present.
+
+        Returns
+        -------
+        ret : dict
+            XATMI buffer passed in as *data* argument and/or used for service call.
+            If not buffer is used, **NULL** buffer is returned.
+
+         )pbdoc",
             py::arg("data"), py::arg("filename")="", py::arg("filesvc")="");
 
     m.def(
