@@ -463,19 +463,6 @@ expublic void ndrxpy_register_tplog(py::module &m)
             }
             return py::str(filename);
         },
-        [](py::object data)
-        {
-            char filename[PATH_MAX+1];
-            auto in = ndrx_from_py(data);
-            {
-                py::gil_scoped_release release;
-                if (EXSUCCEED!=tploggetbufreqfile(*in.pp, filename, sizeof(filename)))
-                {
-                    throw atmi_exception(tperrno); 
-                }
-            }
-            return py::str(filename);
-        },
         R"pbdoc(
         Get current request file name for **tp** topic. In case if request file
         is not used, empty string is returned.
