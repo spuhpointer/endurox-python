@@ -534,6 +534,8 @@ Python3 bindings for writing Endurox clients and servers
         tpsrvsetctxdata
         tpcontinue
         tpexit
+        tpext_addb4pollcb
+        tpext_delb4pollcb
         Bfldtype
         Bfldno
         Bmkfldid

@@ -212,8 +212,46 @@ expublic void ndrxpy_register_tpext(py::module &m)
     m.def(
         "tpext_addb4pollcb", [](const py::object &func)
         { ndrxpy_tpext_addb4pollcb(func); },
-        "Register callback handler for server going. Work only from server thread. "
-        "API is not thread safe. For MT servers only use in tpsvrinit().", py::arg("func"));
+        R"pbdoc(
+        Register callback handler for server going. Work only from server thread. 
+        API is not thread safe. For MT servers only use in tpsvrinit().
+
+        .. code-block:: python
+            :caption: tpext_addb4pollcb example
+            :name: tpext_addb4pollcb-example
+
+            import sys
+            import endurox as e
+
+            def b4poll():
+                e.tplog_info("Going to poll...");
+
+            class Server:
+
+                def tpsvrinit(self, args):
+                    e.tpext_addb4pollcb(b4poll)
+                    return 0
+                    
+            if __name__ == '__main__':
+                e.run(Server(), sys.argv)
+
+        For more details see **tpext_addb4pollcb(3)** C API call.
+
+        :raise AtmiException: 
+            | Following error codes may be present:
+            | **TPEINVAL** - Invalid parameters.
+
+        Parameters
+        ----------
+        func: object
+            Callback function.
+        Returns
+        -------
+        ret : dict
+            XATMI buffer passed in as *data* argument and/or used for service call.
+            If not buffer is used, **NULL** buffer is returned.
+
+         )pbdoc", py::arg("func"));
 
     m.def(
         "tpext_delb4pollcb", [](void)
@@ -227,7 +265,13 @@ expublic void ndrxpy_register_tpext(py::module &m)
             delete M_b4pollcb_handler;
             M_b4pollcb_handler = nullptr;
         },
-        "Remove before-poll callback");
+        R"pbdoc(
+        Remove current before server poll callback previously
+        set by :func:`.tpext_addb4pollcb`
+
+        For more details see **tpext_delb4pollcb(3)** C API call.
+
+         )pbdoc");
 
      m.def(
         "tpext_addperiodcb", [](int secs, const py::object &func)
