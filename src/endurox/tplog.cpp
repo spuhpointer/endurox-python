@@ -400,7 +400,18 @@ expublic void ndrxpy_register_tplog(py::module &m)
             py::gil_scoped_release release;
             tplogsetreqfile_direct(const_cast<char *>(filename.c_str()));
         },
-        "Set request log file from filename only", 
+        R"pbdoc(
+        Set logfile from given filename.
+
+        For more details see **tplogsetreqfile_direct(3)** C API call.
+
+        Parameters
+        ----------
+        filename: str
+            Log file name. It is recommended that file name is different than
+            log file name used for the process level logging.
+
+         )pbdoc",
             py::arg("filename")="");
 
     m.def(
@@ -418,7 +429,27 @@ expublic void ndrxpy_register_tplog(py::module &m)
             }
             return py::str(filename);
         },
-        "Get request file name from UBF buffer",
+        R"pbdoc(
+        Extract request file from the UBF buffer. At current Enduro/X version
+        this just reads **EX_NREQLOGFILE** field from the buffer and returns value.
+                
+        For more details see **tploggetbufreqfile(3)** C API call.
+
+        :raise AtmiException: 
+            | Following error codes may be present:
+            | **TPENOENT** - Request file name not present or UBF error.
+            | **TPEINVAL** - Invalid UBF buffer.
+
+        Parameters
+        ----------
+        data: dict
+            UBF buffer, where to search for **EX_NREQLOGFILE** field.
+
+        Returns
+        -------
+        ret : str
+            Request file name.
+         )pbdoc",
         py::arg("data"));
 
      m.def(
@@ -432,7 +463,30 @@ expublic void ndrxpy_register_tplog(py::module &m)
             }
             return py::str(filename);
         },
-        "Get current request log file, returns empty if one is not set");
+        [](py::object data)
+        {
+            char filename[PATH_MAX+1];
+            auto in = ndrx_from_py(data);
+            {
+                py::gil_scoped_release release;
+                if (EXSUCCEED!=tploggetbufreqfile(*in.pp, filename, sizeof(filename)))
+                {
+                    throw atmi_exception(tperrno); 
+                }
+            }
+            return py::str(filename);
+        },
+        R"pbdoc(
+        Get current request file name for **tp** topic. In case if request file
+        is not used, empty string is returned.
+                
+        For more details see **tploggetreqfile(3)** C API call.
+
+        Returns
+        -------
+        ret : str
+            Request file name or empty string.
+         )pbdoc");
 
      m.def(
         "tplogdelbufreqfile",
