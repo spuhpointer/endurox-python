@@ -245,11 +245,6 @@ expublic void ndrxpy_register_tpext(py::module &m)
         ----------
         func: object
             Callback function.
-        Returns
-        -------
-        ret : dict
-            XATMI buffer passed in as *data* argument and/or used for service call.
-            If not buffer is used, **NULL** buffer is returned.
 
          )pbdoc", py::arg("func"));
 
@@ -267,7 +262,7 @@ expublic void ndrxpy_register_tpext(py::module &m)
         },
         R"pbdoc(
         Remove current before server poll callback previously
-        set by :func:`.tpext_addb4pollcb`
+        set by :func:`.tpext_addb4pollcb`.
 
         For more details see **tpext_delb4pollcb(3)** C API call.
 
@@ -276,7 +271,41 @@ expublic void ndrxpy_register_tpext(py::module &m)
      m.def(
         "tpext_addperiodcb", [](int secs, const py::object &func)
         { ndrxpy_tpext_addperiodcb(secs, func); },
-        "Register periodic callback handler. API is not thread safe. For MT servers only use in tpsvrinit().", 
+        R"pbdoc(
+        Register periodic callback handler. API is not thread safe. 
+        For MT servers only use in tpsvrinit().
+
+        .. code-block:: python
+            :caption: tpext_addperiodcb example
+            :name: tpext_addperiodcb-example
+
+            import sys
+            import endurox as e
+
+            def period():
+                return 0
+
+            class Server:
+
+                def tpsvrinit(self, args):
+                    e.userlog('Server startup')
+                    e.tpext_addperiodcb(1, period)
+                    return 0
+
+            if __name__ == '__main__':
+                e.run(Server(), sys.argv)
+
+
+        For more details see **tpext_addperiodcb(3)** C API call.
+
+        Parameters
+        ----------
+        secs: int
+            Interval of seconds to call the callback while service
+            is idling.
+        func: object
+            Callback function.
+         )pbdoc",
         py::arg("secs"), py::arg("func"));
 
     m.def(
@@ -291,7 +320,14 @@ expublic void ndrxpy_register_tpext(py::module &m)
             delete M_addperiodcb_handler;
             M_addperiodcb_handler = nullptr;
         },
-        "Remove before-poll callback. API is not thread safe. For MT servers only use in tpsvrinit().");
+        R"pbdoc(
+        "Remove periodic XATMI server idle time callback handle previously set by :func:`.tpext_addperiodcb`. 
+        API is not thread safe. For MT servers only use in tpsvrinit()."
+
+        For more details see **tpext_delperiodcb(3)** C API call.
+
+         )pbdoc"
+        );
 
      m.def(
         "tpext_addpollerfd", [](int fd, uint32_t events, const py::object ptr1, const py::object &func)
