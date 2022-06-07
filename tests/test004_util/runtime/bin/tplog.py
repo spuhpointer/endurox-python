@@ -120,6 +120,7 @@ class TestTplog(unittest.TestCase):
         filename = "%s/tplog_fd" % e.tuxgetenv('NDRX_ULOG')
         os.remove(filename) if os.path.exists(filename) else None
         e.tplogconfig(e.LOG_FACILITY_TP, e.log_info, "file=%s" % filename, "TEST", None)
+        self.assertEqual(e.tplogfplock(9, 0), None)
         handle = e.tplogfplock()
         fd = e.tplogfpget(handle)
         os.write(fd, b'\x41\x42\x43\x20\x48\x45\x4c\x4c\x4f')

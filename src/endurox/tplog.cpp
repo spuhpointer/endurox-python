@@ -505,10 +505,40 @@ expublic void ndrxpy_register_tplog(py::module &m)
         "tplogfplock",
         [](int lev, long flags)
         {
-            return pyndrxdebugptr(tplogfplock(lev, flags));
+            ndrx_debug_t *ptr = tplogfplock(lev, flags);
+
+            //Allow to return None
+            if (nullptr!=ptr)
+            {
+                return std::unique_ptr<pyndrxdebugptr>(new pyndrxdebugptr(ptr)); 
+            }
+            else
+            {
+                return std::unique_ptr<pyndrxdebugptr>{};
+            }
         },
-        "Lock the file pointer / fileno"
-        ,
+        R"pbdoc(
+        Locks and returns logging handle. During the time while handle is locked 
+        system functions such as log-rotate would not work for given process.
+        In case if logging is not required i.e. 'lev' is greater than currently configured 
+        logging level, :data:`None` is returned.
+                
+        For more details see **tplogfplock(3)** C API call.
+
+        Parameters
+        ----------
+        lev: int
+            Request log level. If handle is needed by not checking the log level,
+            use value *-1*.
+        flags : int
+            RFU.
+
+        Returns
+        -------
+        ret : .NdrxDebugHandle
+            Enduro/X logger handle or :data:`None` if logging is not required.
+
+         )pbdoc",
         py::arg("lev")=-1, py::arg("flags")=0);
 
      m.def(
@@ -518,8 +548,36 @@ expublic void ndrxpy_register_tplog(py::module &m)
             ndrx_debug_t *ptr = reinterpret_cast<ndrx_debug_t *>(dbg.ptr);
             return fileno(tplogfpget(ptr, flags));
         },
-        "Get file descriptor for Python."
-        ,
+        R"pbdoc(
+        Get fileno for currently locked logger (i.e. value returned from :func:`.tplogfplock`).
+
+        .. code-block:: python
+            :caption: tplogfpget example
+            :name: tplogfpget-example
+
+                import os
+                import endurox as e
+                h = e.tplogfplock(e.log_debug, 0)
+                no = e.tplogfpget(h, 0)
+                os.write(fd, b'HELLO WORLD')
+                os.fsync(fd)
+                e.tplogfpunlock(h)
+
+        For more details see **tplogfpget(3)** C API call.
+
+        Parameters
+        ----------
+        dbg: .NdrxDebugHandle
+            Debug handle previously locked by :func:`.tplogfplock`
+        flags : int
+            RFU
+
+        Returns
+        -------
+        ret : int
+            File descriptor.
+
+         )pbdoc",
         py::arg("dbg"), py::arg("flags")=0);
 
      m.def(
@@ -529,8 +587,20 @@ expublic void ndrxpy_register_tplog(py::module &m)
             ndrx_debug_t *ptr = reinterpret_cast<ndrx_debug_t *>(dbg.ptr);
             tplogfpunlock(ptr);
         },
-        "Unlock the debug handle"
-        ,
+        R"pbdoc(
+        Unlock logger handle for given process previously locked by 
+        :func:`.tplogfplock`.
+
+        For more details see **tplogfpunlock(3)** C API call.
+
+        Parameters
+        ----------
+        dbg: .NdrxDebugHandle
+            Debug handle previously locked by :func:`.tplogfplock`
+        flags : int
+            RFU
+
+         )pbdoc",
         py::arg("dbg"));
 
      m.def(
@@ -541,8 +611,34 @@ expublic void ndrxpy_register_tplog(py::module &m)
             py::gil_scoped_release release;
             tplogprintubf(lev, const_cast<char *>(title), reinterpret_cast<UBFH *>(*in.pp));
         },
-        "Get file descriptor for Python."
-        ,
+        R"pbdoc(
+        Print UBF buffer to log file.
+
+        .. code-block:: python
+            :caption: tplogprintubf example
+            :name: tplogprintubf-example
+
+                import endurox as e
+                e.tplogprintubf(e.log_info, "TEST", {"data":{"T_STRING_FLD":["HELLO", "WORLD"], "T_LONG_FLD":9991}})
+
+                # would print to log file:
+                # t:USER:4:c9e5ad48:10162:7f623e424740:000:20220607:090939401481:plogprintubf:bf/ubf.c:1790:TEST
+                # T_LONG_FLD	9991
+                # T_STRING_FLD	HELLO
+                # T_STRING_FLD	WORLD
+
+        For more details see **tplogprintubf(3)** C API call.
+
+        Parameters
+        ----------
+        lev: int
+            Log level.
+        title: str
+            Dump title.
+        data: dict
+            UBF buffer to print.
+
+         )pbdoc",
         py::arg("lev"), py::arg("title"), py::arg("data"));
 
 }

@@ -470,6 +470,10 @@ Python3 bindings for writing Endurox clients and servers
         tplogconfig
         tplogqinfo
         tplogsetreqfile
+        tplogfplock
+        tplogfpget
+        tplogfpunlock
+        tplogprintubf
         tpinit
         tptoutset
         tptoutget
