@@ -490,7 +490,27 @@ expublic void ndrxpy_register_tplog(py::module &m)
 
             return ndrx_to_py(in);
         },
-        "Get current request log file, returns empty if one is not set",
+        R"pbdoc(
+        Delete request file name from the given UBF buffer. Altered buffer
+        is returned.
+                
+        For more details see **tplogdelbufreqfile(3)** C API call.
+
+        :raise AtmiException: 
+            | Following error codes may be present:
+            | **TPENOENT** - Request file name not present or UBF error.
+            | **TPEINVAL** - Invalid UBF buffer.
+
+        Parameters
+        ----------
+        data: dict
+            UBF buffer, where to delete **EX_NREQLOGFILE** field.
+
+        Returns
+        -------
+        ret : dict
+            Altered UBF buffer.
+         )pbdoc",
         py::arg("data"));
 
      m.def(
@@ -500,7 +520,12 @@ expublic void ndrxpy_register_tplog(py::module &m)
             py::gil_scoped_release release;
             tplogclosereqfile();
         },
-        "Close request logging file (if one is currenlty open)");
+        R"pbdoc(
+        Close request logging file.
+                
+        For more details see **tplogclosereqfile(3)** C API call.
+
+        )pbdoc");
 
      m.def(
         "tplogclosethread",
@@ -509,7 +534,22 @@ expublic void ndrxpy_register_tplog(py::module &m)
             py::gil_scoped_release release;
             tplogclosethread();
         },
-        "Close tread log file");
+        R"pbdoc(
+        Close thread logging file.
+
+        .. code-block:: python
+            :caption: tplogclosethread example
+            :name: tplogclosethread-example
+
+                import endurox as e
+                
+                e.tplogconfig(e.LOG_FACILITY_TP_THREAD, -1, "tp=4", "", "/tmp/thread1")
+                e.tplog_info("OK")
+                e.tplogclosethread()
+
+        For more details see **tplogclosethread(3)** C API call.
+
+        )pbdoc");
 
      m.def(
         "tplogdump",
@@ -521,7 +561,32 @@ expublic void ndrxpy_register_tplog(py::module &m)
             tplogdump(lev, const_cast<char *>(comment), 
                 const_cast<char *>(val.data()), val.size());
         },
-        "Produce hex dump of byte array",
+        R"pbdoc(
+        Dump byte array to log file.
+
+        .. code-block:: python
+            :caption: tplogdump example
+            :name: tplogdump-example
+
+                import endurox as e
+                
+                e.tplogdump(e.log_info, "TEST TITLE", b'HELLO WORLD FROM ENDUROX')
+                # current log file will contain:
+                # t:USER:4:d190fd96:04714:7f15d6d9e740:000:20220607:170621814408:tplogdump   :/tplog.c:0614:TEST TITLE (nr bytes: 24)
+                #   0000  48 45 4c 4c 4f 20 57 4f 52 4c 44 20 46 52 4f 4d  HELLO WORLD FROM
+                #   0010  20 45 4e 44 55 52 4f 58                           ENDUROX
+
+        For more details see **tplogdump(3)** C API call.
+
+        Parameters
+        ----------
+        lev: int
+            Log level.
+        comment: str
+            Log title.
+        data: bytes
+            Bytes to dump to log.
+        )pbdoc",
         py::arg("lev"), py::arg("comment"), py::arg("data"));
 
      m.def(
@@ -538,8 +603,36 @@ expublic void ndrxpy_register_tplog(py::module &m)
                 const_cast<char *>(val1.data()), const_cast<char *>(val2.data()), 
                 len);
         },
-        "Compare two byte arrays and print differences in the log"
-        ,
+        R"pbdoc(
+        Compare two byte arrays and print differences for the common length.
+
+        .. code-block:: python
+            :caption: tplogdumpdiff example
+            :name: tplogdumpdiff-example
+
+                import endurox as e
+                
+                e.tplogdumpdiff(e.log_info, "TEST TITLE", b'HELLO WORLD FROM ENDUROX', 
+                    b'HELLO FROM OTHER PLACE OR SYSTEM')
+                # t:USER:4:d190fd96:25552:7f5ef2bb3740:000:20220607:185313821586:plogdumpdiff:/tplog.c:0627:TEST TITLE
+                # <  0000  48 45 4c 4c 4f 20 57 4f 52 4c 44 20 46 52 4f 4d  HELLO WORLD FROM
+                # >  0000  48 45 4c 4c 4f 20 46 52 4f 4d 20 4f 54 48 45 52  HELLO FROM OTHER
+                # <  0010  20 45 4e 44 55 52 4f 58                           ENDUROX
+                # >  0010  20 50 4c 41 43 45 20 4f                           PLACE O
+
+        For more details see **tplogdumpdiff(3)** C API call.
+
+        Parameters
+        ----------
+        lev: int
+            Log level.
+        comment: str
+            Log title.
+        data1: bytes
+            Bytes to compare.
+        data2: bytes
+            Bytes to compare.
+        )pbdoc",
         py::arg("lev"), py::arg("comment"), py::arg("data1"), py::arg("data2"));
 
      m.def(
