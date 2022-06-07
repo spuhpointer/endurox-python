@@ -31,6 +31,9 @@
  * SOFTWARE.
  * -----------------------------------------------------------------------------
  */
+
+/*---------------------------Includes-----------------------------------*/
+
 #include <dlfcn.h>
 
 #include <atmi.h>
@@ -50,20 +53,15 @@
 #include <functional>
 #include <map>
 
+/*---------------------------Externs------------------------------------*/
+/*---------------------------Macros-------------------------------------*/
+
 #define MODULE "endurox"
 
-
-/**
- * tpgetconn() struct values
- * this is copy+paste from unexported header from xadrv/oracle/oracle_common.c (Enduro/X source)
- */
-typedef struct
-{
-    unsigned int magic; /**< magic number of the record                    */
-    long version;       /**< record version                                */
-    void *xaoSvcCtx;    /**< xaoSvcCtx handle,                             */
-    
-} ndrx_ora_tpgetconn_t;
+/*---------------------------Enums--------------------------------------*/
+/*---------------------------Typedefs-----------------------------------*/
+/*---------------------------Globals------------------------------------*/
+/*---------------------------Statics------------------------------------*/
 
 namespace py = pybind11;
 
@@ -198,47 +196,6 @@ static void register_exceptions(py::module &m)
 PYBIND11_MODULE(endurox, m)
 {
     register_exceptions(m);
-
-    //Access to XA drivers from cx_Oracle
-    m.def(
-        "xaoSvcCtx",
-        []()
-        {
-            struct xa_switch_t *sw = ndrx_xa_sw_get();
-
-            if (nullptr!=sw && 0==strcmp(sw->name, "Oracle_XA"))
-            {
-                /* this is ora */
-                ndrx_ora_tpgetconn_t *detail = reinterpret_cast<ndrx_ora_tpgetconn_t *>(tpgetconn());
-
-                if (nullptr!=detail)
-                {
-                    if (detail->magic!=0x1fca8e4c)
-                    {
-                        NDRX_LOG(log_error, "Invalid ora lib magic [%x] expected [%x]",
-                            detail->magic, 0x1fca8e4c);
-                        throw std::runtime_error("Invalid tpgetconn() magic");
-                    }
-
-                    if (detail->version<1)
-                    {
-                        throw std::runtime_error("Expected tpgetconn() version >=1");
-                    }
-
-                    if (nullptr==detail->xaoSvcCtx)
-                    {
-                        throw std::runtime_error("xaoSvcCtx is null");
-                    }
-
-                    xao_svc_ctx *xao_svc_ctx_ptr = reinterpret_cast<xao_svc_ctx *>(detail->xaoSvcCtx);
-
-                    return reinterpret_cast<unsigned long long>(
-                            (*xao_svc_ctx_ptr)(nullptr));
-                }
-            }
-            throw std::runtime_error("tpinit() not issued, or Oracle drivers not configured");
-        },
-        "Returns the OCI service handle for a given XA connection");
 
     ndrxpy_register_ubf(m);
     ndrxpy_register_atmi(m);
@@ -458,8 +415,8 @@ PYBIND11_MODULE(endurox, m)
     //https://www.sphinx-doc.org/en/master/usage/restructuredtext/domains.html#cross-referencing-python-objects
     m.doc() =
         R"pbdoc(
-Python3 bindings for writing Endurox clients and servers
-########################################################
+Python3 bindings for writing Enduro/X clients and servers
+#########################################################
 
     .. module:: endurox
     .. currentmodule:: endurox
@@ -481,6 +438,17 @@ Python3 bindings for writing Endurox clients and servers
         tplogfpget
         tplogfpunlock
         tplogprintubf
+        Bfldtype
+        Bfldno
+        Bmkfldid
+        Bfname
+        Bfldid
+        Bboolpr
+        Bboolev
+        Bfloatev
+        Bfprint
+        Bprint
+        Bextread
         tpinit
         tptoutset
         tptoutget
@@ -523,6 +491,7 @@ Python3 bindings for writing Endurox clients and servers
         tpscmt
         tpencrypt
         tpdecrypt
+        xaoSvcCtx
         run
         tpsubscribe
         tpunsubscribe
@@ -537,17 +506,8 @@ Python3 bindings for writing Endurox clients and servers
         tpext_addb4pollcb
         tpext_delb4pollcb
         tpext_delperiodcb
-        Bfldtype
-        Bfldno
-        Bmkfldid
-        Bfname
-        Bfldid
-        Bboolpr
-        Bboolev
-        Bfloatev
-        Bfprint
-        Bprint
-        Bextread
+        tpext_addpollerfd
+        tpext_delpollerfd
 
 How to read this documentation
 ==============================
@@ -921,33 +881,97 @@ tpenqueue() and tpdequeue() module function.
 
 :attr:`TPQCTL.flags` may be set to following values:
 
-- **TPQCORRID** - use :attr:`TPQCTL.corrid` identifier, set correlator id when performing
+.. data:: TPQCORRID
+    
+    Use :attr:`TPQCTL.corrid` identifier, set correlator id when performing
     enqueue.
-- **TPQGETBYCORRID** - dequeue message by :attr:`TPQCTL.corrid`.
-- **TPQGETBYMSGID** - dequeue message by :attr:`TPQCTL.msgid`.
-- **TPQREPLYQ** - use :attr:`TPQCTL.replyqueue` set reply queue for automatic queues.
-- **TPQFAILUREQ** - use :attr:`TPQCTL.failurequeue` use failure queue for failed 
+
+.. data:: TPQGETBYCORRID
+
+    Dequeue message by :attr:`TPQCTL.corrid`.
+
+.. data:: TPQGETBYMSGID
+    
+    Dequeue message by :attr:`TPQCTL.msgid`.
+
+.. data:: TPQREPLYQ
+    
+    Use :attr:`TPQCTL.replyqueue` set reply queue for automatic queues.
+
+.. data:: TPQFAILUREQ
+    
+    Use :attr:`TPQCTL.failurequeue` use failure queue for failed 
     automatic queue messages.
 
 Following :attr:`TPQCTL.diagnostic` (*QmException.code*) codes may be returned:
 
-- **QMEINVAL** - Invalid data.
-- **QMEBADRMID** - RFU.
-- **QMENOTOPEN** - RFU.
-- **QMETRAN** - RFU.
-- **QMEBADMSGID** - RFU.
-- **QMESYSTEM** - System error.
-- **QMEOS** - OS error.
-- **QMEABORTED** - RFU.
-- **QMENOTA** - RFU.         
-- **QMEPROTO** - RFU.
-- **QMEBADQUEUE** - Bad queue name.
-- **QMENOMSG** - No messages in queue.
-- **QMEINUSE** - RFU.
-- **QMENOSPACE** - RFU.
-- **QMERELEASE** - RFU.
-- **QMEINVHANDLE** - RFU.
-- **QMESHARE** - RFU.
+.. data:: QMEINVAL
+    
+    Invalid data.
+
+.. data:: QMEBADRMID
+    
+    RFU.
+
+.. data:: QMENOTOPEN
+    
+    RFU.
+
+.. data:: QMETRAN
+    
+    RFU.
+
+.. data:: QMEBADMSGID
+    
+    RFU.
+
+.. data:: QMESYSTEM
+    
+    System error.
+
+.. data:: QMEOS
+    
+    OS error.
+
+.. data:: QMEABORTED
+    
+    RFU.
+
+.. data:: QMENOTA
+    
+    RFU.
+
+.. data:: QMEPROTO
+    
+    RFU.
+
+.. data:: QMEBADQUEUE
+    
+    Bad queue name.
+
+.. data:: QMENOMSG
+    
+    No messages in queue.
+
+.. data:: QMEINUSE
+    
+    RFU.
+
+.. data:: QMENOSPACE
+    
+    RFU.
+
+.. data:: QMERELEASE
+    
+    RFU.
+
+.. data:: QMEINVHANDLE
+    
+    RFU.
+
+.. data:: QMESHARE
+    
+    RFU.
 
 
 TPEVCTL
@@ -979,65 +1003,188 @@ Flags
 Flags to service routines
 -------------------------
 
-- **TPNOBLOCK** - non-blocking send/rcv
-- **TPSIGRSTRT** - restart rcv on interrupt
-- **TPNOREPLY** - no reply expected
-- **TPNOTRAN** - not sent in transaction mode
-- **TPTRAN** - sent in transaction mode
-- **TPNOTIME** - no timeout
-- **TPABSOLUTE** - absolute value on tmsetprio
-- **TPGETANY** - get any valid reply
-- **TPNOCHANGE** - force incoming buffer to match
-- **RESERVED_BIT1** - reserved for future use
-- **TPCONV** - conversational service
-- **TPSENDONLY** - send-only mode
-- **TPRECVONLY** - recv-only mode
+.. data:: TPNOBLOCK
+    
+    Non-blocking send/rcv
+
+.. data:: TPSIGRSTRT
+    
+    Restart rcv on interrupt
+
+.. data:: TPNOREPLY
+    
+    No reply expected
+
+.. data:: TPNOTRAN
+    
+    Not sent in transaction mode
+
+.. data:: TPTRAN
+    
+    Sent in transaction mode
+
+.. data:: TPNOTIME
+    
+    No timeout
+
+.. data:: TPABSOLUTE
+    
+    Absolute value on tmsetprio
+
+.. data:: TPGETANY
+    
+    Get any valid reply
+
+.. data:: TPNOCHANGE
+    
+    Force incoming buffer to match
+
+.. data:: RESERVED_BIT1
+    
+    Reserved for future use
+
+.. data:: TPCONV
+    
+    Conversational service
+
+.. data:: TPSENDONLY
+    
+    Send-only mode
+
+.. data:: TPRECVONLY
+    
+    Recv-only mode
 
 Flags to tpreturn
 -----------------
 
-- **TPFAIL** - service FAILURE for tpreturn
-- **TPEXIT** - service FAILURE with server exit
-- **TPSUCCESS** - service SUCCESS for tpreturn
+.. data:: TPFAIL
+    
+    Service FAILURE for tpreturn
+
+.. data:: TPEXIT
+    
+    Service FAILURE with server exit
+
+.. data:: TPSUCCESS
+    
+    Service SUCCESS for tpreturn
 
 Flags to tpsblktime/tpgblktime
 ------------------------------
 
-- **TPBLK_SECOND** - This flag sets the blocktime value, in seconds. This is default behavior.
-- **TPBLK_NEXT** - This flag sets the blocktime value for the next potential blocking API.
-- **TPBLK_ALL** - This flag sets the blocktime value for the all subsequent potential blocking APIs.
+.. data:: TPBLK_SECOND
+    
+    This flag sets the blocktime value, in seconds. 
+    This is default behavior.
+
+.. data:: TPBLK_NEXT
+    
+    This flag sets the blocktime value for the
+    next potential blocking API.
+
+.. data:: TPBLK_ALL
+    
+    This flag sets the blocktime value for 
+    the all subsequent potential blocking APIs.
 
 Flags to tpenqueue/tpdequeue
 ----------------------------
 
-- **TPQCORRID** - set/get correlation id
-- **TPQFAILUREQ** - set/get failure queue
-- **TPQBEFOREMSGID** - enqueue before message id
-- **TPQGETBYMSGIDOLD** - deprecated
-- **TPQMSGID** - get msgid of enq/deq message
-- **TPQPRIORITY** - set/get message priority
-- **TPQTOP** - enqueue at queue top
-- **TPQWAIT** - wait for dequeuing
-- **TPQREPLYQ** - set/get reply queue
-- **TPQTIME_ABS** - set absolute time
-- **TPQTIME_REL** - set absolute time
-- **TPQGETBYCORRIDOLD** - deprecated
-- **TPQPEEK** - peek
-- **TPQDELIVERYQOS** - delivery quality of service
-- **TPQREPLYQOS**   - reply message quality of service
-- **TPQEXPTIME_ABS** - absolute expiration time
-- **TPQEXPTIME_REL** - relative expiration time
-- **TPQEXPTIME_NONE**  - never expire
-- **TPQGETBYMSGID** - dequeue by msgid
-- **TPQGETBYCORRID** - dequeue by corrid
-- **TPQQOSDEFAULTPERSIST** - queue's default persistence policy
-- **TPQQOSPERSISTENT**  - disk message
-- **TPQQOSNONPERSISTENT** - memory message
+.. data:: TPQCORRID
+
+    Set/get correlation id
+
+.. data:: TPQFAILUREQ
+
+    Set/get failure queue
+
+.. data:: TPQBEFOREMSGID
+
+    Enqueue before message id
+
+.. data:: TPQGETBYMSGIDOLD
+
+    Deprecated, RFU
+
+.. data:: TPQMSGID
+    
+    Get msgid of enq/deq message
+
+.. data:: TPQPRIORITY
+
+    Set/get message priority, RFU
+
+.. data:: TPQTOP 
+    
+    Enqueue at queue top, RFU
+
+.. data:: TPQWAIT
+    
+    Wait for dequeuing, RFU
+
+.. data:: TPQREPLYQ
+    
+    Set/get reply queue, RFU
+
+.. data:: TPQTIME_ABS
+    
+    Set absolute time, RFU
+
+.. data:: TPQTIME_REL
+    
+    Set absolute time, RFU
+
+.. data:: TPQGETBYCORRIDOLD
+    
+    Deprecated, RFU
+
+.. data:: TPQPEEK 
+    
+    Peek
+
+.. data:: TPQDELIVERYQOS
+    
+    Delivery quality of service, RFU
+
+.. data:: TPQREPLYQOS
+    
+    Reply message quality of service, RFU
+
+.. data:: TPQEXPTIME_ABS
+
+    Absolute expiration time, RFU
+
+.. data:: TPQEXPTIME_REL
+
+    Relative expiration time, RFU
+
+.. data:: TPQEXPTIME_NONE
+
+    Never expire, RFU
+
+.. data:: TPQGETBYMSGID
+    
+    Dequeue by msgid
+
+.. data:: TPQGETBYCORRID
+    
+    Dequeue by corrid
+
+.. data:: TPQQOSDEFAULTPERSIST
+    
+    Queue's default persistence policy
+
+.. data:: TPQQOSPERSISTENT
+    
+    Disk message, RFU
+
+.. data:: TPQQOSNONPERSISTENT
+    
+    Memory message, RFU
 
 Flags to tpsubscribe/tpunsubscribe (:attr:`TPEVCTL.flags`)
 ----------------------------------------------------------
-
-See this const :data:`.TPEVSERVICE`
 
 .. data:: TPEVSERVICE
 

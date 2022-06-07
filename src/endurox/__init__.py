@@ -1,4 +1,4 @@
-"""Python3 bindings for writing Endurox clients and servers"""
+"""Python3 bindings for writing Enduro/X clients and servers"""
 
 import sys
 import ctypes

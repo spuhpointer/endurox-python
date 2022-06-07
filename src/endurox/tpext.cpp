@@ -216,6 +216,8 @@ expublic void ndrxpy_register_tpext(py::module &m)
         Register callback handler for server going. Work only from server thread. 
         API is not thread safe. For MT servers only use in tpsvrinit().
 
+        This function applies to ATMI servers only.
+
         .. code-block:: python
             :caption: tpext_addb4pollcb example
             :name: tpext_addb4pollcb-example
@@ -264,6 +266,8 @@ expublic void ndrxpy_register_tpext(py::module &m)
         Remove current before server poll callback previously
         set by :func:`.tpext_addb4pollcb`.
 
+        This function applies to ATMI servers only.
+
         For more details see **tpext_delb4pollcb(3)** C API call.
 
          )pbdoc");
@@ -274,6 +278,8 @@ expublic void ndrxpy_register_tpext(py::module &m)
         R"pbdoc(
         Register periodic callback handler. API is not thread safe. 
         For MT servers only use in tpsvrinit().
+
+        This function applies to ATMI servers only.
 
         .. code-block:: python
             :caption: tpext_addperiodcb example
@@ -321,8 +327,10 @@ expublic void ndrxpy_register_tpext(py::module &m)
             M_addperiodcb_handler = nullptr;
         },
         R"pbdoc(
-        "Remove periodic XATMI server idle time callback handle previously set by :func:`.tpext_addperiodcb`. 
-        API is not thread safe. For MT servers only use in tpsvrinit()."
+        Remove periodic XATMI server idle time callback handle previously set by :func:`.tpext_addperiodcb`. 
+        API is not thread safe. For MT servers only use in tpsvrinit().
+
+        This function applies to ATMI servers only.
 
         For more details see **tpext_delperiodcb(3)** C API call.
 
@@ -332,14 +340,111 @@ expublic void ndrxpy_register_tpext(py::module &m)
      m.def(
         "tpext_addpollerfd", [](int fd, uint32_t events, const py::object ptr1, const py::object &func)
         { ndrxpy_tpext_addpollerfd(fd, events, ptr1, func); },
-        "Add file descriptor to atmi server polling", 
-        py::arg("fd"), py::arg("events"), py::arg("ptr1"), py::arg("func"));
+        R"pbdoc(
+        Monitor file descriptor in XATMI server main dispatcher.
+        This allows the main thread of the server process to select either a service call
+        or perform callback if file descriptor *fd* has events arrived. Events monitor
+        are ones which are passed to poll() unix call, and shall be passed in *events* field,
+        such as **select.POLLIN**.
+        tpext_addpollerfd() can be only called when XATMI server has performed the init, i.e.
+        outside of the tpsvrinit().
 
+        Function is not thread safe. This function applies to ATMI servers only.
+
+        .. code-block:: python
+            :caption: tpext_addpollerfd example
+            :name: tpext_addpollerfd-example
+
+            import sys, os, select
+            import endurox as e
+
+            outx = None
+            path = "/tmp/tmp_py"
+
+            def cb(fd, events, ptr1):
+                e.tplog_info("fd %d got event %d" % (fd, events));
+                # process the events...
+                return 0
+
+            # use b4poll() callback to activate the fd callback 
+            def b4poll():
+                e.tpext_addpollerfd(outx, select.POLLIN, None, cb)
+                e.tpext_delb4pollcb()
+                return 0
+                
+            class Server:
+
+                def tpsvrinit(self, args):
+                    os.mkfifo( path, 0O644 )
+                    outx = os.open(path, os.O_NONBLOCK | os.O_RDWR)
+                    e.tpext_addb4pollcb(b4poll)
+                    return 0
+
+                def tpsvrdone(self):
+                    global outx
+                    global path
+                    os.close(outx)
+                    os.remove(path) if os.path.exists(path) else None
+                    e.userlog('Server shutdown')
+
+            if __name__ == '__main__':
+                e.run(Server(), sys.argv)
+                    global outx
+                    global path
+                    e.userlog('Server startup')
+                    path = "/tmp/tmp_py"
+                    os.remove(path) if os.path.exists(path) else None
+        
+        For more details see **tpext_addpollerfd(3)** C API call.
+
+        :raise AtmiException: 
+            | Following error codes may be present:
+            | **TPEMATCH** - *fd* is already registered with callback.
+            | **TPEPROTO** - Called from invalid place, e.g. **tpsvrinit()** func.
+            | **TPESYSTEM** - System error occurred.
+            | **TPEOS** - Operating system error occurred.
+
+        Parameters
+        ----------
+        fd : int
+            File descriptor to monitor.
+        events : int
+            Bitnmask of select events.
+        ptr1 : object
+            Custom object passed to callback.
+        func : object
+            Callback func used for notifying for events occurred on *fd*.
+            Function signature must accept signature of "(fd, events, ptr1)".
+            Where *fd* is file descriptor, *events* is poll() events occurred on
+            *fd*, ptr1 is custom pointer passed when tpext_addpollerfd() was called.
+
+         )pbdoc",
+        py::arg("fd"), py::arg("events"), py::arg("ptr1"), py::arg("func"));
 
      m.def(
         "tpext_delpollerfd", [](int fd)
         { ndrxpy_tpext_delpollerfd(fd); },
-        "Delete file descriptor from ATMI poller", 
+        R"pbdoc(
+        Delete file descriptor for ATMI server poller.
+
+        Function is not thread safe. This function applies to ATMI servers only.
+
+        For more details see **tpext_delpollerfd(3)** C API call.
+
+        :raise AtmiException: 
+            | Following error codes may be present:
+            | **TPEINVAL** - Invalid file descriptor *fd* passed.
+            | **TPEMATCH** - File descriptor was not registered.
+            | **TPEPROTO** - Invalid call sequence. Called from **tpsvrinit()**.
+            | **TPESYSTEM** - System error occurred.
+            | **TPEOS** - Operating system error occurred.
+
+        Parameters
+        ----------
+        fd : int
+            File descriptor to remove.
+
+         )pbdoc",
         py::arg("fd"));
 }
 

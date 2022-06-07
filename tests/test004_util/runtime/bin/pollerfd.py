@@ -23,6 +23,7 @@ def cb(fd, events, ptr1):
 
     # shall get valid object back...
     assert ptr1.field == 199
+    assert(ptr1==obj)
 
     if events & select.POLLIN:
         data = os.read(outx, 1) 

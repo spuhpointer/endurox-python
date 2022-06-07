@@ -32,6 +32,8 @@
  * -----------------------------------------------------------------------------
  */
 
+/*---------------------------Includes-----------------------------------*/
+
 #include <dlfcn.h>
 
 #include <atmi.h>
@@ -51,6 +53,26 @@
 
 #include <functional>
 #include <map>
+
+/*---------------------------Externs------------------------------------*/
+/*---------------------------Macros-------------------------------------*/
+/*---------------------------Enums--------------------------------------*/
+/*---------------------------Typedefs-----------------------------------*/
+
+/**
+ * tpgetconn() struct values
+ * this is copy+paste from unexported header from xadrv/oracle/oracle_common.c (Enduro/X source)
+ */
+typedef struct
+{
+    unsigned int magic; /**< magic number of the record                    */
+    long version;       /**< record version                                */
+    void *xaoSvcCtx;    /**< xaoSvcCtx handle,                             */
+    
+} ndrx_ora_tpgetconn_t;
+
+/*---------------------------Globals------------------------------------*/
+/*---------------------------Statics------------------------------------*/
 
 namespace py = pybind11;
 
@@ -1029,8 +1051,8 @@ expublic void ndrxpy_register_atmi(py::module &m)
                 previous tpurcode is returned.
         int
             revent - In case if **TPEEVENT** tperrno was returned, may contain:
-                **TPEV_DISCONIMM**, **TPEV_SENDONLY**, **TPEV_SVCERR**, **TPEV_SVCFAIL**,
-                **TPEV_SVCSUCC**.
+            **TPEV_DISCONIMM**, **TPEV_SENDONLY**, **TPEV_SVCERR**, **TPEV_SVCFAIL**,
+            **TPEV_SVCSUCC**.
 
          )pbdoc",
           py::arg("cd"), py::arg("idata"), py::arg("flags") = 0);
@@ -2313,6 +2335,75 @@ expublic void ndrxpy_register_atmi(py::module &m)
      )pbdoc",
         py::arg("tout")
         );
+
+    //Access to XA drivers from cx_Oracle
+    m.def(
+        "xaoSvcCtx",
+        []()
+        {
+            struct xa_switch_t *sw = ndrx_xa_sw_get();
+
+            if (nullptr!=sw && 0==strcmp(sw->name, "Oracle_XA"))
+            {
+                /* this is ora */
+                ndrx_ora_tpgetconn_t *detail = reinterpret_cast<ndrx_ora_tpgetconn_t *>(tpgetconn());
+
+                if (nullptr!=detail)
+                {
+                    if (detail->magic!=0x1fca8e4c)
+                    {
+                        NDRX_LOG(log_error, "Invalid ora lib magic [%x] expected [%x]",
+                            detail->magic, 0x1fca8e4c);
+                        throw std::runtime_error("Invalid tpgetconn() magic");
+                    }
+
+                    if (detail->version<1)
+                    {
+                        throw std::runtime_error("Expected tpgetconn() version >=1");
+                    }
+
+                    if (nullptr==detail->xaoSvcCtx)
+                    {
+                        throw std::runtime_error("xaoSvcCtx is null");
+                    }
+
+                    xao_svc_ctx *xao_svc_ctx_ptr = reinterpret_cast<xao_svc_ctx *>(detail->xaoSvcCtx);
+
+                    return reinterpret_cast<unsigned long long>(
+                            (*xao_svc_ctx_ptr)(nullptr));
+                }
+            }
+            throw std::runtime_error("tpinit() not issued, or Oracle drivers not configured");
+        },
+        R"pbdoc(
+        Returns the OCI service handle for a given XA connection.
+        Usable only for Oracle DB.
+
+        .. code-block:: python
+            :caption: xaoSvcCtx example
+            :name: xaoSvcCtx-example
+
+            import endurox as e
+            import cx_Oracle
+
+            e.tpinit()            
+            db = cx_Oracle.connect(handle=e.xaoSvcCtx())
+            e.tpbegin(99, 0)
+            
+            with db.cursor() as cursor:
+                cursor.execute("delete from pyaccounts")
+            e.tpcommit(0)
+            e.tpterm()
+
+
+        :raise RuntimeError: 
+            | Oracle XA drivers not properly initialized.
+
+        Returns
+        -------
+        handle : int
+            Oracle OCI service handle.
+            )pbdoc");
     }
 
 /* vim: set ts=4 sw=4 et smartindent: */
