@@ -2387,6 +2387,7 @@ expublic void ndrxpy_register_atmi(py::module &m)
             import cx_Oracle
 
             e.tpinit()            
+            e.tpopen()
             db = cx_Oracle.connect(handle=e.xaoSvcCtx())
             e.tpbegin(99, 0)
             

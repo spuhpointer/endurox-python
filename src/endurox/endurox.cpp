@@ -424,6 +424,12 @@ Python3 bindings for writing Enduro/X clients and servers
     .. autosummary::
         :toctree: _generate
 
+        tplog
+        tplog_debug
+        tplog_info
+        tplog_warn
+        tplog_error
+        tplog_always
         tplogconfig
         tplogqinfo
         tplogsetreqfile

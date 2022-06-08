@@ -683,7 +683,7 @@ expublic void ndrxpy_register_srv(py::module &m)
 
         This function applies to ATMI servers only.
         
-        For more deatils see *tpreturn(3)* C API call.
+        For more deatils see **tpreturn(3)** C API call.
 
         Parameters
         ----------
@@ -708,7 +708,7 @@ expublic void ndrxpy_register_srv(py::module &m)
 
         This function applies to ATMI servers only.
         
-        For more details see *tpforward(3)* C API call.
+        For more details see **tpforward(3)** C API call.
 
         Parameters
         ----------
@@ -732,7 +732,7 @@ expublic void ndrxpy_register_srv(py::module &m)
 
         This function applies to ATMI servers only.
         
-        For more details see *tpexit(3)* C API call.
+        For more details see **tpexit(3)** C API call.
 
         )pbdoc");
 }

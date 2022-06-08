@@ -389,12 +389,7 @@ expublic void ndrxpy_register_tpext(py::module &m)
 
             if __name__ == '__main__':
                 e.run(Server(), sys.argv)
-                    global outx
-                    global path
-                    e.userlog('Server startup')
-                    path = "/tmp/tmp_py"
-                    os.remove(path) if os.path.exists(path) else None
-        
+
         For more details see **tpext_addpollerfd(3)** C API call.
 
         :raise AtmiException: 
