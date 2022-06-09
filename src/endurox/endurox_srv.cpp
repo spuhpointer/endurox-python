@@ -439,20 +439,10 @@ expublic void ndrxpy_register_srv(py::module &m)
         Subscribe to event. Once event is published by the **tppost(3)**, it is
         delivered to subscribers.
 
-        Service name is specified in **TPEVCTL** class which is following:
-
-        .. code-block:: python
-            :caption: TPEVCTL Calss
-            :name: TPEVCTL-class
-
-                class TPEVCTL:
-                    flags: int
-                    name1: str
-                    name2: str
-
-        where bitwise *flags* is set to: **TPEVSERVICE** - call service (this must be always set
-        for ATMI server). **TPEVPERSIST** is set to not to remove service from event broker
-        in case if service failed.
+        Service name is specified in :attr:`.TPQCTL.name1`.
+        :attr:`.TPQCTL.flags` must be set to **TPEVSERVICE** - call service.
+        Flag **TPEVPERSIST** may be optionally set to not to remove service from event broker
+        in case if service failed. :attr:`.TPQCTL.name2` is reserved for future use.
 
         Service name to which to deliver event notification shall be set in *name1* field.
         Object may be constructed only by the TPEVCTL(flags, name1, name2).
