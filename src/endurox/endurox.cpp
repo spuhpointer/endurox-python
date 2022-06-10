@@ -1613,8 +1613,8 @@ Log levels
     
         6 - Unofficial log level, dump.
 
-Loging topics aka facilities
-----------------------------
+Logging topics aka facilities
+-----------------------------
 
 .. data:: LOG_FACILITY_NDRX
     
@@ -1662,7 +1662,7 @@ Transaction completion
 .. data:: TP_CMT_COMPLETE
     
         Return from commit when fully complete.
-        
+
 )pbdoc";
 }
 
