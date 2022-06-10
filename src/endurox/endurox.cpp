@@ -209,7 +209,6 @@ PYBIND11_MODULE(endurox, m)
     m.attr("TPEV_SVCSUCC") = py::int_(TPEV_SVCSUCC);
     m.attr("TPEV_SENDONLY") = py::int_(TPEV_SENDONLY);
 
-
     //Event subscribtions
     m.attr("TPEVSERVICE") = py::int_(TPEVSERVICE);
     m.attr("TPEVQUEUE") = py::int_(TPEVQUEUE);//RFU
@@ -244,6 +243,7 @@ PYBIND11_MODULE(endurox, m)
     m.attr("TPEXIT") = py::int_(TPEXIT);
     
     //ATMI errors:
+    m.attr("TPMINVAL") = py::int_(TPMINVAL);
     m.attr("TPEABORT") = py::int_(TPEABORT);
     m.attr("TPEBADDESC") = py::int_(TPEBADDESC);
     m.attr("TPEBLOCK") = py::int_(TPEBLOCK);
@@ -269,9 +269,10 @@ PYBIND11_MODULE(endurox, m)
     m.attr("TPEMATCH") = py::int_(TPEMATCH);
     m.attr("TPEDIAGNOSTIC") = py::int_(TPEDIAGNOSTIC);
     m.attr("TPEMIB") = py::int_(TPEMIB);
+    m.attr("TPMAXVAL") = py::int_(TPMAXVAL);
     
     //UBF errors:
-    
+    m.attr("BMINVAL") = py::int_(BMINVAL);
     m.attr("BERFU0") = py::int_(BERFU0);
     m.attr("BALIGNERR") = py::int_(BALIGNERR);
     m.attr("BNOTFLD") = py::int_(BNOTFLD);
@@ -294,7 +295,8 @@ PYBIND11_MODULE(endurox, m)
     m.attr("BBADACM") = py::int_(BBADACM);
     m.attr("BNOCNAME") = py::int_(BNOCNAME);
     m.attr("BEBADOP") = py::int_(BEBADOP);
-
+    m.attr("BMAXVAL") = py::int_(BMAXVAL);
+    
     //Queue errors:
     m.attr("QMEINVAL") = py::int_(QMEINVAL);
     m.attr("QMEBADRMID") = py::int_(QMEBADRMID);
@@ -909,77 +911,6 @@ tpenqueue() and tpdequeue() module function.
     Use :attr:`TPQCTL.failurequeue` use failure queue for failed 
     automatic queue messages.
 
-Following :attr:`TPQCTL.diagnostic` (*QmException.code*) codes may be returned:
-
-.. data:: QMEINVAL
-    
-    Invalid data.
-
-.. data:: QMEBADRMID
-    
-    RFU.
-
-.. data:: QMENOTOPEN
-    
-    RFU.
-
-.. data:: QMETRAN
-    
-    RFU.
-
-.. data:: QMEBADMSGID
-    
-    RFU.
-
-.. data:: QMESYSTEM
-    
-    System error.
-
-.. data:: QMEOS
-    
-    OS error.
-
-.. data:: QMEABORTED
-    
-    RFU.
-
-.. data:: QMENOTA
-    
-    RFU.
-
-.. data:: QMEPROTO
-    
-    RFU.
-
-.. data:: QMEBADQUEUE
-    
-    Bad queue name.
-
-.. data:: QMENOMSG
-    
-    No messages in queue.
-
-.. data:: QMEINUSE
-    
-    RFU.
-
-.. data:: QMENOSPACE
-    
-    RFU.
-
-.. data:: QMERELEASE
-    
-    RFU.
-
-.. data:: QMEINVHANDLE
-    
-    RFU.
-
-.. data:: QMESHARE
-    
-    RFU.
-
-
 TPEVCTL
 -------
 
@@ -1201,6 +1132,537 @@ Flags to tpsubscribe/tpunsubscribe (:attr:`TPEVCTL.flags`)
     Do not unsubscribe from event in case if service failed
     when event was delivered.
 
+.. data:: TPEVQUEUE
+
+    RFU.
+
+.. data:: TPEVTRAN
+
+    RFU.
+
+Events returned by conversational API
+-------------------------------------
+
+.. data:: TPEV_DISCONIMM
+
+    Immediate disconnect event.
+
+.. data:: TPEV_SVCERR
+
+    Server died or :func:`.tpreturn` failed.
+    
+.. data:: TPEV_SVCFAIL
+
+    Server returned :data:`.TPFAIL` with :func:`.tpreturn`.
+    
+.. data:: TPEV_SVCSUCC
+
+    Server returned with success.
+    
+.. data:: TPEV_SENDONLY
+
+    Sender puts receiving party in sender mode.
+
+
+Flags for :func:`.tplogqinfo` input and return
+----------------------------------------------
+
+.. data:: TPLOGQI_GET_NDRX
+
+    Query logging information about **NDRX* topic.
+
+.. data:: TPLOGQI_GET_UBF
+
+    Query logging information about **UBF* topic.
+
+.. data:: TPLOGQI_GET_TP
+
+    Query logging information about **TP* topic.
+
+.. data:: TPLOGQI_EVAL_RETURN
+
+    Evaluate request regardless of log level.
+
+.. data:: TPLOGQI_RET_HAVDETAILED
+
+    Detailed flag have been set for logger.
+
+Error Codes
+===========
+
+This section lists error codes used in API interface.
+
+ATMI Errors
+-----------
+
+Atmi Errors are thrown in **AtmiException** object.
+Following constants may be set in *code* field.
+
+Error code values are given for reference reasons only. The codes may change
+in future without a notice.
+
+.. data:: TPMINVAL
+    
+    0 - Minimum error, no error.
+        
+.. data:: TPEABORT
+
+    1 - Transaction aborted.
+
+.. data:: TPEBADDESC
+
+    2 - Bad descriptor.
+
+.. data:: TPEBLOCK
+
+    3 - Blocking condition found but resource is configured as
+    non blocking (e.g. flag :data:`.TPNOBLOCK` was passed).
+
+.. data:: TPEINVAL
+
+    4 - Invalid arguments.
+
+.. data:: TPELIMIT
+
+    5 - Limit reached.
+
+.. data:: TPENOENT
+
+    6 - No entry.
+
+.. data:: TPEOS
+
+    7 - Operating system error.
+
+.. data:: TPEPERM
+
+    8 - Permissions error.
+
+.. data:: TPEPROTO
+
+    9 - Protocol error. Invalid call sequence.
+
+.. data:: TPESVCERR
+
+    10 - Service crashed.
+
+.. data:: TPESVCFAIL
+
+    11 - Service user code failed.
+
+.. data:: TPESYSTEM
+
+    12 - Enduro/X system error.
+
+.. data:: TPETIME
+
+    13 - Call timed out.
+
+.. data:: TPETRAN
+
+    14 - Transaction error.
+
+.. data:: TPGOTSIG
+
+    15 - Got signal.
+
+.. data:: TPERMERR
+
+    15 - Resource manager error.
+
+.. data:: TPEITYPE
+
+    17 - Input ATMI buffer error.
+
+.. data:: TPEOTYPE
+
+    18 - Output ATMI buffer error.
+
+.. data:: TPERELEASE
+
+    19 - Invalid release version.
+
+.. data:: TPEHAZARD
+
+    20 - Partial transaction commit/abort error.
+
+.. data:: TPEHEURISTIC
+
+    21 - Partial transaction commit/abort error.
+
+.. data:: TPEEVENT
+
+    22 - Event occurred.
+
+.. data:: TPEMATCH
+
+    23 - Matching identifier, duplicate.
+
+.. data:: TPEDIAGNOSTIC
+
+    24 - Diagnostic error returned in :attr:`TPQCTL.diagnostic`.
+
+.. data:: TPEMIB
+
+    25 - RFU.
+
+UBF Errors
+----------
+
+Unified Buffer Format (UBF) errors are thrown in **UbfException** object.
+Following constants may be set in *code* field.
+
+Error code values are given for reference reasons only. The codes may change
+in future without a notice.
+
+.. data:: BMINVAL
+    
+        0 - Minimum error, no error.
+        
+.. data:: BERFU0
+    
+        1 - Reserved for future use.
+
+.. data:: BALIGNERR           
+    
+        2 - Buffer not aligned to platform address or corrupted.
+
+.. data:: BNOTFLD
+
+        3 - Buffer not fielded / TLV formatted.
+
+.. data:: BNOSPACE            
+    
+        4 - No space in buffer.
+
+.. data:: BNOTPRES            
+        
+        5 - Field not present.
+
+.. data:: BBADFLD
+        
+        6 - Bad field ID.
+
+.. data:: BTYPERR
+    
+        7 - Bad field type.
+
+.. data:: BEUNIX
+
+        8 - System error occurred.
+
+.. data:: BBADNAME
+        
+        9 - Bad field name.
+
+.. data:: BMALLOC
+        
+        10 - Malloc failed, out of mem?
+
+.. data:: BSYNTAX
+    
+        11 - UBF Boolean expression error or UBF bad text format.
+
+.. data:: BFTOPEN
+    
+        12 - Failed to open field tables.
+
+.. data:: BFTSYNTAX
+    
+        13 - Field table syntax error.
+
+.. data:: BEINVAL
+        
+        14 - Invalid value.
+
+.. data:: BERFU1
+        
+        15 - Reserved for future use.
+
+.. data:: BBADTBL
+    
+        16 - Reserved for future use.
+
+.. data:: BBADVIEW
+    
+        17 - Invalid compiled VIEW file.
+
+.. data:: BVFSYNTAX
+    
+        18 - Source VIEW file syntax error.
+
+.. data:: BVFOPEN
+        
+        19 - Failed to open VIEW file.
+
+.. data:: BBADACM
+        
+        20 - Reserved for future use.
+
+.. data:: BNOCNAME
+    
+        21 - Structure field not found for VIEW.
+
+.. data:: BEBADOP
+        
+        22 - Buffer operation not supported (complex type).
+        
+.. data:: NMAXVAL
+        
+        22 - Maximum error code.
+
+Enduro/X standard errors
+------------------------
+
+Enduro/X standard library errors are thrown in **NstdException** object.
+Following constants may be set in *code* field.
+
+Error code values are given for reference reasons only. The codes may change
+in future without a notice.
+
+.. data:: NMINVAL
+        
+        0 - Minimum error code.
+        
+.. data:: NEINVALINI
+    
+        1 - Invalid INI file.
+        
+.. data:: NEMALLOC
+    
+        2 - Malloc failed.
+        
+.. data:: NEUNIX
+    
+        3 - Unix error occurred.
+        
+.. data:: NEINVAL
+    
+        4 - Invalid value passed to function.
+        
+.. data:: NESYSTEM
+    
+        5 - System failure.
+        
+.. data:: NEMANDATORY
+
+        6 - Mandatory field is missing.
+        
+.. data:: NEFORMAT
+    
+        7 - Format error.
+        
+.. data:: NETOUT
+
+        8 - Time-out condition.
+        
+.. data:: NENOCONN
+        
+        9 - Connection not found.
+        
+.. data:: NELIMIT
+        
+        10 - Limit reached.
+        
+.. data:: NEPLUGIN
+        
+        11 - Plugin error.
+        
+.. data:: NENOSPACE
+        
+        12 - No space.
+        
+.. data:: NEINVALKEY
+        
+        13 - Invalid key (probably).
+        
+.. data:: NENOENT
+        
+        14 - No such file or directory.
+        
+.. data:: NEWRITE
+        
+        15 - Failed to open/write.
+        
+.. data:: NEEXEC
+        
+        16 - Failed to execute.
+        
+.. data:: NESUPPORT
+        
+        17 - Command not supported.
+        
+.. data:: NEEXISTS
+        
+        18 - Duplicate action.
+        
+.. data:: NEVERSION
+        
+        19 - API version conflict.
+
+.. data:: NMAXVAL
+        
+        19 - Maximum error code.
+
+Persistent queue errors
+-----------------------
+
+Following :attr:`TPQCTL.diagnostic` (*QmException.code*) codes may be returned.
+
+Error code values are given for reference reasons only. The codes may change
+in future without a notice.
+
+.. data:: QMEINVAL
+    
+    -1 - Invalid data.
+
+.. data:: QMEBADRMID
+    
+    -2 - RFU.
+
+.. data:: QMENOTOPEN
+    
+    -3 - RFU.
+
+.. data:: QMETRAN
+    
+    -4 - RFU.
+
+.. data:: QMEBADMSGID
+    
+    -5 - RFU.
+
+.. data:: QMESYSTEM
+    
+    -6 - System error.
+
+.. data:: QMEOS
+    
+    -7 - OS error.
+
+.. data:: QMEABORTED
+    
+    -8 - RFU.
+
+.. data:: QMENOTA
+    
+    -8 - RFU.
+
+.. data:: QMEPROTO
+    
+    -9 - RFU.
+
+.. data:: QMEBADQUEUE
+    
+    -10 - Bad queue name.
+
+.. data:: QMENOMSG
+    
+    -11 - No messages in queue.
+
+.. data:: QMEINUSE
+    
+    -12 - RFU.
+
+.. data:: QMENOSPACE
+    
+    -13 - RFU.
+
+.. data:: QMERELEASE
+    
+    -14 - RFU.
+
+.. data:: QMEINVHANDLE
+    
+    -15 - RFU.
+
+.. data:: QMESHARE
+    
+    -16 - RFU.
+
+Other constants
+===============
+
+This section lists other constants used in the Enduro/X Python
+module.
+
+Log levels
+----------
+
+.. data:: log_always
+    
+        2 - Fatal loging level.
+
+.. data:: log_error
+    
+        2 - Error loging level.
+
+.. data:: log_warn
+    
+        3 - Warning logging level.
+
+.. data:: log_info
+    
+        4 - Info logging level.
+
+.. data:: log_debug
+    
+        5 - Debug logging level.
+
+.. data:: log_dump
+    
+        6 - Unofficial log level, dump.
+
+Loging topics aka facilities
+----------------------------
+
+.. data:: LOG_FACILITY_NDRX
+    
+        Process level, Enduro/X core logging topic.
+
+.. data:: LOG_FACILITY_UBF
+    
+        Process level, Enduro/X UBF library logging topic.
+
+.. data:: LOG_FACILITY_TP
+
+        Process level, user logging topic.
+
+.. data:: LOG_FACILITY_NDRX_THREAD
+    
+        Thread level, Enduro/X core logging topic.
+        
+.. data:: LOG_FACILITY_UBF_THREAD
+    
+        Thread level, Enduro/X UBF library logging topic.
+
+.. data:: LOG_FACILITY_TP_THREAD
+    
+        Thread level, user logging topic.
+
+.. data:: LOG_FACILITY_NDRX_REQUEST
+    
+        Request logging (per context), Enduro/X core logging topic.
+
+.. data:: LOG_FACILITY_UBF_REQUEST
+    
+        Request logging (per context), Enduro/X UBF library logging topic.
+
+.. data:: LOG_FACILITY_TP_REQUEST
+    
+        Request logging (per context), user logging topic.
+
+Transaction completion
+----------------------
+
+.. data:: TP_CMT_LOGGED
+    
+        Return from commit when logged.
+
+.. data:: TP_CMT_COMPLETE
+    
+        Return from commit when fully complete.
+        
 )pbdoc";
 }
 

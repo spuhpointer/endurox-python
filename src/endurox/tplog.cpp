@@ -113,7 +113,7 @@ expublic void ndrxpy_register_tplog(py::module &m)
             tplog(log_error, const_cast<char *>(message));
         },
         R"pbdoc(
-        Print warning message to log file. Info is logged as level **3**.
+        Print warning message to log file. Warning is logged as level **3**.
 
         For more details see **tplog(3)** C API call
 
@@ -131,7 +131,7 @@ expublic void ndrxpy_register_tplog(py::module &m)
             tplog(log_error, const_cast<char *>(message));
         },
         R"pbdoc(
-        Print error message to log file. Info is logged as level **2**.
+        Print error message to log file. Error is logged as level **2**.
 
         For more details see **tplog(3)** C API call
 
