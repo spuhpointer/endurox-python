@@ -360,6 +360,18 @@ struct pytpcontext
     py::bytes ctx_bytes;
 };
 
+/**
+ * @brief tpgetctxt() return value
+ */
+struct pytpgetctxtret
+{
+    int pyret;   /**< Return value */
+    pytpcontext pyctxt; /**< context value*/
+
+    pytpgetctxtret(int pyret, pytpcontext pyctxt)
+        : pyret(pyret), pyctxt(pyctxt) {}
+};
+
 /*---------------------------Globals------------------------------------*/
 /*---------------------------Statics------------------------------------*/
 /*---------------------------Prototypes---------------------------------*/

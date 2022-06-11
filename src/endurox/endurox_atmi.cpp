@@ -592,6 +592,21 @@ expublic void ndrxpy_register_atmi(py::module &m)
           throw py::index_error();
         } });
 
+    //Return value for tpgetctxt()
+    //First comes ret value
+    py::class_<pytpgetctxtret>(m, "TpGetCtxtRet")
+        .def_readonly("pyret", &pytpgetctxtret::pyret)
+        .def_readonly("pyctxt", &pytpgetctxtret::pyctxt)
+        .def("__getitem__", [](const pytpgetctxtret &s, size_t i)
+             {
+        if (i == 0) {
+          return py::make_tuple(s.pyret);
+        } else if (i == 1) {
+          return py::make_tuple(s.pyctxt);
+        } else {
+          throw py::index_error();
+        } });
+
     py::class_<NDRXPY_TPQCTL>(m, "TPQCTL")
         .def(py::init([](long flags, long deq_time, long priority, long exp_time,
                          long urcode, long delivery_qos, long reply_qos,
@@ -2084,12 +2099,13 @@ expublic void ndrxpy_register_atmi(py::module &m)
         [](long flags)
         {
             TPCONTEXT_T ctxt;
-            if (EXFAIL==tpgetctxt(&ctxt, flags))
+            int ret;
+            if (EXFAIL==(ret=tpgetctxt(&ctxt, flags)))
             {
                 throw atmi_exception(tperrno);
             }
 
-            return pytpcontext(&ctxt);
+            return py::make_tuple(ret, pytpcontext(&ctxt));
         },
         R"pbdoc(
         Retrieve current ATMI context handle and put current thread
@@ -2100,12 +2116,16 @@ expublic void ndrxpy_register_atmi(py::module &m)
         Parameters
         ----------
         flags : int
-            | RFU, default **0**.
+            RFU, default **0**.
 
         Returns
         -------
+        ret : int
+            In case if current thread was NULL associated :data:`.TPNULLCONTEXT` is returned.
+            In case if current thread was associated with XATMI context, :data:`.TPMULTICONTEXTS`
+            is returned.
         context : TPCONTEXT_T
-            | ATMI Context handle.
+            ATMI Context handle.
 
          )pbdoc",
         py::arg("flags")=0);

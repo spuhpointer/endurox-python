@@ -353,6 +353,7 @@ PYBIND11_MODULE(endurox, m)
     m.attr("TPEX_STRING") = py::int_(TPEX_STRING);
 
     m.attr("TPMULTICONTEXTS") = py::int_(TPMULTICONTEXTS);
+    m.attr("TPNULLCONTEXT") = py::int_(TPNULLCONTEXT);
 
     m.attr("MIB_LOCAL") = py::int_(MIB_LOCAL);
 
@@ -1618,50 +1619,61 @@ Logging topics aka facilities
 
 .. data:: LOG_FACILITY_NDRX
     
-        Process level, Enduro/X core logging topic.
+    Process level, Enduro/X core logging topic.
 
 .. data:: LOG_FACILITY_UBF
     
-        Process level, Enduro/X UBF library logging topic.
+    Process level, Enduro/X UBF library logging topic.
 
 .. data:: LOG_FACILITY_TP
 
-        Process level, user logging topic.
+    Process level, user logging topic.
 
 .. data:: LOG_FACILITY_NDRX_THREAD
     
-        Thread level, Enduro/X core logging topic.
+    Thread level, Enduro/X core logging topic.
         
 .. data:: LOG_FACILITY_UBF_THREAD
     
-        Thread level, Enduro/X UBF library logging topic.
+    Thread level, Enduro/X UBF library logging topic.
 
 .. data:: LOG_FACILITY_TP_THREAD
     
-        Thread level, user logging topic.
+    Thread level, user logging topic.
 
 .. data:: LOG_FACILITY_NDRX_REQUEST
     
-        Request logging (per context), Enduro/X core logging topic.
+    Request logging (per context), Enduro/X core logging topic.
 
 .. data:: LOG_FACILITY_UBF_REQUEST
     
-        Request logging (per context), Enduro/X UBF library logging topic.
+    Request logging (per context), Enduro/X UBF library logging topic.
 
 .. data:: LOG_FACILITY_TP_REQUEST
     
-        Request logging (per context), user logging topic.
+    Request logging (per context), user logging topic.
 
 Transaction completion
 ----------------------
 
 .. data:: TP_CMT_LOGGED
     
-        Return from commit when logged.
+    Return from commit when logged.
 
 .. data:: TP_CMT_COMPLETE
     
-        Return from commit when fully complete.
+    Return from commit when fully complete.
+
+Transaction completion
+----------------------
+
+.. data:: TPMULTICONTEXTS
+    
+    Atmi context was intialized.
+
+.. data:: TPNULLCONTEXT
+    
+    Atmi context as not initialized.
 
 )pbdoc";
 }
