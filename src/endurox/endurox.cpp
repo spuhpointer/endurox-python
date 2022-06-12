@@ -1170,15 +1170,15 @@ Flags for :func:`.tplogqinfo` input and return
 
 .. data:: TPLOGQI_GET_NDRX
 
-    Query logging information about **NDRX* topic.
+    Query logging information about **NDRX** topic.
 
 .. data:: TPLOGQI_GET_UBF
 
-    Query logging information about **UBF* topic.
+    Query logging information about **UBF** topic.
 
 .. data:: TPLOGQI_GET_TP
 
-    Query logging information about **TP* topic.
+    Query logging information about **TP** topic.
 
 .. data:: TPLOGQI_EVAL_RETURN
 
@@ -1423,87 +1423,87 @@ in future without a notice.
 
 .. data:: NMINVAL
         
-        0 - Minimum error code.
+    0 - Minimum error code.
         
 .. data:: NEINVALINI
     
-        1 - Invalid INI file.
+    1 - Invalid INI file.
         
 .. data:: NEMALLOC
     
-        2 - Malloc failed.
+    2 - Malloc failed.
         
 .. data:: NEUNIX
     
-        3 - Unix error occurred.
+    3 - Unix error occurred.
         
 .. data:: NEINVAL
     
-        4 - Invalid value passed to function.
+    4 - Invalid value passed to function.
         
 .. data:: NESYSTEM
     
-        5 - System failure.
+    5 - System failure.
         
 .. data:: NEMANDATORY
 
-        6 - Mandatory field is missing.
+    6 - Mandatory field is missing.
         
 .. data:: NEFORMAT
     
-        7 - Format error.
+    7 - Format error.
         
 .. data:: NETOUT
 
-        8 - Time-out condition.
+    8 - Time-out condition.
         
 .. data:: NENOCONN
         
-        9 - Connection not found.
+    9 - Connection not found.
         
 .. data:: NELIMIT
         
-        10 - Limit reached.
+    10 - Limit reached.
         
 .. data:: NEPLUGIN
         
-        11 - Plugin error.
+    11 - Plugin error.
         
 .. data:: NENOSPACE
         
-        12 - No space.
+    12 - No space.
         
 .. data:: NEINVALKEY
         
-        13 - Invalid key (probably).
+    13 - Invalid key (probably).
         
 .. data:: NENOENT
         
-        14 - No such file or directory.
+    14 - No such file or directory.
         
 .. data:: NEWRITE
         
-        15 - Failed to open/write.
+    15 - Failed to open/write.
         
 .. data:: NEEXEC
         
-        16 - Failed to execute.
+    16 - Failed to execute.
         
 .. data:: NESUPPORT
         
-        17 - Command not supported.
+    17 - Command not supported.
         
 .. data:: NEEXISTS
         
-        18 - Duplicate action.
+    18 - Duplicate action.
         
 .. data:: NEVERSION
         
-        19 - API version conflict.
+    19 - API version conflict.
 
 .. data:: NMAXVAL
         
-        19 - Maximum error code.
+    19 - Maximum error code.
 
 Persistent queue errors
 -----------------------
@@ -1592,27 +1592,27 @@ Log levels
 
 .. data:: log_always
     
-        2 - Fatal loging level.
+    2 - Fatal loging level.
 
 .. data:: log_error
     
-        2 - Error loging level.
+    2 - Error loging level.
 
 .. data:: log_warn
     
-        3 - Warning logging level.
+    3 - Warning logging level.
 
 .. data:: log_info
     
-        4 - Info logging level.
+    4 - Info logging level.
 
 .. data:: log_debug
     
-        5 - Debug logging level.
+    5 - Debug logging level.
 
 .. data:: log_dump
     
-        6 - Unofficial log level, dump.
+    6 - Unofficial log level, dump.
 
 Logging topics aka facilities
 -----------------------------
@@ -1674,6 +1674,21 @@ Transaction completion
 .. data:: TPNULLCONTEXT
     
     Atmi context as not initialized.
+
+MIB interface
+-------------
+
+.. data:: TAOK
+    
+    Value for **TA_ERROR**, success.
+
+.. data:: TAUPDATED
+    
+    Value for **TA_ERROR**, success, data updated.
+
+.. data:: TAPARTIAL
+    
+    Value for **TA_ERROR**, Partial succeed, have updates.
 
 )pbdoc";
 }
