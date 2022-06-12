@@ -149,7 +149,7 @@ expublic py::object ndrxpy_to_py_ubf(UBFH *fbfr, BFLDLEN buflen = 0)
             break;
         case BFLD_STRING:
 
-            NDRX_LOG(log_debug, "Processing FLD_STRING... [%s]", d_ptr);
+            NDRX_LOG(log_dump, "Processing FLD_STRING... [%s]", d_ptr);
             val.append(
 #if PY_MAJOR_VERSION >= 3
                 py::str(d_ptr)

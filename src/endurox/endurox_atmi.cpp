@@ -1322,7 +1322,7 @@ expublic void ndrxpy_register_atmi(py::module &m)
         Returns
         -------
         cnt : int
-            | Number of unsolicited messages processed.
+            Number of unsolicited messages processed.
 
             )pbdoc");
 
@@ -1353,9 +1353,9 @@ expublic void ndrxpy_register_atmi(py::module &m)
         Parameters
         ----------
         ibuf : dict
-            | ATMI buffer.
+            ATMI buffer.
         flags : int
-            | Bitwise flags, may contain **TPEX_STRING**. Default is **0**.
+            Bitwise flags, may contain **TPEX_STRING**. Default is **0**.
 
         Returns
         -------
@@ -1392,9 +1392,9 @@ expublic void ndrxpy_register_atmi(py::module &m)
         Parameters
         ----------
         istr : str
-            | Serialized buffer with :func:`.tpexport`
+            Serialized buffer with :func:`.tpexport`
         flags : int
-            | Bitwise flags, may contain :data:`.TPEX_STRING`, :data:`.TPEX_NOCHANGE`. Default is **0**.
+            Bitwise flags, may contain :data:`.TPEX_STRING`, :data:`.TPEX_NOCHANGE`. Default is **0**.
 
         Returns
         -------
@@ -1431,12 +1431,12 @@ expublic void ndrxpy_register_atmi(py::module &m)
         Parameters
         ----------
         eventname : str
-            | Event name.
+            Event name.
         data : dict
-            | ATMI buffer to post.
+            ATMI buffer to post.
         flags : int
-            | Bitwise flags, may contain :data:`.TPNOTRAN`, :data:`.TPNOREPLY`, :data:`.TPSIGRSTRT`, :data:`.TPNOTIME` and :data:`.TPNOBLOCK` 
-            | Default is **0**.
+            Bitwise flags, may contain :data:`.TPNOTRAN`, :data:`.TPNOREPLY`, :data:`.TPSIGRSTRT`, :data:`.TPNOTIME` and :data:`.TPNOBLOCK` 
+            Default is **0**.
 
         Returns
         -------
@@ -1470,7 +1470,7 @@ expublic void ndrxpy_register_atmi(py::module &m)
         Parameters
         ----------
         flags : int
-            | Bitwise flags, may contain :data:`.TPBLK_ALL`, :data:`.TPBLK_NEXT`.
+            Bitwise flags, may contain :data:`.TPBLK_ALL`, :data:`.TPBLK_NEXT`.
 
         Returns
         -------
@@ -1502,9 +1502,9 @@ expublic void ndrxpy_register_atmi(py::module &m)
         Parameters
         ----------
         blktime : int
-            | Timeout value in seconds.
+            Timeout value in seconds.
         flags : int
-            | :data:`.TPBLK_ALL` or :data:`TPBLK_NEXT`.
+            :data:`.TPBLK_ALL` or :data:`TPBLK_NEXT`.
             )pbdoc"
         , py::arg("blktime"), py::arg("flags"));
 
@@ -1538,8 +1538,8 @@ expublic void ndrxpy_register_atmi(py::module &m)
         Parameters
         ----------
         rval : int
-            | Or'd flags, default is 0: 
-            | **TPU_IGN** - ignore incoming unsolicited messages.
+            Or'd flags, default is 0: 
+            **TPU_IGN** - ignore incoming unsolicited messages.
      )pbdoc", py::arg("flags") = 0);
 
     m.def(
@@ -1593,9 +1593,9 @@ expublic void ndrxpy_register_atmi(py::module &m)
         Parameters
         ----------
         timeout : int
-            | Transaction timeout value in seconds.
+            Transaction timeout value in seconds.
         flags : int
-            | RFU. Shall be set to **0**, which is default value.
+            RFU. Shall be set to **0**, which is default value.
 
          )pbdoc"
          , py::arg("timeout"), py::arg("flags") = 0);
@@ -1626,8 +1626,8 @@ expublic void ndrxpy_register_atmi(py::module &m)
         Parameters
         ----------
         flags : int
-            | Bitwise flags of :data:`.TPTXNOOPTIM` and :data:`.TPTXTMSUSPEND`.
-            | default value is **0**.
+            Bitwise flags of :data:`.TPTXNOOPTIM` and :data:`.TPTXTMSUSPEND`.
+            default value is **0**.
 
         Returns
         -------
@@ -1670,8 +1670,8 @@ expublic void ndrxpy_register_atmi(py::module &m)
         tranid : TPTRANID
             Transaction identifier returned by :func:`.tpsuspend`.
         flags : int
-            | Bitwise flags of :data:`.TPTXNOOPTIM` and :data:`.TPTXTMSUSPEND`.
-            | default value is **0**.
+            Bitwise flags of :data:`.TPTXNOOPTIM` and :data:`.TPTXTMSUSPEND`.
+            default value is **0**.
 
         Returns
         -------
@@ -1710,7 +1710,7 @@ expublic void ndrxpy_register_atmi(py::module &m)
         Parameters
         ----------
         flags : int
-            | Bitwise flags of :data:`.TPTXCOMMITDLOG` default value is **0**.
+            Bitwise flags of :data:`.TPTXCOMMITDLOG` default value is **0**.
 
          )pbdoc", py::arg("flags") = 0);
 
@@ -1744,7 +1744,7 @@ expublic void ndrxpy_register_atmi(py::module &m)
         Parameters
         ----------
         flags : int
-            | RFU, default value is **0**.
+            RFU, default value is **0**.
 
          )pbdoc", py::arg("flags") = 0);
 
@@ -1767,7 +1767,7 @@ expublic void ndrxpy_register_atmi(py::module &m)
         Parameters
         ----------
         flags : int
-            | RFU, default value is **0**.
+            RFU, default value is **0**.
 
         Returns
         -------
@@ -1870,14 +1870,14 @@ expublic void ndrxpy_register_atmi(py::module &m)
         **Parameters:**
 
         input : bytes
-            | Data to encrypt.
+            Data to encrypt.
         flags : int
-            | Shall be set to **0** (default).
+            Shall be set to **0** (default).
 
         **Returns:**
 
         value : bytes
-            | Encrypted value block
+            Encrypted value block
 
          )pbdoc",
         py::arg("input"), py::arg("flags")=0);
@@ -1926,14 +1926,14 @@ expublic void ndrxpy_register_atmi(py::module &m)
         **Parameters:**
 
         input : str
-            | Data to encrypt, string.
+            Data to encrypt, string.
         flags : int
-            | Shall be set to **0** (default).
+            Shall be set to **0** (default).
 
         **Returns:**
 
         value : str
-            | Encrypted value, Base64 string
+            Encrypted value, Base64 string
 
          )pbdoc",
         py::arg("input"), py::arg("flags")=0);
@@ -1977,14 +1977,14 @@ expublic void ndrxpy_register_atmi(py::module &m)
         **Parameters:**
 
         input : bytes
-            | Encrypted data.
+            Encrypted data.
         flags : int
-            | Shall be set to **0** (default).
+            Shall be set to **0** (default).
 
         **Returns:**
 
         value : bytes
-            | Decrypted value.
+            Decrypted value.
 
          )pbdoc",
         py::arg("input"), py::arg("flags")=0);
@@ -2029,14 +2029,14 @@ expublic void ndrxpy_register_atmi(py::module &m)
         **Parameters:**
 
         input : str
-            | Base64 encrypted data.
+            Base64 encrypted data.
         flags : int
-            | Shall be set to **0** (default).
+            Shall be set to **0** (default).
 
         **Returns:**
 
         value : str
-            | Decrypted value.
+            Decrypted value.
 
          )pbdoc",
         py::arg("input"), py::arg("flags")=0);
@@ -2045,7 +2045,13 @@ expublic void ndrxpy_register_atmi(py::module &m)
         "tuxgetenv",
         [](std::string envname)
         {
-            return py::str(tuxgetenv(const_cast<char *>(envname.c_str())));
+            char *ret = tuxgetenv(const_cast<char *>(envname.c_str()));
+
+            if (NULL!=ret)
+            {
+                return py::str(ret);
+            }
+            return py::str("");
         },
         R"pbdoc(
         Get environment variable. This function directly uses libc getenv() function (i.e. avoids
@@ -2057,12 +2063,12 @@ expublic void ndrxpy_register_atmi(py::module &m)
         Parameters
         ----------
         envname : str
-            | Environment name.
+            Environment name.
 
         Returns
         -------
         env_val : str
-            | Environment variable value.
+            Environment variable value.
 
          )pbdoc",
         py::arg("envname"));
@@ -2082,14 +2088,14 @@ expublic void ndrxpy_register_atmi(py::module &m)
         Parameters
         ----------
         auto_destroy : bool
-            | If set to **true**, delete the Context when current thread exits.
+            If set to **true**, delete the Context when current thread exits.
         auto_set : bool
-            | If set to **true**, associate current thread with created context.
+            If set to **true**, associate current thread with created context.
 
         Returns
         -------
         context : TPCONTEXT_T
-            | ATMI Context handle.
+            ATMI Context handle.
 
          )pbdoc",
         py::arg("auto_destroy"), py::arg("auto_set"));
@@ -2155,9 +2161,9 @@ expublic void ndrxpy_register_atmi(py::module &m)
         **Parameters**
 
         context : TPCONTEXT_T
-            | Context handle.
+            Context handle.
         flags : int
-            | RFU, default **0**.
+            RFU, default **0**.
 
          )pbdoc",
         py::arg("context"), py::arg("flags")=0);
@@ -2183,9 +2189,9 @@ expublic void ndrxpy_register_atmi(py::module &m)
         **Parameters**
 
         none : none
-            | Python's :const:`py::None` constant.
+            Python's :const:`py::None` constant.
         flags : int
-            | RFU, default **0**.
+            RFU, default **0**.
 
          )pbdoc",
         py::arg("none"), py::arg("flags")=0);
@@ -2212,7 +2218,7 @@ expublic void ndrxpy_register_atmi(py::module &m)
         Parameters
         ----------
         context : int
-            | ATMI context read by :func:`.tpgetctxt` or :func:`.tpnewctxt`
+            ATMI context read by :func:`.tpgetctxt` or :func:`.tpnewctxt`
          )pbdoc",
         py::arg("context"));
 
@@ -2235,7 +2241,7 @@ expublic void ndrxpy_register_atmi(py::module &m)
         Returns
         -------
         nodeid : int
-            | Enduro/X cluster node id.
+            Enduro/X cluster node id.
          )pbdoc"
         );
 
@@ -2253,7 +2259,7 @@ expublic void ndrxpy_register_atmi(py::module &m)
         Returns
         -------
         prio : int
-            | Last ATMI service call priority.
+            Last ATMI service call priority.
      )pbdoc");
 
     m.def(
@@ -2283,9 +2289,9 @@ expublic void ndrxpy_register_atmi(py::module &m)
         Parameters
         ----------
         prio : int
-            | Service call priority.
+            Service call priority.
         flags : int
-            | Flag :data:`.TPABSOLUTE`. Default is **0**.
+            Flag :data:`.TPABSOLUTE`. Default is **0**.
      )pbdoc", py::arg("prio"), py::arg("flags")=0);
 
     m.def(
@@ -2308,7 +2314,7 @@ expublic void ndrxpy_register_atmi(py::module &m)
         Returns
         -------
         flags : int
-            | :data:`.TP_CMT_LOGGED` or :data:`.TP_CMT_COMPLETE` (default).
+            :data:`.TP_CMT_LOGGED` or :data:`.TP_CMT_COMPLETE` (default).
          )pbdoc", py::arg("flags"));
 
     m.def(
@@ -2351,7 +2357,7 @@ expublic void ndrxpy_register_atmi(py::module &m)
         Parameters
         ----------
         tout : int
-            | Timeout value in seconds.
+            Timeout value in seconds.
      )pbdoc",
         py::arg("tout")
         );

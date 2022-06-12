@@ -522,8 +522,34 @@ How to read this documentation
 ==============================
 
 This documentation contains only short description of the API calls which mentions
-core functinoality provided by the API. Each API call contains reference to underlaying
+core functionality provided by the API. Each API call contains reference to underlaying
 C call which explains in deep details how exactly given function behaves.
+
+
+Sample application
+==================
+
+This sections lists basic ATMI client and server examples using endurox-python module.
+
+
+ATMI Server
+-----------
+
+
+.. code-block:: python
+   :caption: STRING buffer encoding call
+   :name: string-call
+        import endurox as e
+
+        tperrno, tpurcode, retbuf = e.tpcall("ECHO", { "data":"HELLO WORLD" })
+
+        print(retbuf)
+
+
+
+ATMI Client
+-----------
+
 
 ATMI buffer formats
 ====================
@@ -1702,6 +1728,17 @@ MIB interface
 .. data:: TAPARTIAL
     
     Value for **TA_ERROR**, Partial succeed, have updates.
+
+Generic status codes
+--------------------
+
+.. data:: EXSUCCEED
+    
+    Success
+
+.. data:: EXFAIL
+    
+    Failure
 
 )pbdoc";
 }

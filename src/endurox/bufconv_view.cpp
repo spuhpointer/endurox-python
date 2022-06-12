@@ -165,7 +165,7 @@ expublic py::object ndrxpy_to_py_view(char *cstruct, char *view, long size)
                 break;
             case BFLD_STRING:
 
-                NDRX_LOG(log_debug, "Processing FLD_STRING...");
+                NDRX_LOG(log_dump, "Processing FLD_STRING...");
                 val.append(
     #if PY_MAJOR_VERSION >= 3
                     py::str(tmp.buf)
@@ -203,7 +203,7 @@ static void from_py1_view(atmibuf &buf, const char *view, const char *cname, BFL
                      py::handle obj)
 {
 
-    NDRX_LOG(log_debug, "Processing %s.%s[%d]", view, cname, oc);
+    NDRX_LOG(log_dump, "Processing %s.%s[%d]", view, cname, oc);
     if (obj.is_none())
     {
 
