@@ -504,8 +504,8 @@ expublic void ndrxpy_register_ubf(py::module &m)
 
         :raise UbfException: 
             | Following error codes may be present:
-            | **BBADFLD** - Field not found in FD files or UBFDB.
-            | **BFTOPEN** - Unable to open field tables.
+            | :data:`.BBADFLD` - Field not found in FD files or UBFDB.
+            | :data:`.BFTOPEN` - Unable to open field tables.
 
         Parameters
         ----------
@@ -537,8 +537,8 @@ expublic void ndrxpy_register_ubf(py::module &m)
 
         :raise UbfException: 
             | Following error codes may be present:
-            | **BBADNAME** - Field not found in FD files or UBFDB.
-            | **BFTOPEN** - Unable to open field tables.
+            | :data:`.BBADNAME` - Field not found in FD files or UBFDB.
+            | :data:`.BFTOPEN` - Unable to open field tables.
 
         Parameters
         ----------
@@ -586,9 +586,9 @@ expublic void ndrxpy_register_ubf(py::module &m)
 
         :raise UbfException: 
             | Following error codes may be present:
-            | **BBADNAME** - Field not found in FD files or UBFDB.
-            | **BSYNTAX** - Bad boolean expression syntax
-            | **BFTOPEN** - Unable to open field tables.
+            | :data:`.BBADNAME` - Field not found in FD files or UBFDB.
+            | :data:`.BSYNTAX` - Bad boolean expression syntax
+            | :data:`.BFTOPEN` - Unable to open field tables.
 
         Parameters
         ----------
@@ -634,13 +634,13 @@ expublic void ndrxpy_register_ubf(py::module &m)
 
         :raise UbfException: 
             | Following error codes may be present:
-            | **BALIGNERR** - Corrupted UBF buffer.
-            | **BNOTFLD** - Invalid ATMI buffer format, not UBF.
-            | **BEINVAL** - Invalid arguments passed.
-            | **BBADNAME** - Field not found in FD files or UBFDB.
-            | **BSYNTAX** - Bad boolean expression syntax
-            | **BFTOPEN** - Unable to open field tables.
-            | **BEBADOP** - Operation not supported on given field types.
+            | :data:`.BALIGNERR` - Corrupted UBF buffer.
+            | :data:`.BNOTFLD` - Invalid ATMI buffer format, not UBF.
+            | :data:`.BEINVAL` - Invalid arguments passed.
+            | :data:`.BBADNAME` - Field not found in FD files or UBFDB.
+            | :data:`.BSYNTAX` - Bad boolean expression syntax
+            | :data:`.BFTOPEN` - Unable to open field tables.
+            | :data:`.BEBADOP` - Operation not supported on given field types.
 
         Parameters
         ----------
@@ -691,13 +691,13 @@ expublic void ndrxpy_register_ubf(py::module &m)
 
         :raise UbfException: 
             | Following error codes may be present:
-            | **BALIGNERR** - Corrupted UBF buffer.
-            | **BNOTFLD** - Invalid ATMI buffer format, not UBF.
-            | **BEINVAL** - Invalid arguments passed.
-            | **BBADNAME** - Field not found in FD files or UBFDB.
-            | **BSYNTAX** - Bad boolean expression syntax
-            | **BFTOPEN** - Unable to open field tables.
-            | **BEBADOP** - Operation not supported on given field types.
+            | :data:`.BALIGNERR` - Corrupted UBF buffer.
+            | :data:`.BNOTFLD` - Invalid ATMI buffer format, not UBF.
+            | :data:`.BEINVAL` - Invalid arguments passed.
+            | :data:`.BBADNAME` - Field not found in FD files or UBFDB.
+            | :data:`.BSYNTAX` - Bad boolean expression syntax
+            | :data:`.BFTOPEN` - Unable to open field tables.
+            | :data:`.BEBADOP` - Operation not supported on given field types.
 
         Parameters
         ----------
@@ -735,8 +735,8 @@ expublic void ndrxpy_register_ubf(py::module &m)
 
         :raise UbfException: 
             | Following error codes may be present:
-            | **BALIGNERR** - Invalid ATMI buffer format, not UBF.
-            | **BNOTFLD** - Not UBF buffer.
+            | :data:`.BALIGNERR` - Invalid ATMI buffer format, not UBF.
+            | :data:`.BNOTFLD` - Not UBF buffer.
 
         Parameters
         ----------
@@ -765,8 +765,8 @@ expublic void ndrxpy_register_ubf(py::module &m)
 
         :raise UbfException: 
             | Following error codes may be present:
-            | **BALIGNERR** - Invalid ATMI buffer format, not UBF.
-            | **BNOTFLD** - Not UBF buffer.
+            | :data:`.BALIGNERR` - Invalid ATMI buffer format, not UBF.
+            | :data:`.BNOTFLD` - Not UBF buffer.
 
         Parameters
         ----------
@@ -794,12 +794,12 @@ expublic void ndrxpy_register_ubf(py::module &m)
 
         :raise UbfException: 
             | Following error codes may be present:
-            | **BALIGNERR** - Corrupted output buffer (internal error).
-            | **BNOTFLD** - Corrupted output buffer (internal error).
-            | **BEINVAL** - Invalid input file.
-            | **BSYNTAX** - Input file syntax error.
-            | **BBADNAME** - Field not found in UBF field tables.
-            | **BBADVIEW** - View not found.
+            | :data:`.BALIGNERR` - Corrupted output buffer (internal error).
+            | :data:`.BNOTFLD` - Corrupted output buffer (internal error).
+            | :data:`.BEINVAL` - Invalid input file.
+            | :data:`.BSYNTAX` - Input file syntax error.
+            | :data:`.BBADNAME` - Field not found in UBF field tables.
+            | :data:`.BBADVIEW` - View not found.
 
         Parameters
         ----------

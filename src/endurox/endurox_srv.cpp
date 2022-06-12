@@ -417,10 +417,10 @@ expublic void ndrxpy_register_srv(py::module &m)
 
         :raise AtmiException:
             | Following error codes may be present:
-            | **TPEINVAL** - Service name empty or too long (longer than **MAXTIDENT**)
-            | **TPELIMIT** - More than 48 services attempted to advertise by the script.
-            | **TPEMATCH** - Service already advertised.
-            | **TPEOS** - System error.
+            | :data:`.TPEINVAL` - Service name empty or too long (longer than **MAXTIDENT**)
+            | :data:`.TPELIMIT` - More than 48 services attempted to advertise by the script.
+            | :data:`.TPEMATCH` - Service already advertised.
+            | :data:`.TPEOS` - System error.
 
         Parameters
         ----------
@@ -440,8 +440,8 @@ expublic void ndrxpy_register_srv(py::module &m)
         delivered to subscribers.
 
         Service name is specified in :attr:`.TPQCTL.name1`.
-        :attr:`.TPQCTL.flags` must be set to **TPEVSERVICE** - call service.
-        Flag **TPEVPERSIST** may be optionally set to not to remove service from event broker
+        :attr:`.TPQCTL.flags` must be set to :data:`.TPEVSERVICE` - call service.
+        Flag :data:`.TPEVPERSIST` may be optionally set to not to remove service from event broker
         in case if service failed. :attr:`.TPQCTL.name2` is reserved for future use.
 
         Service name to which to deliver event notification shall be set in *name1* field.
@@ -453,10 +453,10 @@ expublic void ndrxpy_register_srv(py::module &m)
 
         :raise AtmiException:
             | Following error codes may be present:
-            | **TPEINVAL** - Service name empty or too long (longer than **MAXTIDENT**)
-            | **TPELIMIT** - More than 48 services attempted to advertise by the script.
-            | **TPEMATCH** - Service already advertised.
-            | **TPEOS** - System error.
+            | :data:`.TPEINVAL` - Service name empty or too long (longer than **MAXTIDENT**)
+            | :data:`.TPELIMIT` - More than 48 services attempted to advertise by the script.
+            | :data:`.TPEMATCH` - Service already advertised.
+            | :data:`.TPEOS` - System error.
 
         Parameters
         ----------
@@ -468,7 +468,7 @@ expublic void ndrxpy_register_srv(py::module &m)
         ctl : TPEVCTL
             Control structure.
         flags : int
-            Bitwise or'd **TPNOTRAN**, **TPSIGRSTRT**, **TPNOTIME** flags.
+            Bitwise or'd :data:`.TPNOTRAN`, :data:`.TPSIGRSTRT`, :data:`.TPNOTIME` flags.
 
         Returns
         -------
@@ -488,24 +488,24 @@ expublic void ndrxpy_register_srv(py::module &m)
 
         :raise AtmiException:
             | Following error codes may be present:
-            | **TPEINVAL** - Invalid subscription id was passed.
-            | **TPENOENT** - Event server **tpevsrv(5)** is not available.
-            | **TPETIME** - Timeout calling event server.
-            | **TPESVCFAIL** - Event server failed.
-            | **TPESVCERR** - Event server crashed.
-            | **TPESYSTEM** - System error occurred.
-            | **TPEOS** - OS error.
+            | :data:`.TPEINVAL` - Invalid subscription id was passed.
+            | :data:`.TPENOENT` - Event server **tpevsrv(5)** is not available.
+            | :data:`.TPETIME` - Timeout calling event server.
+            | :data:`.TPESVCFAIL` - Event server failed.
+            | :data:`.TPESVCERR` - Event server crashed.
+            | :data:`.TPESYSTEM` - System error occurred.
+            | :data:`.TPEOS` - OS error.
 
         Parameters
         ----------
         subscription : int
             Subscription id.
         flags : int
-            Optionally Or'd **TPSIGRSTRT**, **TPNOTIME**
+            Optionally Or'd :data:`.TPSIGRSTRT`, :data:`.TPNOTIME`
         ctl : TPEVCTL
             Control structure.
         flags : int
-            Bitwise or'd **TPNOTRAN**, **TPSIGRSTRT**, **TPNOTIME** flags.
+            Bitwise or'd :data:`.TPNOTRAN`, :data:`.TPSIGRSTRT`, :data:`.TPNOTIME` flags.
 
         Returns
         -------
@@ -534,13 +534,13 @@ expublic void ndrxpy_register_srv(py::module &m)
 
         :raise AtmiException:
             | Following error codes may be present:
-            | **TPEINVAL** - Invalid subscription id was passed.
-            | **TPEPROTO** - Global transaction was started and it was marked for abort-only, 
+            | :data:`.TPEINVAL` - Invalid subscription id was passed.
+            | :data:`.TPEPROTO` - Global transaction was started and it was marked for abort-only, 
                 there was any open call descriptors with-in global transaction,
-            | **TPERMERR** - Resource Manager failed (failed to suspend global transaction).
-            | **TPESYSTEM** - System failure occurred during serving
-            | **TPESVCERR** - Event server crashed.
-            | **TPEOS** - OS error.
+            | :data:`.TPERMERR` - Resource Manager failed (failed to suspend global transaction).
+            | :data:`.TPESYSTEM` - System failure occurred during serving
+            | :data:`.TPESVCERR` - Event server crashed.
+            | :data:`.TPEOS` - OS error.
 
         Returns
         -------
@@ -564,9 +564,9 @@ expublic void ndrxpy_register_srv(py::module &m)
 
         :raise AtmiException:
             | Following error codes may be present:
-            | **TPEPROTO** - Global transaction is started in current thread.
-            | **TPESYSTEM** - System failure, see logs.
-            | **TPEOS** - OS error, see logs.
+            | :data:`.TPEPROTO` - Global transaction is started in current thread.
+            | :data:`.TPESYSTEM` - System failure, see logs.
+            | :data:`.TPEOS` - OS error, see logs.
 
         Parameters
         ----------
@@ -596,9 +596,9 @@ expublic void ndrxpy_register_srv(py::module &m)
 
         :raise AtmiException:
             | Following error codes may be present:
-            | **TPENOENT** - Service not advertised.
-            | **TPEOS** - System error.
-            | **TPESYSTEM** - Failed to report to **ndrxd(8)**.
+            | :data:`.TPENOENT` - Service not advertised.
+            | :data:`.TPEOS` - System error.
+            | :data:`.TPESYSTEM` - Failed to report to **ndrxd(8)**.
 
         Parameters
         ----------
@@ -655,7 +655,7 @@ expublic void ndrxpy_register_srv(py::module &m)
         event subscriptions, configure pollers, etc. 
         At :py:meth:`Server.tpsvrdone()` shutdown cleanups shall be performed.
 
-        In case if ATMI service code failed, caller receives **TPESVCERR** error,
+        In case if ATMI service code failed, caller receives :data:`.TPESVCERR` error,
         the error is logged to ulog and ATMI servers main loop continues until
         shutdown is received (e.g. xadmin stop -y).
 
@@ -678,14 +678,14 @@ expublic void ndrxpy_register_srv(py::module &m)
         Parameters
         ----------
         rval : int
-            Return value **TPSUCCESS** for success, **TPFAIL** for returning error
-            **TPEXIT** for returning error and restarting the ATMI server process.
+            Return value :data:`.TPSUCCESS` for success, :data:`.TPFAIL` for returning error
+            :data:`.TPEXIT` for returning error and restarting the ATMI server process.
         rcode : int
             User return code. If not used, use value **0**.
         data : dict
             ATMI buffer returned from the service
         flags : int
-            Or'd flags **TPSOFTTIMEOUT** for simulating **TPETIME** error to caller.
+            Or'd flags **TPSOFTTIMEOUT** for simulating :data:`.TPETIME` error to caller.
             **TPSOFTERR** return any ATMI call error, which is set in *rval* param.
 	    Default value is **0**.
         )pbdoc",

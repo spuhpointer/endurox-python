@@ -210,8 +210,8 @@ expublic void ndrxpy_register_tplog(py::module &m)
 
         :raise NstdException: 
             | Following error codes may be present:
-            | **NEFORMAT** - Debug string format error.
-            | **NESYSTEM** - System error.
+            | :data:`.NEFORMAT` - Debug string format error.
+            | :data:`.NESYSTEM` - System error.
 
         Parameters
         ----------
@@ -276,7 +276,7 @@ expublic void ndrxpy_register_tplog(py::module &m)
 
         :raise NstdException: 
             | Following error codes may be present:
-            | **NEINVAL** - Invalid logger flag.
+            | :data:`.NEINVAL` - Invalid logger flag.
 
         Parameters
         ----------
@@ -363,13 +363,13 @@ expublic void ndrxpy_register_tplog(py::module &m)
 
         :raise AtmiException: 
             | Following error codes may be present:
-            | **TPEINVAL** - Invalid parameters.
-            | **TPENOENT** - *filesvc* is not available.
-            | **TPETIME** - *filesvc* timed out.
-            | **TPESVCFAIL** - *filesvc* failed.
-            | **TPESVCERR**- *filesvc* crashed.
-            | **TPESYSTEM** - System error.
-            | **TPEOS** - Operating system error.
+            | :data:`.TPEINVAL` - Invalid parameters.
+            | :data:`.TPENOENT` - *filesvc* is not available.
+            | :data:`.TPETIME` - *filesvc* timed out.
+            | :data:`.TPESVCFAIL` - *filesvc* failed.
+            | :data:`.TPESVCERR`- *filesvc* crashed.
+            | :data:`.TPESYSTEM` - System error.
+            | :data:`.TPEOS` - Operating system error.
 
         Parameters
         ----------
@@ -437,8 +437,8 @@ expublic void ndrxpy_register_tplog(py::module &m)
 
         :raise AtmiException: 
             | Following error codes may be present:
-            | **TPENOENT** - Request file name not present or UBF error.
-            | **TPEINVAL** - Invalid UBF buffer.
+            | :data:`.TPENOENT` - Request file name not present or UBF error.
+            | :data:`.TPEINVAL` - Invalid UBF buffer.
 
         Parameters
         ----------
@@ -498,8 +498,8 @@ expublic void ndrxpy_register_tplog(py::module &m)
 
         :raise AtmiException: 
             | Following error codes may be present:
-            | **TPENOENT** - Request file name not present or UBF error.
-            | **TPEINVAL** - Invalid UBF buffer.
+            | :data:`.TPENOENT` - Request file name not present or UBF error.
+            | :data:`.TPEINVAL` - Invalid UBF buffer.
 
         Parameters
         ----------

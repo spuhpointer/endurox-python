@@ -241,7 +241,7 @@ expublic void ndrxpy_register_tpext(py::module &m)
 
         :raise AtmiException: 
             | Following error codes may be present:
-            | **TPEINVAL** - Invalid parameters.
+            | :data:`.TPEINVAL` - Invalid parameters.
 
         Parameters
         ----------
@@ -394,10 +394,10 @@ expublic void ndrxpy_register_tpext(py::module &m)
 
         :raise AtmiException: 
             | Following error codes may be present:
-            | **TPEMATCH** - *fd* is already registered with callback.
-            | **TPEPROTO** - Called from invalid place, e.g. **tpsvrinit()** func.
-            | **TPESYSTEM** - System error occurred.
-            | **TPEOS** - Operating system error occurred.
+            | :data:`.TPEMATCH` - *fd* is already registered with callback.
+            | :data:`.TPEPROTO` - Called from invalid place, e.g. **tpsvrinit()** func.
+            | :data:`.TPESYSTEM` - System error occurred.
+            | :data:`.TPEOS` - Operating system error occurred.
 
         Parameters
         ----------
@@ -428,11 +428,11 @@ expublic void ndrxpy_register_tpext(py::module &m)
 
         :raise AtmiException: 
             | Following error codes may be present:
-            | **TPEINVAL** - Invalid file descriptor *fd* passed.
-            | **TPEMATCH** - File descriptor was not registered.
-            | **TPEPROTO** - Invalid call sequence. Called from **tpsvrinit()**.
-            | **TPESYSTEM** - System error occurred.
-            | **TPEOS** - Operating system error occurred.
+            | :data:`.TPEINVAL` - Invalid file descriptor *fd* passed.
+            | :data:`.TPEMATCH` - File descriptor was not registered.
+            | :data:`.TPEPROTO` - Invalid call sequence. Called from **tpsvrinit()**.
+            | :data:`.TPESYSTEM` - System error occurred.
+            | :data:`.TPEOS` - Operating system error occurred.
 
         Parameters
         ----------

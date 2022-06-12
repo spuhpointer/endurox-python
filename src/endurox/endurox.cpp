@@ -631,9 +631,9 @@ Example call to echo service:
 
 Following **exceptions** may be throw, when ATMI buffer is instantiated:
 
-- | AtmiException with code: **TPENOENT** - view name in vname is not found. 
-- | UbfException with code: **BEINVAL** - invalid view field occurrance.
-  | **BNOSPACE** - no space in view field.
+- | AtmiException with code: :data:`.TPENOENT` - view name in vname is not found. 
+- | UbfException with code: :data:`.BEINVAL` - invalid view field occurrance.
+  | :data:`.BNOSPACE` - no space in view field.
 
 STRING Data encoding
 --------------------
@@ -925,7 +925,7 @@ Used by :func:`.tpsubscribe` and :func:`.tpunsubscribe`.
 
    .. attribute:: flags
 
-      *int* -- Bitwise flags of: **TPEVSERVICE** and **TPEVPERSIST**.
+      *int* -- Bitwise flags of: :data:`.TPEVSERVICE` and :data:`.TPEVPERSIST`.
 
    .. attribute:: name1
 
@@ -992,6 +992,19 @@ Flags to service routines
 .. data:: TPRECVONLY
     
     Recv-only mode
+
+.. data:: TPREGEXMATCH
+
+    Match by regular expression.
+
+.. data:: TPTRANSUSPEND
+
+    Suspend global transaction.
+
+.. data:: TPNOABORT
+
+    Do not abort global transaction in case of failure.
+
 
 Flags to tpreturn
 -----------------

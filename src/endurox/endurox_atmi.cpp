@@ -706,22 +706,22 @@ expublic void ndrxpy_register_atmi(py::module &m)
 
         :raise AtmiException: 
             | Following error codes may be present:
-            | **TPEINVAL** - Invalid arguments to function (See C descr).
-            | **TPETIME** - Queue space call timeout.
-            | **TPENOENT** - Queue space not found.
-            | **TPESVCFAIL** - Queue space server failed.
-            | **TPESVCERR** - Queue space server crashed.
-            | **TPESYSTEM** - System error.
-            | **TPEOS** - OS error.
-            | **TPEBLOCK** - Blocking condition exists and **TPNOBLOCK** was specified.
-            | **TPETRAN** - Failed to join global transaction.
+            | :data:`.TPEINVAL` - Invalid arguments to function (See C descr).
+            | :data:`.TPETIME` - Queue space call timeout.
+            | :data:`.TPENOENT` - Queue space not found.
+            | :data:`.TPESVCFAIL` - Queue space server failed.
+            | :data:`.TPESVCERR` - Queue space server crashed.
+            | :data:`.TPESYSTEM` - System error.
+            | :data:`.TPEOS` - OS error.
+            | :data:`.TPEBLOCK` - Blocking condition exists and :data:`.TPNOBLOCK` was specified.
+            | :data:`.TPETRAN` - Failed to join global transaction.
 
         :raise QmException: 
             | Following error codes may be present:
-            | **QMEINVAL** - Invalid request buffer. 
-            | **QMEOS** - OS error.
-            | **QMESYSTEM** - System error.
-            | **QMEBADQUEUE** - Bad queue name.
+            | :data:`.QMEINVAL` - Invalid request buffer. 
+            | :data:`.QMEOS` - OS error.
+            | :data:`.QMESYSTEM` - System error.
+            | :data:`.QMEBADQUEUE` - Bad queue name.
 
         Parameters
         ----------
@@ -734,8 +734,8 @@ expublic void ndrxpy_register_atmi(py::module &m)
         data : dict
             Input ATMI data buffer
         flags : int
-            Or'd bit flags: **TPNOTRAN**, **TPSIGRSTRT**, **TPNOCHANGE**, 
-            **TPTRANSUSPEND**, **TPNOBLOCK**, **TPNOABORT**. Default flag is **0**.
+            Or'd bit flags: :data:`.TPNOTRAN`, :data:`.TPSIGRSTRT`, :data:`.TPNOCHANGE`, 
+            :data:`.TPTRANSUSPEND`, :data:`.TPNOBLOCK`, :data:`.TPNOABORT`. Default flag is **0**.
 
         Returns
         -------
@@ -765,23 +765,23 @@ expublic void ndrxpy_register_atmi(py::module &m)
 
         :raise AtmiException: 
             | Following error codes may be present:
-            | **TPEINVAL** - Invalid arguments to function (See C descr).
-            | **TPENOENT** - Queue space not found (tmqueue process for qspace not started).
-            | **TPETIME** - Queue space call timeout.
-            | **TPESVCFAIL** - Queue space server failed.
-            | **TPESVCERR** - Queue space server crashed.
-            | **TPESYSTEM** - System error.
-            | **TPEOS** - OS error.
-            | **TPEBLOCK** - Blocking condition exists and **TPNOBLOCK** was specified.
-            | **TPETRAN** - Failed to join global transaction.
+            | :data:`.TPEINVAL` - Invalid arguments to function (See C descr).
+            | :data:`.TPENOENT` - Queue space not found (tmqueue process for qspace not started).
+            | :data:`.TPETIME` - Queue space call timeout.
+            | :data:`.TPESVCFAIL` - Queue space server failed.
+            | :data:`.TPESVCERR` - Queue space server crashed.
+            | :data:`.TPESYSTEM` - System error.
+            | :data:`.TPEOS` - OS error.
+            | :data:`.TPEBLOCK` - Blocking condition exists and :data:`.TPNOBLOCK` was specified.
+            | :data:`.TPETRAN` - Failed to join global transaction.
 
         :raise QmException: 
             | Following error codes may be present:
-            | **QMEINVAL** - Invalid request buffer or qctl. 
-            | **QMEOS** - OS error.
-            | **QMESYSTEM** - System error.
-            | **QMEBADQUEUE** - Bad queue name.
-            | **QMENOMSG** - No messages in
+            | :data:`.QMEINVAL` - Invalid request buffer or qctl. 
+            | :data:`.QMEOS` - OS error.
+            | :data:`.QMESYSTEM` - System error.
+            | :data:`.QMEBADQUEUE` - Bad queue name.
+            | :data:`.QMENOMSG` - No messages in
 
         Parameters
         ----------
@@ -794,8 +794,8 @@ expublic void ndrxpy_register_atmi(py::module &m)
         data : dict
             Input ATMI data buffer
         flags : int
-            Or'd bit flags: **TPNOTRAN**, **TPSIGRSTRT**, **TPNOCHANGE**, 
-            **TPNOTIME**, **TPNOBLOCK**. Default flag is **0**.
+            Or'd bit flags: :data:`.TPNOTRAN`, :data:`.TPSIGRSTRT`, :data:`.TPNOCHANGE`, 
+            :data:`.TPNOTIME`, :data:`.TPNOBLOCK`. Default flag is **0**.
 
         Returns
         -------
@@ -810,7 +810,7 @@ expublic void ndrxpy_register_atmi(py::module &m)
 
     m.def("tpcall", &ndrxpy_pytpcall,
           R"pbdoc(
-        Synchronous service call. In case if service returns **TPFAIL** or **TPEXIT**,
+        Synchronous service call. In case if service returns :data:`.TPFAIL` or :data:`.TPEXIT`,
         exception is not thrown, instead first return argument shall be tested for
         the tperrno for 0 (to check success case).
 
@@ -829,17 +829,17 @@ expublic void ndrxpy_register_atmi(py::module &m)
 
         :raise AtmiException: 
             | Following error codes may be present:
-            | **TPEINVAL** - Invalid arguments to function.
-            | **TPEOTYPE** - Output type not allowed.
-            | **TPENOENT** - Service not advertised.
-            | **TPETIME** - Service timeout.
-            | **TPESVCFAIL** - Service returned **TPFAIL** or **TPEXIT** (not thrown).
-            | **TPESVCERR** - Service failure during processing.
-            | **TPESYSTEM** - System error.
-            | **TPEOS** - System error.
-            | **TPEBLOCK** - Blocking condition found and **TPNOBLOCK** flag was specified
-            | **TPETRAN** - Target service is transactional, but failed to start the transaction.
-            | **TPEITYPE** - Service error during input buffer handling.
+            | :data:`.TPEINVAL` - Invalid arguments to function.
+            | :data:`.TPEOTYPE` - Output type not allowed.
+            | :data:`.TPENOENT` - Service not advertised.
+            | :data:`.TPETIME` - Service timeout.
+            | :data:`.TPESVCFAIL` - Service returned :data:`.TPFAIL` or :data:`.TPEXIT` (not thrown).
+            | :data:`.TPESVCERR` - Service failure during processing.
+            | :data:`.TPESYSTEM` - System error.
+            | :data:`.TPEOS` - System error.
+            | :data:`.TPEBLOCK` - Blocking condition found and :data:`.TPNOBLOCK` flag was specified
+            | :data:`.TPETRAN` - Target service is transactional, but failed to start the transaction.
+            | :data:`.TPEITYPE` - Service error during input buffer handling.
 
         Parameters
         ----------
@@ -848,8 +848,8 @@ expublic void ndrxpy_register_atmi(py::module &m)
         idata : dict
             Input ATMI data buffer
         flags : int
-            Or'd bit flags: **TPNOTRAN**, **TPSIGRSTRT**, **TPNOTIME**, 
-            **TPNOCHANGE**, **TPTRANSUSPEND**, **TPNOBLOCK**, **TPNOABORT**.
+            Or'd bit flags: :data:`.TPNOTRAN`, :data:`.TPSIGRSTRT`, :data:`.TPNOTIME`, 
+            :data:`.TPNOCHANGE`, :data:`.TPTRANSUSPEND`, :data:`.TPNOBLOCK`, :data:`.TPNOABORT`.
 
         Returns
         -------
@@ -865,7 +865,7 @@ expublic void ndrxpy_register_atmi(py::module &m)
 
     m.def("tpacall", &ndrxpy_pytpacall,           
         R"pbdoc(
-        Asynchronous service call. Function returns call descriptor if **TPNOREPLY**
+        Asynchronous service call. Function returns call descriptor if :data:`.TPNOREPLY`
         flag is not set. The replies shall be collected with **tpgetrply()** API
         call by passing the returned call descriptor to the function.
 	
@@ -881,13 +881,13 @@ expublic void ndrxpy_register_atmi(py::module &m)
 
         :raise AtmiException: 
             | Following error codes may be present:
-            | **TPEINVAL** - Invalid arguments to function.
-            | **TPENOENT** - Service not is advertised.
-            | **TPETIME** - Destination queue was full/blocked on time-out expired.
-            | **TPESYSTEM** - System error.
-            | **TPEOS** - Operating system error.
-            | **TPEBLOCK** - Blocking condition found and **TPNOBLOCK** flag was specified
-            | **TPEITYPE** - Service error during input buffer handling.
+            | :data:`.TPEINVAL` - Invalid arguments to function.
+            | :data:`.TPENOENT` - Service not is advertised.
+            | :data:`.TPETIME` - Destination queue was full/blocked on time-out expired.
+            | :data:`.TPESYSTEM` - System error.
+            | :data:`.TPEOS` - Operating system error.
+            | :data:`.TPEBLOCK` - Blocking condition found and :data:`.TPNOBLOCK` flag was specified
+            | :data:`.TPEITYPE` - Service error during input buffer handling.
 
         Parameters
         ----------
@@ -896,21 +896,21 @@ expublic void ndrxpy_register_atmi(py::module &m)
         idata : dict
             Input ATMI data buffer
         flags : int
-            Or'd bit flags: **TPNOTRAN**, **TPSIGRSTRT**, **TPNOBLOCK**, 
-            **TPNOREPLY**, **TPNOTIME**. Default value is **0**.
+            Or'd bit flags: :data:`.TPNOTRAN`, :data:`.TPSIGRSTRT`, :data:`.TPNOBLOCK`, 
+            :data:`.TPNOREPLY`, :data:`.TPNOTIME`. Default value is **0**.
 
         Returns
         -------
         int
-            cd - call descriptor. **0** in case if **TPNOREPLY** was specified.
+            cd - call descriptor. **0** in case if :data:`.TPNOREPLY` was specified.
 
          )pbdoc", py::arg("svc"), py::arg("idata"), py::arg("flags") = 0);
 
     m.def("tpgetrply", &ndrxpy_pytpgetrply,
         R"pbdoc(
         Get reply message for asynchronous call initiated by :func:`.tpacall`.
-        Exception is throw in case if error occurs other than **TPESVCFAIL**, in
-        which case returned `tperrno` value contains **TPESVCFAIL** value.        
+        Exception is throw in case if error occurs other than :data:`.TPESVCFAIL`, in
+        which case returned `tperrno` value contains :data:`.TPESVCFAIL` value.        
 	
         .. code-block:: python
             :caption: tpgetrply example
@@ -924,31 +924,31 @@ expublic void ndrxpy_register_atmi(py::module &m)
 
         :raise AtmiException: 
             | Following error codes may be present:
-            | **TPEINVAL** - Invalid arguments to function.
-            | **TPEBADDESC** - Call descriptor passed in *cd* is not valid, and 
-                **TPGETANY** flag was not specified.
-            | **TPETIME** - Destination queue was full/blocked on time-out expired.
-            | **TPESVCERR** - Service crashed.
-            | **TPEBLOCK** - Blocking condition found and **TPNOBLOCK** flag was specified
-            | **TPEITYPE** - Service error during input buffer handling.
-            | **TPETRAN** - Service/server failed to start auto-tran.
-            | **TPEITYPE** - Buffer type not supported by service.
-            | **TPESYSTEM** - System error.
-            | **TPEOS** - Operating system error.
+            | :data:`.TPEINVAL` - Invalid arguments to function.
+            | :data:`.TPEBADDESC` - Call descriptor passed in *cd* is not valid, and 
+                :data:`.TPGETANY` flag was not specified.
+            | :data:`.TPETIME` - Destination queue was full/blocked on time-out expired.
+            | :data:`.TPESVCERR` - Service crashed.
+            | :data:`.TPEBLOCK` - Blocking condition found and :data:`.TPNOBLOCK` flag was specified
+            | :data:`.TPEITYPE` - Service error during input buffer handling.
+            | :data:`.TPETRAN` - Service/server failed to start auto-tran.
+            | :data:`.TPEITYPE` - Buffer type not supported by service.
+            | :data:`.TPESYSTEM` - System error.
+            | :data:`.TPEOS` - Operating system error.
 
         Parameters
         ----------
         cd : int
-            Call descriptor. Value is ignored in case if **TPGETANY** flag is
+            Call descriptor. Value is ignored in case if :data:`.TPGETANY` flag is
             passed in *flags*.
         flags : int
-            Or'd bit flags: **TPGETANY**, **TPNOBLOCK**, **TPSIGRSTRT**, 
-            **TPNOTIME**, **TPNOCHANGE**, **TPNOABORT**. Default value is **0**.
+            Or'd bit flags: :data:`.TPGETANY`, :data:`.TPNOBLOCK`, :data:`.TPSIGRSTRT`, 
+            :data:`.TPNOTIME`, :data:`.TPNOCHANGE`, :data:`.TPNOABORT`. Default value is **0**.
 
         Returns
         -------
         int
-            tperrno - error code (**0** or **TPESVCFAIL**)
+            tperrno - error code (**0** or :data:`.TPESVCFAIL`)
         int
             tpurcode - code passed to **tpreturn(3)** by the server
         dict
@@ -975,10 +975,10 @@ expublic void ndrxpy_register_atmi(py::module &m)
 
         :raise AtmiException: 
             | Following error codes may be present:
-            | **TPEBADDESC** - *cd* is out of the range of valid values.
-            | **TPEINVAL** - Enduro/X is not configured.
-            | **TPESYSTEM** - System error.
-            | **TPEOS** - Operating system error.
+            | :data:`.TPEBADDESC` - *cd* is out of the range of valid values.
+            | :data:`.TPEINVAL` - Enduro/X is not configured.
+            | :data:`.TPESYSTEM` - System error.
+            | :data:`.TPEOS` - Operating system error.
 
         Parameters
         ----------
@@ -998,14 +998,14 @@ expublic void ndrxpy_register_atmi(py::module &m)
 
         :raise AtmiException: 
             | Following error codes may be present:
-            | **TPEINVAL** - Invalid arguments passed to function.
-            | **TPENOENT** - *svc* service is not available.
-            | **TPELIMIT** - Max number of open connections are reached.
-            | **TPESVCERR** - Service crashed.
-            | **TPESYSTEM** - System error occurred.
-            | **TPEOS** - Operating system error occurred.
-            | **TPETRAN** - Destination service was unable to start global transaction.
-            | **TPEITYPE** - Destination server does not accept buffer type sent.
+            | :data:`.TPEINVAL` - Invalid arguments passed to function.
+            | :data:`.TPENOENT` - *svc* service is not available.
+            | :data:`.TPELIMIT` - Max number of open connections are reached.
+            | :data:`.TPESVCERR` - Service crashed.
+            | :data:`.TPESYSTEM` - System error occurred.
+            | :data:`.TPEOS` - Operating system error occurred.
+            | :data:`.TPETRAN` - Destination service was unable to start global transaction.
+            | :data:`.TPEITYPE` - Destination server does not accept buffer type sent.
 
         Parameters
         ----------
@@ -1014,14 +1014,14 @@ expublic void ndrxpy_register_atmi(py::module &m)
         idata : dict
             ATMI buffer to send in connection request.
         flags : int
-            Bitwise or'd **TPNOTRAN**, **TPSIGRSTRT**, **TPNOTIME**, **TPSENDONLY**,
-            **TPRECVONLY**.
+            Bitwise or'd :data:`.TPNOTRAN`, :data:`.TPSIGRSTRT`, :data:`.TPNOTIME`, :data:`.TPSENDONLY`,
+            :data:`.TPRECVONLY`.
          )pbdoc",
         py::arg("svc"), py::arg("idata"), py::arg("flags") = 0);
 
     m.def("tpsend", &ndrxpy_pytpsend,
         R"pbdoc(
-        Send conversational data to connected peer. In case if **TPEEVENT** error
+        Send conversational data to connected peer. In case if :data:`.TPEEVENT` error
         is received, exception is not thrown, instead event code is loaded into
         *revent* return value. In case if event is not generated, *revent* is set
         to **0**.
@@ -1038,13 +1038,13 @@ expublic void ndrxpy_register_atmi(py::module &m)
 
         :raise AtmiException: 
             | Following error codes may be present:
-            | **TPEINVAL** - Invalid call descriptor.
-            | **TPETIME** - Queue was blocked and it timeout out.
-            | **TPESYSTEM** - System error occurred.
-            | **TPEOS** - Operating system error occurred.
-            | **TPEPROTO** -  Protocol error is generated if given process is 
-                in receiver (**TPRECVONLY**) mode.
-            | **TPEBLOCK** - **TPNOBLOCK** flag was set and message queue was full.
+            | :data:`.TPEINVAL` - Invalid call descriptor.
+            | :data:`.TPETIME` - Queue was blocked and it timeout out.
+            | :data:`.TPESYSTEM` - System error occurred.
+            | :data:`.TPEOS` - Operating system error occurred.
+            | :data:`.TPEPROTO` -  Protocol error is generated if given process is 
+                in receiver (:data:`.TPRECVONLY`) mode.
+            | :data:`.TPEBLOCK` - :data:`.TPNOBLOCK` flag was set and message queue was full.
 
         Parameters
         ----------
@@ -1053,28 +1053,28 @@ expublic void ndrxpy_register_atmi(py::module &m)
         idata : dict
             ATMI buffer to send.
         flags : int
-            Bitwise or'd **TPRECVONLY**, **TPNOBLOCK**, **TPSIGRSTRT**, **TPNOTIME**.
+            Bitwise or'd :data:`.TPRECVONLY`, :data:`.TPNOBLOCK`, :data:`.TPSIGRSTRT`, :data:`.TPNOTIME`.
 
         Returns
         -------
         int
-            tperrno - error code (**0** or **TPEEVENT**). For other errors, exceptions
+            tperrno - error code (**0** or :data:`.TPEEVENT`). For other errors, exceptions
                 thrown.
         int
             tpurcode - return code passed to :func:`tpreturn`. Value is loaded in case
-                if *revent* returned is **TPEV_SVCFAIL** or **TPEV_SVCSUCC**, otherwise
+                if *revent* returned is :data:`.TPEV_SVCFAIL` or :data:`.TPEV_SVCSUCC`, otherwise
                 previous tpurcode is returned.
         int
-            revent - In case if **TPEEVENT** tperrno was returned, may contain:
-            **TPEV_DISCONIMM**, **TPEV_SENDONLY**, **TPEV_SVCERR**, **TPEV_SVCFAIL**,
-            **TPEV_SVCSUCC**.
+            revent - In case if :data:`.TPEEVENT` tperrno was returned, may contain:
+            :data:`.TPEV_DISCONIMM`, :data:`.TPEV_SENDONLY`, :data:`.TPEV_SVCERR`, :data:`.TPEV_SVCFAIL`,
+            :data:`.TPEV_SVCSUCC`.
 
          )pbdoc",
           py::arg("cd"), py::arg("idata"), py::arg("flags") = 0);
 
     m.def("tprecv", &ndrxpy_pytprecv, 
         R"pbdoc(
-        Receive conversation data block. In case if **TPEEVENT** error
+        Receive conversation data block. In case if :data:`.TPEEVENT` error
         is received, exception is not thrown, instead event code is loaded into
         *revent* return value. In case if event is not generated, *revent* is set
         to **0**.
@@ -1091,13 +1091,13 @@ expublic void ndrxpy_register_atmi(py::module &m)
 
         :raise AtmiException: 
             | Following error codes may be present:
-            | **TPEINVAL** - Invalid call descriptor.
-            | **TPETIME** - Queue was blocked and it timeout out.
-            | **TPESYSTEM** - System error occurred.
-            | **TPEOS** - Operating system error occurred.
-            | **TPEPROTO** -  Protocol error is generated if given process is 
-                in receiver (**TPRECVONLY**) mode.
-            | **TPEBLOCK** - **TPNOBLOCK** flag was set and message queue was full.
+            | :data:`.TPEINVAL` - Invalid call descriptor.
+            | :data:`.TPETIME` - Queue was blocked and it timeout out.
+            | :data:`.TPESYSTEM` - System error occurred.
+            | :data:`.TPEOS` - Operating system error occurred.
+            | :data:`.TPEPROTO` -  Protocol error is generated if given process is 
+                in receiver (:data:`.TPRECVONLY`) mode.
+            | :data:`.TPEBLOCK` - :data:`.TPNOBLOCK` flag was set and message queue was full.
 
         Parameters
         ----------
@@ -1106,21 +1106,21 @@ expublic void ndrxpy_register_atmi(py::module &m)
         idata : dict
             ATMI buffer to send.
         flags : int
-            Bitwise or'd **TPNOBLOCK**, **TPSIGRSTRT**, **TPNOTIME**.
+            Bitwise or'd :data:`.TPNOBLOCK`, :data:`.TPSIGRSTRT`, :data:`.TPNOTIME`.
 
         Returns
         -------
         int
-            tperrno - error code (**0** or **TPEEVENT**). For other errors, exceptions
+            tperrno - error code (**0** or :data:`.TPEEVENT`). For other errors, exceptions
                 thrown.
         int
             tpurcode - return code passed to :func:`tpreturn`. Value is loaded in case
-                if *revent* returned is **TPEV_SVCFAIL** or **TPEV_SVCSUCC**, otherwise
+                if *revent* returned is :data:`.TPEV_SVCFAIL` or :data:`.TPEV_SVCSUCC`, otherwise
                 previous tpurcode is returned.
         int
-            revent - In case if **TPEEVENT** tperrno was returned, may contain:
-                **TPEV_DISCONIMM**, **TPEV_SENDONLY**, **TPEV_SVCERR**, **TPEV_SVCFAIL**,
-                **TPEV_SVCSUCC**.
+            revent - In case if :data:`.TPEEVENT` tperrno was returned, may contain:
+                :data:`.TPEV_DISCONIMM`, :data:`.TPEV_SENDONLY`, :data:`.TPEV_SVCERR`, :data:`.TPEV_SVCFAIL`,
+                :data:`.TPEV_SVCSUCC`.
         dict
             ATMI buffer send by peer.
          )pbdoc",
@@ -1145,8 +1145,8 @@ expublic void ndrxpy_register_atmi(py::module &m)
 
         :raise AtmiException: 
             | Following error codes may be present:
-            | **TPEINVAL** - Invalid conversation descriptor.
-            | **TPEOS** - Operating system error occurred.
+            | :data:`.TPEINVAL` - Invalid conversation descriptor.
+            | :data:`.TPEOS` - Operating system error occurred.
 
         Parameters
         ----------
@@ -1189,12 +1189,12 @@ expublic void ndrxpy_register_atmi(py::module &m)
 
         :raise AtmiException: 
             | Following error codes may be present:
-            | **TPEINVAL** - Invalid environment or invalid parameters.
-            | **TPENOENT** - Local process queue does not exist.
-            | **TPETIME** - Destination queue was blocking and timeout expired.
-            | **TPEBLOCK** - Destination queue was blocking and **TPNOBLOCK** was specified.
-            | **TPESYSTEM** -  System error occurred.
-            | **TPEOS** - Operating system error occurred.
+            | :data:`.TPEINVAL` - Invalid environment or invalid parameters.
+            | :data:`.TPENOENT` - Local process queue does not exist.
+            | :data:`.TPETIME` - Destination queue was blocking and timeout expired.
+            | :data:`.TPEBLOCK` - Destination queue was blocking and :data:`.TPNOBLOCK` was specified.
+            | :data:`.TPESYSTEM` -  System error occurred.
+            | :data:`.TPEOS` - Operating system error occurred.
 
         Parameters
         ----------
@@ -1203,7 +1203,7 @@ expublic void ndrxpy_register_atmi(py::module &m)
         idata : dict
             ATMI buffer to send.
         flags : int
-            Bitwise or'd **TPNOBLOCK**, **TPSIGRSTRT**, **TPNOTIME**, **TPACK**.
+            Bitwise or'd :data:`.TPNOBLOCK`, :data:`.TPSIGRSTRT`, :data:`.TPNOTIME`, **TPACK**.
 
          )pbdoc",
           py::arg("clientid"), py::arg("idata"), py::arg("flags") = 0);
@@ -1223,24 +1223,24 @@ expublic void ndrxpy_register_atmi(py::module &m)
 
         :raise AtmiException: 
             | Following error codes may be present:
-            | **TPEINVAL** - Invalid environment or invalid parameters.
-            | **TPESYSTEM** -  System error occurred.
-            | **TPEOS** - Operating system error occurred.
+            | :data:`.TPEINVAL` - Invalid environment or invalid parameters.
+            | :data:`.TPESYSTEM` -  System error occurred.
+            | :data:`.TPEOS` - Operating system error occurred.
 
         Parameters
         ----------
         lmid : str
-            Cluster node id. In case of **TPREGEXMATCH** flag several nodes
+            Cluster node id. In case of :data:`.TPREGEXMATCH` flag several nodes
             may be matched with regexp.
         usrname : str
             RFU.
         cltname : str
-            Client process binary name. In case of **TPREGEXMATCH** flag several nodes
+            Client process binary name. In case of :data:`.TPREGEXMATCH` flag several nodes
             may be matched with regexp.
         idata : dict
             Input ATMI buffer to be delivered to matched processes and nodes.
         flags : int
-            Bitwise or'd **TPNOBLOCK**, **TPSIGRSTRT**, **TPNOTIME**, **TPREGEXMATCH**.
+            Bitwise or'd :data:`.TPNOBLOCK`, :data:`.TPSIGRSTRT`, :data:`.TPNOTIME`, :data:`.TPREGEXMATCH`.
 
          )pbdoc",
           py::arg("lmid"), py::arg("usrname"), py::arg("cltname"), 
@@ -1283,9 +1283,9 @@ expublic void ndrxpy_register_atmi(py::module &m)
 
         :raise AtmiException: 
             | Following error codes may be present:
-            | **TPEINVAL** - Invalid environment or invalid parameters.
-            | **TPESYSTEM** -  System error occurred.
-            | **TPEOS** - Operating system error occurred.
+            | :data:`.TPEINVAL` - Invalid environment or invalid parameters.
+            | :data:`.TPESYSTEM` -  System error occurred.
+            | :data:`.TPEOS` - Operating system error occurred.
 
         Parameters
         ----------
@@ -1316,8 +1316,8 @@ expublic void ndrxpy_register_atmi(py::module &m)
 
         :raise AtmiException: 
             | Following error codes may be present:
-            | **TPESYSTEM** -  System error occurred.
-            | **TPEOS** - Operating system error occurred.
+            | :data:`.TPESYSTEM` -  System error occurred.
+            | :data:`.TPEOS` - Operating system error occurred.
 
         Returns
         -------
@@ -1345,10 +1345,10 @@ expublic void ndrxpy_register_atmi(py::module &m)
 
         :raise AtmiException: 
             | Following error codes may be present:
-            | **TPEINVAL** - Invalid buffer passed.
-            | **TPEOTYPE** -  Invalid input type.
-            | **TPESYSTEM** - System error occurred.
-            | **TPEOS** - Operating system error occurred.
+            | :data:`.TPEINVAL` - Invalid buffer passed.
+            | :data:`.TPEOTYPE` -  Invalid input type.
+            | :data:`.TPESYSTEM` - System error occurred.
+            | :data:`.TPEOS` - Operating system error occurred.
 
         Parameters
         ----------
@@ -1384,10 +1384,10 @@ expublic void ndrxpy_register_atmi(py::module &m)
 
         :raise AtmiException: 
             | Following error codes may be present:
-            | **TPEINVAL** - Invalid parameters.
-            | **TPEOTYPE** -  Invalid input type.
-            | **TPESYSTEM** - System error occurred.
-            | **TPEOS** - Operating system error occurred.
+            | :data:`.TPEINVAL` - Invalid parameters.
+            | :data:`.TPEOTYPE` -  Invalid input type.
+            | :data:`.TPESYSTEM` - System error occurred.
+            | :data:`.TPEOS` - Operating system error occurred.
 
         Parameters
         ----------
@@ -1420,13 +1420,13 @@ expublic void ndrxpy_register_atmi(py::module &m)
 
         :raise AtmiException: 
             | Following error codes may be present:
-            | **TPEINVAL** - Invalid parameters.
-            | **TPENOENT** -  Event server (**tpevsrv(3)**) is not started.
-            | **TPETIME** - Event server timeout out.
-            | **TPESVCFAIL** - Event server failure.
-            | **TPESVCERR** - Event server has crashed.
-            | **TPESYSTEM** - System error occurred.
-            | **TPEOS** - Operating system error occurred.
+            | :data:`.TPEINVAL` - Invalid parameters.
+            | :data:`.TPENOENT` -  Event server (**tpevsrv(3)**) is not started.
+            | :data:`.TPETIME` - Event server timeout out.
+            | :data:`.TPESVCFAIL` - Event server failure.
+            | :data:`.TPESVCERR` - Event server has crashed.
+            | :data:`.TPESYSTEM` - System error occurred.
+            | :data:`.TPEOS` - Operating system error occurred.
 
         Parameters
         ----------
@@ -1464,8 +1464,8 @@ expublic void ndrxpy_register_atmi(py::module &m)
 
         :raise AtmiException:
             | Following error codes may be present:
-            | **TPEINVAL** - Invalid flags.
-            | **TPESYSTEM** - System error occurred.
+            | :data:`.TPEINVAL` - Invalid flags.
+            | :data:`.TPESYSTEM` - System error occurred.
 
         Parameters
         ----------
@@ -1497,7 +1497,7 @@ expublic void ndrxpy_register_atmi(py::module &m)
 
         :raise AtmiException:
             | Following error codes may be present:
-            | **TPEINVAL** - Invalid flags or timeout value.
+            | :data:`.TPEINVAL` - Invalid flags or timeout value.
 
         Parameters
         ----------
@@ -1583,12 +1583,12 @@ expublic void ndrxpy_register_atmi(py::module &m)
 
         :raise AtmiException: 
             | Following error codes may be present:
-            | **TPEINVAL** - Invalid flags passed.
-            | **TPETIME** - Transaction manager (**tmsrv(8)**) timeout out.
-            | **TPESVCERR** - Transaction manager crashed.
-            | **TPEPROTO** - Invalid operations sequence.
-            | **TPESYSTEM** - System error occurred.
-            | **TPEOS** - Operating system error occurred.
+            | :data:`.TPEINVAL` - Invalid flags passed.
+            | :data:`.TPETIME` - Transaction manager (**tmsrv(8)**) timeout out.
+            | :data:`.TPESVCERR` - Transaction manager crashed.
+            | :data:`.TPEPROTO` - Invalid operations sequence.
+            | :data:`.TPESYSTEM` - System error occurred.
+            | :data:`.TPEOS` - Operating system error occurred.
 
         Parameters
         ----------
@@ -1618,10 +1618,10 @@ expublic void ndrxpy_register_atmi(py::module &m)
 
         :raise AtmiException: 
             | Following error codes may be present:
-            | **TPEINVAL** - Invalid flags passed.
-            | **TPEPROTO** - Invalid operations sequence.
-            | **TPESYSTEM** - System error occurred.
-            | **TPEOS** - Operating system error occurred.
+            | :data:`.TPEINVAL` - Invalid flags passed.
+            | :data:`.TPEPROTO` - Invalid operations sequence.
+            | :data:`.TPESYSTEM` - System error occurred.
+            | :data:`.TPEOS` - Operating system error occurred.
 
         Parameters
         ----------
@@ -1660,10 +1660,10 @@ expublic void ndrxpy_register_atmi(py::module &m)
 
         :raise AtmiException: 
             | Following error codes may be present:
-            | **TPEINVAL** - Invalid flags passed.
-            | **TPEPROTO** - Invalid operations sequence.
-            | **TPESYSTEM** - System error occurred.
-            | **TPEOS** - Operating system error occurred.
+            | :data:`.TPEINVAL` - Invalid flags passed.
+            | :data:`.TPEPROTO` - Invalid operations sequence.
+            | :data:`.TPESYSTEM` - System error occurred.
+            | :data:`.TPEOS` - Operating system error occurred.
 
         Parameters
         ----------
@@ -1697,15 +1697,15 @@ expublic void ndrxpy_register_atmi(py::module &m)
 
         :raise AtmiException: 
             | Following error codes may be present:
-            | **TPEINVAL** - Invalid flags passed.
-            | **TPETIME** - Transaction manager timeout.
-            | **TPEABORT** - Global transaction was aborted (due to marking or
+            | :data:`.TPEINVAL` - Invalid flags passed.
+            | :data:`.TPETIME` - Transaction manager timeout.
+            | :data:`.TPEABORT` - Global transaction was aborted (due to marking or
                 error error during two phase commit).
-            | **TPEHAZARD** - Partial commit and/or abort.
-            | **TPEHEURISTIC** - Partial commit and/or abort.
-            | **TPEPROTO** - Invalid call sequence.
-            | **TPESYSTEM** - System error occurred.
-            | **TPEOS** - Operating system error occurred.
+            | :data:`.TPEHAZARD` - Partial commit and/or abort.
+            | :data:`.TPEHEURISTIC` - Partial commit and/or abort.
+            | :data:`.TPEPROTO` - Invalid call sequence.
+            | :data:`.TPESYSTEM` - System error occurred.
+            | :data:`.TPEOS` - Operating system error occurred.
 
         Parameters
         ----------
@@ -1731,15 +1731,15 @@ expublic void ndrxpy_register_atmi(py::module &m)
 
         :raise AtmiException: 
             | Following error codes may be present:
-            | **TPEINVAL** - Invalid flags passed.
-            | **TPETIME** - Transaction manager timeout.
-            | **TPEABORT** - Global transaction was aborted (due to marking or
+            | :data:`.TPEINVAL` - Invalid flags passed.
+            | :data:`.TPETIME` - Transaction manager timeout.
+            | :data:`.TPEABORT` - Global transaction was aborted (due to marking or
                 error error during two phase commit).
-            | **TPEHAZARD** - Partial commit and/or abort.
-            | **TPEHEURISTIC** - Partial commit and/or abort.
-            | **TPEPROTO** - Invalid call sequence.
-            | **TPESYSTEM** - System error occurred.
-            | **TPEOS** - Operating system error occurred.
+            | :data:`.TPEHAZARD` - Partial commit and/or abort.
+            | :data:`.TPEHEURISTIC` - Partial commit and/or abort.
+            | :data:`.TPEPROTO` - Invalid call sequence.
+            | :data:`.TPESYSTEM` - System error occurred.
+            | :data:`.TPEOS` - Operating system error occurred.
 
         Parameters
         ----------
@@ -1794,9 +1794,9 @@ expublic void ndrxpy_register_atmi(py::module &m)
 
         :raise AtmiException: 
             | Following error codes may be present:
-            | **TPERMERR** - Resource manager error.
-            | **TPESYSTEM** - System error occurred.
-            | **TPEOS** - Operating system error occurred.
+            | :data:`.TPERMERR` - Resource manager error.
+            | :data:`.TPESYSTEM` - System error occurred.
+            | :data:`.TPEOS` - Operating system error occurred.
 
          )pbdoc");
     m.def(
@@ -1815,10 +1815,10 @@ expublic void ndrxpy_register_atmi(py::module &m)
 
         :raise AtmiException: 
             | Following error codes may be present:
-            | **TPEPROTO** - Thread is in global transaction.
-            | **TPERMERR** - Resource manager error.
-            | **TPESYSTEM** - System error occurred.
-            | **TPEOS** - Operating system error occurred.
+            | :data:`.TPEPROTO` - Thread is in global transaction.
+            | :data:`.TPERMERR` - Resource manager error.
+            | :data:`.TPESYSTEM` - System error occurred.
+            | :data:`.TPEOS` - Operating system error occurred.
 
          )pbdoc");
     m.def(
@@ -1864,7 +1864,7 @@ expublic void ndrxpy_register_atmi(py::module &m)
 
         :raise AtmiException:
             | Following error codes may be present:
-            | **TPEINVAL** - Invalid input data.
+            | :data:`.TPEINVAL` - Invalid input data.
 
 
         **Parameters:**
@@ -1921,7 +1921,7 @@ expublic void ndrxpy_register_atmi(py::module &m)
 
         :raise AtmiException:
             | Following error codes may be present:
-            | **TPEINVAL** - Invalid input data.
+            | :data:`.TPEINVAL` - Invalid input data.
 
         **Parameters:**
 
@@ -1971,8 +1971,8 @@ expublic void ndrxpy_register_atmi(py::module &m)
 
         :raise AtmiException:
             | Following error codes may be present:
-            | **TPEINVAL** - Invalid input data.
-            | **TPEOS** - System error occurred.
+            | :data:`.TPEINVAL` - Invalid input data.
+            | :data:`.TPEOS` - System error occurred.
 
         **Parameters:**
 
@@ -2023,8 +2023,8 @@ expublic void ndrxpy_register_atmi(py::module &m)
 
         :raise AtmiException:
             | Following error codes may be present:
-            | **TPEINVAL** - Invalid input data.
-            | **TPEOS** - System error occurred.
+            | :data:`.TPEINVAL` - Invalid input data.
+            | :data:`.TPEOS` - System error occurred.
 
         **Parameters:**
 
@@ -2109,7 +2109,7 @@ expublic void ndrxpy_register_atmi(py::module &m)
         },
         R"pbdoc(
         Retrieve current ATMI context handle and put current thread
-        in **TPNULLCONTEXT** context.
+        in :data:`.TPNULLCONTEXT` context.
 
         For more details see **tpgetctxt(3)** C API call.
 
@@ -2149,8 +2149,8 @@ expublic void ndrxpy_register_atmi(py::module &m)
 
         :raise AtmiException:
             | Following error codes may be present:
-            | **TPENOENT** - Invalid context data.
-            | **TPESYSTEM** - System error occurred.
+            | :data:`.TPENOENT` - Invalid context data.
+            | :data:`.TPESYSTEM` - System error occurred.
 
         **Parameters**
 
@@ -2172,13 +2172,13 @@ expublic void ndrxpy_register_atmi(py::module &m)
             }
         },
         R"pbdoc(
-        Set **TPNULLCONTEXT**. Removes given thread from any ATMI context.
+        Set :data:`.TPNULLCONTEXT`. Removes given thread from any ATMI context.
 
         For more details see **tpsetctxt(3)** C API call.
 
         :raise AtmiException:
             | Following error codes may be present:
-            | **TPESYSTEM** - System error occurred.
+            | :data:`.TPESYSTEM` - System error occurred.
 
         **Parameters**
 
@@ -2206,8 +2206,8 @@ expublic void ndrxpy_register_atmi(py::module &m)
 
         :raise AtmiException:
             | Following error codes may be present:
-            | **TPESYSTEM** - System error occurred.
-            | **TPEOS** - Operating System error occurred.
+            | :data:`.TPESYSTEM` - System error occurred.
+            | :data:`.TPEOS` - Operating System error occurred.
 
         Parameters
         ----------
@@ -2229,8 +2229,8 @@ expublic void ndrxpy_register_atmi(py::module &m)
 
         :raise AtmiException:
             | Following error codes may be present:
-            | **TPESYSTEM** - System error occurred.
-            | **TPEOS** - Operating System error occurred.
+            | :data:`.TPESYSTEM` - System error occurred.
+            | :data:`.TPEOS` - Operating System error occurred.
 
         Returns
         -------
@@ -2267,7 +2267,7 @@ expublic void ndrxpy_register_atmi(py::module &m)
         },
         R"pbdoc(
         Set priority for next ATMI service call. *prio* can be absolute value
-        in such case it must be in range of **1..100** (if flag **TPABSOLUTE**
+        in such case it must be in range of **1..100** (if flag :data:`.TPABSOLUTE`
         is used). In relative mode, priority range must be in range of *-100..100*.
         Default mode for *flags* (value **0**) is relative mode.
 
@@ -2278,14 +2278,14 @@ expublic void ndrxpy_register_atmi(py::module &m)
 
         :raise AtmiException:
             | Following error codes may be present:
-            | **TPEINVAL** - *prio* is out of range.
+            | :data:`.TPEINVAL` - *prio* is out of range.
 
         Parameters
         ----------
         prio : int
             | Service call priority.
         flags : int
-            | Flag **TPABSOLUTE**. Default is **0**.
+            | Flag :data:`.TPABSOLUTE`. Default is **0**.
      )pbdoc", py::arg("prio"), py::arg("flags")=0);
 
     m.def(
@@ -2308,7 +2308,7 @@ expublic void ndrxpy_register_atmi(py::module &m)
         Returns
         -------
         flags : int
-            | **TP_CMT_LOGGED** or **TP_CMT_COMPLETE** (default).
+            | :data:`.TP_CMT_LOGGED` or :data:`.TP_CMT_COMPLETE` (default).
          )pbdoc", py::arg("flags"));
 
     m.def(
@@ -2346,7 +2346,7 @@ expublic void ndrxpy_register_atmi(py::module &m)
 
         :raise AtmiException:
             | Following error codes may be present:
-            | **TPEINVAL** - value **0** as passed in *tout*.
+            | :data:`.TPEINVAL` - value **0** as passed in *tout*.
 
         Parameters
         ----------
