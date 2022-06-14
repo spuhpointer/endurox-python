@@ -38,7 +38,7 @@ python3 ./setup.py test
 Note that documentation is updated only when "pip install ." is re-run.
 
 ```bash
-cd docs
+cd doc
 make html
 cd _build/html
 firefox index.html
