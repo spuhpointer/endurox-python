@@ -535,21 +535,59 @@ This sections lists basic ATMI client and server examples using endurox-python m
 ATMI Server
 -----------
 
-
 .. code-block:: python
    :caption: STRING buffer encoding call
-   :name: string-call
-        import endurox as e
+   :name: testsv.py
 
-        tperrno, tpurcode, retbuf = e.tpcall("ECHO", { "data":"HELLO WORLD" })
+    import endurox as e
 
-        print(retbuf)
+    tperrno, tpurcode, retbuf = e.tpcall("ECHO", { "data":"HELLO WORLD" })
 
+    print(retbuf)
 
 
 ATMI Client
 -----------
 
+.. code-block:: python
+   :caption: ATMI Client example
+   :name: testcl.py
+
+    #!/usr/bin/env python3
+
+    import sys
+    import endurox as e
+
+    def run():
+
+        # Do some work here
+
+        buf = dict()
+        buf["data"] = dict()
+        buf["data"]["T_STRING_FLD"] = "Hello world!"
+        
+        tperrno, tpurcode, buf = e.tpcall("TESTSV", buf)
+        
+        if 0!=tperrno: 
+            e.tplog_error("Failed to get configuration: %d" % tperrno)
+            raise AtmiExcept(e.TPESVCFAIL, "Failed to call TESTSV")
+
+        e.tplogprintubf(e.log_info, "Got server reply", buf);
+
+    def appinit():
+        e.tplog_info("Doing client init...");
+        e.tpinit()
+
+    def unInit():
+        e.tpterm()
+
+    if __name__ == '__main__':
+        try:
+            appinit()
+            run()
+            unInit()
+        except Exception as ee:
+            e.tplog_error("Exception: %s occurred: %s" % (ee.__class__, str(ee)))
 
 ATMI buffer formats
 ====================
@@ -600,60 +638,60 @@ Example call to echo service:
    :caption: UBF buffer encoding call
    :name: ubf-call
 
-        import endurox as e
+    import endurox as e
 
-        tperrno, tpurcode, retbuf = e.tpcall("ECHO", { "data":{
-            # 3x occs:
-            "T_CHAR_FLD": ["X", "Y", 0]
-            , "T_SHORT_FLD": 3200
-            , "T_LONG_FLD": 99999111
-            , "T_FLOAT_FLD": 1000.99
-            , "T_DOUBLE_FLD": 1000111.99
-            , "T_STRING_FLD": "HELLO INPUT"
-            # contains sub-ubf buffer, which againt contains sub-buffer
-            , "T_UBF_FLD": {"T_SHORT_FLD":99, "T_UBF_FLD":{"T_LONG_2_FLD":1000091}}
-            # at occ 0 EMPTY view is used
-            , "T_VIEW_FLD": [ {}, {"vname":"UBTESTVIEW2", "data":{
-                            "tshort1":5
-                            , "tlong1":100000
-                            , "tchar1":"J"
-                            , "tfloat1":9999.9
-                            , "tdouble1":11119999.9
-                            , "tstring1":"HELLO VIEW"
-                            , "tcarray1":[b'\x00\x00', b'\x01\x01'] 
-                            }}]
-            # contains pointer to STRING buffer:
-            , "T_PTR_FLD":{"data":"HELLO WORLD"}
-        }})
-        print(retbuf)
+    tperrno, tpurcode, retbuf = e.tpcall("ECHO", { "data":{
+        # 3x occs:
+        "T_CHAR_FLD": ["X", "Y", 0]
+        , "T_SHORT_FLD": 3200
+        , "T_LONG_FLD": 99999111
+        , "T_FLOAT_FLD": 1000.99
+        , "T_DOUBLE_FLD": 1000111.99
+        , "T_STRING_FLD": "HELLO INPUT"
+        # contains sub-ubf buffer, which againt contains sub-buffer
+        , "T_UBF_FLD": {"T_SHORT_FLD":99, "T_UBF_FLD":{"T_LONG_2_FLD":1000091}}
+        # at occ 0 EMPTY view is used
+        , "T_VIEW_FLD": [ {}, {"vname":"UBTESTVIEW2", "data":{
+                        "tshort1":5
+                        , "tlong1":100000
+                        , "tchar1":"J"
+                        , "tfloat1":9999.9
+                        , "tdouble1":11119999.9
+                        , "tstring1":"HELLO VIEW"
+                        , "tcarray1":[b'\x00\x00', b'\x01\x01'] 
+                        }}]
+        # contains pointer to STRING buffer:
+        , "T_PTR_FLD":{"data":"HELLO WORLD"}
+    }})
+    print(retbuf)
 
 
 .. code-block:: python
    :caption: UBF buffer encoding output (line wrapped)
    :name: ubf-call-output
    
+    {
+        'buftype': 'UBF', 'data':
         {
-            'buftype': 'UBF', 'data':
-            {
-                'T_SHORT_FLD': [3200]
-                , 'T_LONG_FLD': [99999111]
-                , 'T_CHAR_FLD': ['X', 'Y', b'\x00']
-                , 'T_FLOAT_FLD': [1000.989990234375]
-                , 'T_DOUBLE_FLD': [1000111.99]
-                , 'T_STRING_FLD': ['HELLO INPUT']
-                , 'T_PTR_FLD': [{'buftype': 'STRING', 'data': 'HELLO WORLD'}]
-                , 'T_UBF_FLD': [{'T_SHORT_FLD': [99], 'T_UBF_FLD': [{'T_LONG_2_FLD': [1000091]}]}]
-                , 'T_VIEW_FLD': [{}, {'vname': 'UBTESTVIEW2', 'data': {
-                        'tshort1': [5]
-                        , 'tlong1': [100000]
-                        , 'tchar1': ['J']
-                        , 'tfloat1': [9999.900390625]
-                        , 'tdouble1': [11119999.9]
-                        , 'tstring1': ['HELLO VIEW']
-                        , 'tcarray1': [b'\x00\x00', b'\x01\x01']
-                }}]
-            }
+            'T_SHORT_FLD': [3200]
+            , 'T_LONG_FLD': [99999111]
+            , 'T_CHAR_FLD': ['X', 'Y', b'\x00']
+            , 'T_FLOAT_FLD': [1000.989990234375]
+            , 'T_DOUBLE_FLD': [1000111.99]
+            , 'T_STRING_FLD': ['HELLO INPUT']
+            , 'T_PTR_FLD': [{'buftype': 'STRING', 'data': 'HELLO WORLD'}]
+            , 'T_UBF_FLD': [{'T_SHORT_FLD': [99], 'T_UBF_FLD': [{'T_LONG_2_FLD': [1000091]}]}]
+            , 'T_VIEW_FLD': [{}, {'vname': 'UBTESTVIEW2', 'data': {
+                    'tshort1': [5]
+                    , 'tlong1': [100000]
+                    , 'tchar1': ['J']
+                    , 'tfloat1': [9999.900390625]
+                    , 'tdouble1': [11119999.9]
+                    , 'tstring1': ['HELLO VIEW']
+                    , 'tcarray1': [b'\x00\x00', b'\x01\x01']
+            }}]
         }
+    }
 
 Following **exceptions** may be throw, when ATMI buffer is instantiated:
 
@@ -674,17 +712,17 @@ STRING buffer type is selected by following rules:
 .. code-block:: python
    :caption: STRING buffer encoding call
    :name: string-call
-        import endurox as e
+    import endurox as e
 
-        tperrno, tpurcode, retbuf = e.tpcall("ECHO", { "data":"HELLO WORLD" })
+    tperrno, tpurcode, retbuf = e.tpcall("ECHO", { "data":"HELLO WORLD" })
 
-        print(retbuf)
+    print(retbuf)
 
 .. code-block:: python
    :caption: STRING buffer encoding output
    :name: sring-call-output
 
-        {'buftype': 'STRING', 'data': 'HELLO WORLD'}
+    {'buftype': 'STRING', 'data': 'HELLO WORLD'}
 
 
 CARRAY Data encoding
@@ -700,17 +738,17 @@ CARRAY buffer type is selected by following rules:
    :caption: CARRAY buffer encoding call
    :name: carray-call
 
-        import endurox as e
+    import endurox as e
 
-        tperrno, tpurcode, retbuf = e.tpcall("ECHO", { "data":b'\x00\x00\x01\x02\x04' })
+    tperrno, tpurcode, retbuf = e.tpcall("ECHO", { "data":b'\x00\x00\x01\x02\x04' })
 
-        print(retbuf)
+    print(retbuf)
 
 .. code-block:: python
    :caption: CARRAY buffer encoding output
    :name: carray-call-output
 
-        {'buftype': 'CARRAY', 'data': b'\x00\x00\x01\x02\x04'}
+    {'buftype': 'CARRAY', 'data': b'\x00\x00\x01\x02\x04'}
 
 NULL Data encoding
 ------------------
@@ -724,17 +762,17 @@ NULL buffers are empty dictionaries, selected by following rules:
    :caption: NULL buffer encoding call
    :name: null-call
 
-        import endurox as e
+    import endurox as e
 
-        tperrno, tpurcode, retbuf = e.tpcall("ECHO", {})
+    tperrno, tpurcode, retbuf = e.tpcall("ECHO", {})
 
-        print(retbuf)
+    print(retbuf)
     
 .. code-block:: python
    :caption: NULL buffer encoding output
    :name: null-call-output
 
-        {'buftype': 'NULL'}
+    {'buftype': 'NULL'}
 
 JSON Data encoding
 ------------------
@@ -748,17 +786,17 @@ it contains json formatted data. JSON buffer is selected by following rules:
    :caption: JSON buffer encoding call
    :name: json-call
 
-        import endurox as e
+    import endurox as e
 
-        tperrno, tpurcode, retbuf = e.tpcall("ECHO", { "buftype":"JSON", "data":'{"name":"Jim", "age":30, "car":null}'})
+    tperrno, tpurcode, retbuf = e.tpcall("ECHO", { "buftype":"JSON", "data":'{"name":"Jim", "age":30, "car":null}'})
 
-        print(retbuf)
+    print(retbuf)
 
 .. code-block:: python
    :caption: JSON buffer encoding output
    :name: json-call-output
 
-        {'buftype': 'JSON', 'data': '{"name":"Jim", "age":30, "car":null}'}
+    {'buftype': 'JSON', 'data': '{"name":"Jim", "age":30, "car":null}'}
 
 VIEW Data encoding
 ------------------
@@ -782,17 +820,17 @@ VIEW buffer type is selected by following rules:
    :caption: VIEW buffer encoding call
    :name: view-call
 
-        import endurox as e
+    import endurox as e
 
-        tperrno, tpurcode, retbuf = e.tpcall("ECHO", { "buftype":"VIEW", "subtype":"UBTESTVIEW2", "data":{
-            "tshort1":5
-            , "tlong1":100000
-            , "tchar1":"J"
-            , "tfloat1":9999.9
-            , "tdouble1":11119999.9
-            , "tstring1":"HELLO VIEW"
-            , "tcarray1":[b'\x00\x00', b'\x01\x01']
-        }})
+    tperrno, tpurcode, retbuf = e.tpcall("ECHO", { "buftype":"VIEW", "subtype":"UBTESTVIEW2", "data":{
+        "tshort1":5
+        , "tlong1":100000
+        , "tchar1":"J"
+        , "tfloat1":9999.9
+        , "tdouble1":11119999.9
+        , "tstring1":"HELLO VIEW"
+        , "tcarray1":[b'\x00\x00', b'\x01\x01']
+    }})
 
     print(retbuf)
 
@@ -800,7 +838,9 @@ VIEW buffer type is selected by following rules:
    :caption: VIEW buffer encoding output
    :name: view-call-output
 
-        {'buftype': 'VIEW', 'subtype': 'UBTESTVIEW2', 'data': {
+    {
+        'buftype': 'VIEW', 'subtype': 'UBTESTVIEW2', 'data': 
+        {
             'tshort1': [5]
             , 'tlong1': [100000]
             , 'tchar1': ['J']
@@ -808,8 +848,8 @@ VIEW buffer type is selected by following rules:
             , 'tdouble1': [11119999.9]
             , 'tstring1': ['HELLO VIEW']
             , 'tcarray1': [b'\x00\x00', b'\x01\x01']
-            }
         }
+    }
 
 CALL-INFO ATMI buffer association
 ----------------------------------
@@ -822,20 +862,20 @@ HTTP headers information, i.e. additional data linked to the message body.
    :caption: Call info example
    :name: call-info
 
-        import endurox as e
+    import endurox as e
 
-        tperrno, tpurcode, retbuf = e.tpcall("ECHO", { 
-                "data":"HELLO STRING"
-                , "callinfo":{"T_SHORT_FLD":55, "T_STRING_FLD":"HELLO"}
-            })
-        print(retbuf)
+    tperrno, tpurcode, retbuf = e.tpcall("ECHO", { 
+            "data":"HELLO STRING"
+            , "callinfo":{"T_SHORT_FLD":55, "T_STRING_FLD":"HELLO"}
+        })
+    print(retbuf)
 
 .. code-block:: python
    :caption: Call info example
    :name: call-info-output
 
-        {'buftype': 'STRING', 'data': 'HELLO STRING'
-            , 'callinfo': {'T_SHORT_FLD': [55], 'T_STRING_FLD': ['HELLO']}}
+    {'buftype': 'STRING', 'data': 'HELLO STRING'
+        , 'callinfo': {'T_SHORT_FLD': [55], 'T_STRING_FLD': ['HELLO']}}
 
 Key Classes
 ===========
