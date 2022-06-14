@@ -704,7 +704,7 @@ CARRAY buffer type is selected by following rules:
 
         tperrno, tpurcode, retbuf = e.tpcall("ECHO", { "data":b'\x00\x00\x01\x02\x04' })
 
-    print(retbuf)
+        print(retbuf)
 
 .. code-block:: python
    :caption: CARRAY buffer encoding output
@@ -748,11 +748,11 @@ it contains json formatted data. JSON buffer is selected by following rules:
    :caption: JSON buffer encoding call
    :name: json-call
 
-    import endurox as e
+        import endurox as e
 
-    tperrno, tpurcode, retbuf = e.tpcall("ECHO", { "buftype":"JSON", "data":'{"name":"Jim", "age":30, "car":null}'})
+        tperrno, tpurcode, retbuf = e.tpcall("ECHO", { "buftype":"JSON", "data":'{"name":"Jim", "age":30, "car":null}'})
 
-    print(retbuf)
+        print(retbuf)
 
 .. code-block:: python
    :caption: JSON buffer encoding output
@@ -835,8 +835,7 @@ HTTP headers information, i.e. additional data linked to the message body.
    :name: call-info-output
 
         {'buftype': 'STRING', 'data': 'HELLO STRING'
-            , 'callinfo': {'T_SHORT_FLD': [55], 'T_STRING_FLD': ['HELLO']}
-        }
+            , 'callinfo': {'T_SHORT_FLD': [55], 'T_STRING_FLD': ['HELLO']}}
 
 Key Classes
 ===========
