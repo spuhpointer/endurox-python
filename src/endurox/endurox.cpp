@@ -536,15 +536,54 @@ ATMI Server
 -----------
 
 .. code-block:: python
-   :caption: STRING buffer encoding call
+   :caption: ATMI Python server example
    :name: testsv.py
+    #!/usr/bin/env python3
 
+    import sys
     import endurox as e
 
-    tperrno, tpurcode, retbuf = e.tpcall("ECHO", { "data":"HELLO WORLD" })
+    class Server:
 
-    print(retbuf)
+        def tpsvrinit(self, args):
+            e.tplog_info("Doing server init...");
+            e.tpadvertise("TESTSV", "TESTSV", self.TESTSV)
+            e.tpadvertise("ECHO", "ECHO", self.ECHO)
+            return 0
 
+        def tpsvrdone(self):
+            e.log_info("Server shutdown")
+
+        # This is advertised service
+        def TESTSV(self, args):
+            e.tplogprintubf(e.log_info, "Incoming request:", args.data)
+            args.data["data"]["T_STRING_2_FLD"]="Hello World from XATMI server"
+            return e.tpreturn(e.TPSUCCESS, 0, args.data)
+
+        # another service, just echo request buffer
+        def ECHO(self, args):
+            return e.tpreturn(e.TPSUCCESS, 0, args.data)
+
+    if __name__ == "__main__":
+        e.run(Server(), sys.argv)
+
+The testsv.py shall be present in system **PATH**, and script may be started when
+it is registered in ndrxconfig.xml configuration file:
+
+.. code-block:: xml
+   :caption: ATMI server registration
+   :name: ndrxconfig.xml
+
+    <server name="testsv.py">
+            <min>1</min>
+            <max>1</max>
+            <srvid>140</srvid>
+            <sysopt>-e ${NDRX_ULOG}/testsv.log -r --</sysopt>
+    </server>
+
+For full instructions how to run server or client programs on Enduro/X platform
+see **getting_started_tutorial(guides)(Getting Started Tutorial)** user guide from
+Enduro/X Core package.
 
 ATMI Client
 -----------
