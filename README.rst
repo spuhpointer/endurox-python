@@ -49,7 +49,6 @@ The unit tests can be started with:
 
     $ python3 ./setup.py test
 
-
 To build API documentation:
 
 .. code:: bash
@@ -100,13 +99,20 @@ All buffers are encapsulated in Python dictionary. For example ``UBF`` (equivale
         }
     }
 
-``buftype`` is optional for ``CARRAY``, ``STRING``, ``UBF`` and ``NULL`` buffers. It is mandatory for ``JSON`` and ``VIEW`` buffers. For ``VIEW`` buffers ``subtype`` specifies view name. Buffer data is present in ``data`` root dictionary key.
+``buftype`` is optional for ``CARRAY``, ``STRING``, ``UBF`` and ``NULL`` buffers. It is mandatory for ``JSON`` 
+and ``VIEW`` buffers. For ``VIEW`` buffers ``subtype`` specifies view name. 
+Buffer data is present in ``data`` root dictionary key.
 
 ``CARRAY`` is mapped to/from Python ``bytes`` type.
 
 ``STRING`` is mapped to/from Python ``str`` type.
 
-``UBF`` (a ``FML32`` Tuxedo emulation) is mapped to/from Python ``dict`` type with field names (``str``) as keys and lists (``list``) of different types (``int``, ``str``, ``float`` or ``dict`` (for embedded ``BFLD_UBF``, ``BLFD_PTR`` or ``BFLD_VIEW``) as values. This is default type for the ``dict`` buffer if for root dictionary ``buftype`` key is not specified. ``dict`` to ``UBF`` conversion also treats types ``int``, ``str``, ``float`` or ``dict`` as lists with a single element (the same rule applies to ``VIEW`` buffer keys):
+``UBF`` (a ``FML32`` Tuxedo emulation) is mapped to/from Python ``dict`` type with field names 
+(``str``) as keys and lists (``list``) of different types (``int``, ``str``, ``float`` or ``dict``
+(for embedded ``BFLD_UBF``, ``BLFD_PTR`` or ``BFLD_VIEW``) as values. This is default type for the
+``dict`` buffer if for root dictionary ``buftype`` key is not specified. ``dict`` to ``UBF``
+conversion also treats types ``int``, ``str``, ``float`` or ``dict`` as lists with a
+single element (the same rule applies to ``VIEW`` buffer keys):
 
 .. code:: python
 
@@ -124,7 +130,11 @@ All ATMI functions that take buffer and length arguments in C take only buffer a
 Calling a service
 -----------------
 
-``endurox.tpcall()`` and ``endurox.tpgetrply()`` functions return a tuple with 3 elements or throw an exception when no data is received. In case if service returned ``TPFAIL`` status, the error is not thrown, but instead error code ``endurox.TPESVCFAIL`` is returned in first return value. For all other errors, ``AtmiException`` is thrown.
+``endurox.tpcall()`` and ``endurox.tpgetrply()`` functions return a tuple with 3
+elements or throw an exception when no data is received. In case if service returned 
+``TPFAIL`` status, the error is not thrown, but instead error code 
+``endurox.TPESVCFAIL`` is returned in first return value. 
+For all other errors, ``AtmiException`` is thrown.
 
 ``endurox.tpcall()`` and ``endurox.tpgetrply()`` returns following values:
 
@@ -136,8 +146,8 @@ Calling a service
 
     import endurox
 
-    tperrno, tpurcode, data = endurox.tpcall('TESTSV', {'T_STRING_FLD': 'HELLO', 'T_STRING_4_FLD': 'WORLD'})
-        if rval == 0:
+    tperrno, tpurcode, data = endurox.tpcall('TESTSV', {'data':{'T_STRING_FLD': 'HELLO', 'T_STRING_4_FLD': 'WORLD'}})
+    if rval == 0:
         # Service returned TPSUCCESS
     else:
         # tperrno == endurox.TPESVCFAIL
@@ -146,52 +156,64 @@ Calling a service
 Writing servers
 ---------------
 
-Enduro/X servers are written as Python classes. ``tpsvrinit`` method of object will be called when Enduro/X calls ``tpsvrinit()`` function and it must return 0 on success or -1 on error. A common task for ``tpsvrinit`` is to advertise services the server provides by calling ``endurox.tpadvertise()`` with a service name. Function accepts service name (string), service function name (string) and callback to service function. ``tpsvrdone``, ``tpsvrthrinit`` and ``tpsvrthrdone`` will be called when Enduro/X calls corresponding functions. All of these 4 methods are optional.
+Enduro/X servers are written as Python classes. ``tpsvrinit`` method of object will be
+called when Enduro/X calls ``tpsvrinit()`` function and it must return 0 on success
+or -1 on error. A common task for ``tpsvrinit`` is to advertise services the server
+provides by calling ``endurox.tpadvertise()`` with a service name. Function accepts
+service name (string), service function name (string) and callback to service function.
+``tpsvrdone``, ``tpsvrthrinit`` and ``tpsvrthrdone`` will be called when Enduro/X calls 
+corresponding functions. All of these 4 methods are optional.
 
-Each service method receives a single argument with incoming buffer and service must end with either call to ``endurox.tpreturn()`` or ``endurox.tpforward()``, however some non ATMI code may be executed after these function calls. Service function return may be written in following ways:
+Each service method receives a single argument with incoming buffer and service must end 
+with either call to ``endurox.tpreturn()`` or ``endurox.tpforward()``, however 
+some non ATMI code may be executed after these function calls. Service function 
+return may be written in following ways:
 
 .. code:: python
 
       def ECHO(self, args):
-          return t.tpreturn(t.TPSUCCESS, 0, args)
+          return t.tpreturn(t.TPSUCCESS, 0, args.data)
 
 .. code:: python
 
       def ECHO(self, args):
-          t.tpreturn(t.TPSUCCESS, 0, args)
+          t.tpreturn(t.TPSUCCESS, 0, args.data)
 
 To start Enduro/X ATMI server process ``endurox.run()`` must be called with an instance of the class and command-line arguments.
 
 .. code:: python
 
-  #!/usr/bin/env python3
-  import sys
-  import endurox as e
+    #!/usr/bin/env python3
+    import sys
+    import endurox as e
 
-  class Server:
-      def tpsvrinit(self, args):
-          e.tpadvertise('ECHO')
-          return 0
+    class Server:
+        def tpsvrinit(self, args):
+            e.tpadvertise('TESTSV', 'TESTSV', self.TESTSV)
+            return 0
 
-      def tpsvrthrinit(self, args):
-          return 0
+        def tpsvrthrinit(self, args):
+            return 0
 
-      def tpsvrthrdone(self):
-          pass
+        def tpsvrthrdone(self):
+            pass
 
-      def tpsvrdone(self):
-          pass
+        def tpsvrdone(self):
+            pass
 
-      def ECHO(self, args):
-          return e.tpreturn(t.TPSUCCESS, 0, args)
+        def TESTSV(self, args):
+            e.tplogprintubf(e.log_info, 'Incoming request', args.data)
+            args.data['data']['T_STRING_2_FLD']='Hello World from XATMI server'
+            return e.tpreturn(e.TPSUCCESS, 0, args.data)
 
-  if __name__ == '__main__':
-      e.run(Server(), sys.argv)
+    if __name__ == '__main__':
+        e.run(Server(), sys.argv)
 
 NDRXCONFIG.XML
 --------------
 
-To use Python code as Enduro/X server the file itself must be executable (``chmod +x *.py``) and it must contain shebang line with Python:
+To use Python code as Enduro/X server the file itself must be executable (``chmod +x *.py``)
+and it must contain shebang line with Python:
 
 .. code:: python
 
@@ -217,10 +239,19 @@ start calling XATMI functions.
 
 .. code:: python
 
-  #!/usr/bin/env python3
-  import endurox as e
+    #!/usr/bin/env python3
+    import endurox as e
 
-  rval, rcode, data = e.tpcall('ECHO', {'T_STRING_FLD': 'HELLO', 'T_STRING_4_FLD': 'WORLD'})
+    tperrno, tpurcode, data = e.tpcall('TESTSV', {'data':{'T_STRING_FLD': 'HELLO', 'T_STRING_4_FLD': 'WORLD'}})
+
+    e.tplog_info("tperrno=%d tpurcode=%d" % (tperrno, tpurcode))
+    e.tplogprintubf(e.log_info, 'Got response', data)
+
+    # would print to log file:
+    # t:USER:4:c9e5ad48:413519:7f35b9ad7740:001:20220619:233518812671:plogprintubf:bf/ubf.c:1790:Got response
+    # T_STRING_FLD	HELLO
+    # T_STRING_2_FLD	Hello World from XATMI server
+    # T_STRING_4_FLD	WORLD
 
 Using Oracle Database
 ---------------------
@@ -274,7 +305,8 @@ configuration to it:
     </server>
 
 
-For a multi-threaded server new connections for each thread must be created in ``tpsvrthrinit()`` (instead of ``tpsvrinit()``) and stored in thread-local storage of ``threading.local()``.
+For a multi-threaded server new connections for each thread must be created in 
+``tpsvrthrinit()`` (instead of ``tpsvrinit()``) and stored in thread-local storage of ``threading.local()``.
 
 **app.ini** settings for the Oracle DB:
 
@@ -325,7 +357,9 @@ Functions to determine field number and type from identifier:
 Exceptions
 ----------
 
-On errors either ``AtmiException`` or ``UbfException`` are raised by the module. Exceptions contain additional attribute ``code`` that contains the Enduro/X error code and it can be compared it with defined errors like ``TPENOENT`` or ``TPESYSTEM``.
+On errors either ``AtmiException`` or ``UbfException`` are raised by the module. Exceptions contain
+additional attribute ``code`` that contains the Enduro/X error code and it can be
+compared it with defined errors like ``TPENOENT`` or ``TPESYSTEM``.
 
 .. code:: python
 
