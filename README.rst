@@ -268,6 +268,7 @@ Client process example:
 .. code:: python
 
     #!/usr/bin/env python3
+    import cx_Oracle
     import endurox as e
 
     e.tpopen()
